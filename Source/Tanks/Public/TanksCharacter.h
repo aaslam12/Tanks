@@ -6,6 +6,7 @@
 #include "WheeledVehiclePawn.h"
 #include "TanksCharacter.generated.h"
 
+class ATankController;
 class UTankAnimInstance;
 class USpringArmComponent;
 class UCameraComponent;
@@ -18,37 +19,7 @@ class TANKS_API ATanksCharacter : public AWheeledVehiclePawn
 {
 	GENERATED_BODY()
 
-	/** MappingContext */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
-	/** Move Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> MoveAction;
-	
-	/** Move Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> TurnAction;
-
-	/** Look Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> LookAction;
-
-	/** Shoot Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> ShootAction;
-
-	/** Shoot Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> MouseWheelUpAction;
-	
-	/** Shoot Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> MouseWheelDownAction;
-
-	/** Handbrake Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> HandbrakeAction;
 
 public:
 	// Sets default values for this actor's properties
@@ -56,7 +27,6 @@ public:
 	virtual ~ATanksCharacter() override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
-	void BindControls();
 
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -85,7 +55,7 @@ protected:
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent;
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Default")
-	TObjectPtr<APlayerController> PlayerController;
+	TObjectPtr<ATankController> PlayerController;
 
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;
@@ -108,14 +78,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D MoveValues;
-
-private:
-	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	bool StopTurn;
-
-	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	double VehicleYaw;
-
+	
 	/** Please add a variable description */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UMaterialInstanceDynamic> BodyMaterial;
@@ -123,31 +86,6 @@ private:
 	/** Please add a variable description */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UMaterialInstanceDynamic> TracksMaterial;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
-	bool bCanShoot;
-
-
-protected:
-
-	/** Called for movement input */
-	void Move(const FInputActionValue& Value);
-
-	/** Called for looking input */
-	void Look(const FInputActionValue& Value);
-
-	/** Called for turning input */
-	void Turn(const FInputActionValue& Value);
-	void TurnStarted(const FInputActionValue& InputActionValue);
-	void TurnCompleted(const FInputActionValue& InputActionValue);
-
-	void Shoot(const FInputActionValue& InputActionValue);
-
-	void HandbrakeStarted(const FInputActionValue& InputActionValue);
-	void HandbrakeEnded(const FInputActionValue& InputActionValue);
-
-	void MouseWheelUp(const FInputActionValue& InputActionValue);
-	void MouseWheelDown(const FInputActionValue& InputActionValue);
 
 public:
 	/** Please add a function description */
@@ -177,7 +115,7 @@ public:
 protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent)
-	USceneComponent* GetShootSocket() const;
+	USceneComponent* GetShootSocke() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintImplementableEvent)
@@ -195,4 +133,18 @@ protected:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void SetWheelSmoke(float Intensity);
 
+public:
+	double GetMaxZoomIn() const { return MaxZoomIn; }
+
+	double GetMaxZoomOut() const { return MaxZoomOut; }
+
+	USceneComponent* GetShootSocket() const { return ShootSocket; }
+
+	UCameraComponent* GetFrontCameraComp() const { return FrontCameraComp; }
+
+	UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
+
+	USpringArmComponent* GetSpringArmComp() const { return SpringArmComp; }
+
+	TArray<TObjectPtr<UParticleSystem>> GetShootEmitterSystems() const { return ShootEmitterSystems; }
 };
