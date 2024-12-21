@@ -7,43 +7,42 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "ChaosVehicleMovementComponent.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/GameSession.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
+const FName GunShootSocket = FName("gun_1_jnt");
+const FName FirstPersonSocket = FName("FirstPersonSocket");
 
 // Sets default values
-ATanksCharacter::ATanksCharacter(): StopTurn(false), VehicleYaw(0)
+ATanksCharacter::ATanksCharacter(): MaxZoomIn(500), MaxZoomOut(2500), StopTurn(false), VehicleYaw(0), bCanShoot(true)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
-	// lf_wheel_01_jnt
-	// lf_wheel_02_jnt
-	// lf_wheel_03_jnt
-	// lf_wheel_04_jnt
-	// lf_wheel_05_jnt
-	// lf_wheel_05_jnt
-	// lf_wheel_06_jnt
-	// lf_wheel_07_jnt
-	// lf_wheel_08_jnt
-	// lf_wheel_09_jnt
-
-	// rt_wheel_01_jnt
-	// rt_wheel_02_jnt
-	// rt_wheel_03_jnt
-	// rt_wheel_04_jnt
-	// rt_wheel_05_jnt
-	// rt_wheel_06_jnt
-	// rt_wheel_07_jnt
-	// rt_wheel_08_jnt
-	// rt_wheel_09_jnt
 }
 
-void ATanksCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+ATanksCharacter::~ATanksCharacter()
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	
+}
 
+void ATanksCharacter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	ShootSocket = GetShootSocket();
+	FrontCameraComp = GetFrontCamera();
+	BackCameraComp = GetBackCamera();
+	SpringArmComp = GetSpringArm();
+
+	
+}
+
+void ATanksCharacter::BindControls()
+{
 	// Add Input Mapping Context
-	if (const APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	if (PlayerController)
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
 			UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
@@ -51,9 +50,14 @@ void ATanksCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+	else
+	{
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::SetupPlayerInputComponent) PlayerController is INVALID")),
+		                                  true, true, FLinearColor::Red, 50);
+	}
 
 	// Set up action bindings
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	if (EnhancedInputComponent)
 	{
 
 		// Moving forward and backward
@@ -70,14 +74,38 @@ void ATanksCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATanksCharacter::Look);
+
+		// Shooting
+		EnhancedInputComponent->BindAction(ShootAction, ETriggerEvent::Started, this, &ATanksCharacter::Shoot);
+
+		// Zoom in & out
+		EnhancedInputComponent->BindAction(MouseWheelUpAction, ETriggerEvent::Started, this, &ATanksCharacter::Shoot);
+		EnhancedInputComponent->BindAction(MouseWheelDownAction, ETriggerEvent::Started, this, &ATanksCharacter::Shoot);
+
+		// Handbrake
+		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Started, this, &ATanksCharacter::HandbrakeStarted);
+		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Completed, this, &ATanksCharacter::HandbrakeEnded);
+
+		// Mouse Wheel Up & Down
+		EnhancedInputComponent->BindAction(MouseWheelUpAction, ETriggerEvent::Started, this, &ATanksCharacter::MouseWheelUp);
+		EnhancedInputComponent->BindAction(MouseWheelDownAction, ETriggerEvent::Completed, this, &ATanksCharacter::MouseWheelDown);
 	}
 	else
 	{
 		UE_LOG(LogBlueprintUserMessages, Error,
-			   TEXT(
-				   "'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."
-			   ), *GetNameSafe(this));
+		       TEXT(
+			       "'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."
+		       ), *GetNameSafe(this));
 	}
+}
+
+void ATanksCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	// cache the EnhancedInputComponent to bind controls later in BeginPlay after the controller is available.
+	if (Cast<UEnhancedInputComponent>(PlayerInputComponent))
+		EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 }
 
 // Called when the game starts or when spawned
@@ -88,11 +116,19 @@ void ATanksCharacter::BeginPlay()
 	SetActorScale3D(FVector(0.95));
 	AnimInstance = CastChecked<UTankAnimInstance>(GetMesh()->GetAnimInstance());
 
-	UGameplayStatics::GetPlayerController(GetWorld(), 0)->Possess(this);
+	PlayerController = Cast<APlayerController>(GetController());
+	PlayerController->Possess(this);
 
 	// stops the player from looking under the tank and above too much.
-	UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->ViewPitchMin = -60.0;
-	UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->ViewPitchMax = 15.0;
+	PlayerController->PlayerCameraManager->ViewPitchMin = -60.0;
+	PlayerController->PlayerCameraManager->ViewPitchMax = 15.0;
+
+	FrontCameraComp->SetActive(false);
+	BackCameraComp->SetActive(true);
+
+	
+
+	BindControls();
 }
 
 // Called every frame
@@ -104,8 +140,11 @@ void ATanksCharacter::Tick(float DeltaTime)
 
 	SetSpeed(GetVehicleMovementComponent()->GetForwardSpeed());
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Move) MovementVector: %s"),
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Move) MovementValues: %s"),
 			*MoveValues.ToString()), true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Move) LookValues: %s"),
+			*LookValues.ToString()), true, true, FLinearColor::Yellow, 0);
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Move) StopTurn: %d"),
 			StopTurn), true, true, FLinearColor::Yellow, 0);
@@ -149,11 +188,12 @@ void ATanksCharacter::Turn(const FInputActionValue& Value)
 	MoveValues.X = Value.GetMagnitude();
 
 	if (StopTurn)
-		VehicleYaw = FMath::Lerp(VehicleYaw, 0.0, 0.1);
+		GetVehicleMovementComponent()->SetYawInput(0);
 	else
+	{
 		VehicleYaw = MoveValues.X;
-
-	GetVehicleMovementComponent()->SetYawInput(VehicleYaw);
+		GetVehicleMovementComponent()->SetYawInput(VehicleYaw);
+	}
 }
 
 void ATanksCharacter::TurnStarted(const FInputActionValue& InputActionValue)
@@ -165,6 +205,78 @@ void ATanksCharacter::TurnCompleted(const FInputActionValue& InputActionValue)
 {
 	GetVehicleMovementComponent()->SetThrottleInput(0);
 	GetVehicleMovementComponent()->SetBrakeInput(0);
+}
+
+void ATanksCharacter::Shoot(const FInputActionValue& InputActionValue)
+{
+	if (!ShootSocket)
+		return;
+
+	if (!bCanShoot)
+		return;
+
+	for (auto ParticleSystem : ShootEmitterSystems)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, ShootSocket->GetComponentTransform());
+	}
+}
+
+void ATanksCharacter::HandbrakeStarted(const FInputActionValue& InputActionValue)
+{
+	GetVehicleMovementComponent()->SetHandbrakeInput(true);
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::HandbrakeStarted)")),
+		true, true, FLinearColor::Yellow, 0);
+}
+
+void ATanksCharacter::HandbrakeEnded(const FInputActionValue& InputActionValue)
+{
+	GetVehicleMovementComponent()->SetHandbrakeInput(false);
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::HandbrakeEnded)")),
+		true, true, FLinearColor::Yellow, 0);
+}
+
+void ATanksCharacter::MouseWheelUp(const FInputActionValue& InputActionValue)
+{
+	SpringArmComp->TargetArmLength = FMath::Max(SpringArmComp->TargetArmLength - 200.0, MaxZoomIn);
+
+	if (SpringArmComp->TargetArmLength == MaxZoomIn)
+	{
+		// Switch to aiming camera
+		if (PlayerController && FrontCameraComp)
+		{
+			BackCameraComp->SetActive(false);
+			FrontCameraComp->SetActive(true);
+			
+			// Switch to the new camera smoothly (can adjust Blend Time and Blend function)
+			PlayerController->SetViewTargetWithBlend(this, 1.0f, EViewTargetBlendFunction::VTBlend_Cubic, 0.0f);
+		}
+	}
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::MouseWheelUp)")),
+		true, true, FLinearColor::Yellow, 0);
+}
+
+void ATanksCharacter::MouseWheelDown(const FInputActionValue& InputActionValue)
+{
+	SpringArmComp->TargetArmLength = FMath::Min(SpringArmComp->TargetArmLength + 200.0, MaxZoomOut);
+
+	if (SpringArmComp->TargetArmLength > MaxZoomIn)
+	{
+		// Switch to 3rd person camera
+		if (PlayerController && FrontCameraComp)
+		{
+			FrontCameraComp->SetActive(false);
+			BackCameraComp->SetActive(true);
+			
+			// Switch to the new camera smoothly (can adjust Blend Time and Blend function)
+			PlayerController->SetViewTargetWithBlend(this, 1.0f, EViewTargetBlendFunction::VTBlend_Cubic, 0.0f);
+		}
+	}
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::MouseWheelDown)")),
+		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATanksCharacter::SetGunElevation(double GunElevation)
@@ -190,6 +302,8 @@ void ATanksCharacter::SetLightsEmissivity(double LightsEmissivity)
 void ATanksCharacter::SetSpeed(double Speed)
 {
 	AnimInstance->WheelSpeed = Speed;
+
+	SetWheelSmoke(Speed);
 }
 
 void ATanksCharacter::SetHatchesAngles(double HatchAngle)
