@@ -89,16 +89,13 @@ void ATankController::BindControls()
 		EnhancedInputComponent->BindAction(ShootAction, ETriggerEvent::Started, this, &ATankController::Shoot);
 
 		// Zoom in & out
-		EnhancedInputComponent->BindAction(MouseWheelUpAction, ETriggerEvent::Started, this, &ATankController::Shoot);
-		EnhancedInputComponent->BindAction(MouseWheelDownAction, ETriggerEvent::Started, this, &ATankController::Shoot);
+		EnhancedInputComponent->BindAction(MouseWheelUpAction, ETriggerEvent::Started, this, &ATankController::MouseWheelUp);
+		EnhancedInputComponent->BindAction(MouseWheelDownAction, ETriggerEvent::Completed, this, &ATankController::MouseWheelDown);
 
 		// Handbrake
 		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Started, this, &ATankController::HandbrakeStarted);
 		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Completed, this, &ATankController::HandbrakeEnded);
-
-		// Mouse Wheel Up & Down
-		EnhancedInputComponent->BindAction(MouseWheelUpAction, ETriggerEvent::Started, this, &ATankController::MouseWheelUp);
-		EnhancedInputComponent->BindAction(MouseWheelDownAction, ETriggerEvent::Completed, this, &ATankController::MouseWheelDown);
+		
 	}
 	else
 	{
@@ -172,6 +169,9 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	for (auto ParticleSystem : TankPlayer->GetShootEmitterSystems())
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, TankPlayer->GetShootSocket()->GetComponentTransform());
+
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) SpawnEmitterAtLocation: %s"), *ParticleSystem.GetFullName()),
+		true, true, FLinearColor::Yellow, 0);
 	}
 }
 
@@ -193,18 +193,18 @@ void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
 
 void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 {
-	TankPlayer->GetSpringArmComp()->TargetArmLength = FMath::Max(TankPlayer->GetSpringArmComp()->TargetArmLength - 200.0, TankPlayer->GetMaxZoomIn());
+	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Max(TankPlayer->GetBackSpringArmComp()->TargetArmLength - 200.0, TankPlayer->GetMaxZoomIn());
 
-	if (TankPlayer->GetSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
+	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
 	{
 		// Switch to aiming camera
 		if (TankPlayer->GetFrontCameraComp())
 		{
-			TankPlayer->GetBackCameraComp()->SetActive(false);
 			TankPlayer->GetFrontCameraComp()->SetActive(true);
+			TankPlayer->GetBackCameraComp()->SetActive(false);
 			
 			// Switch to the new camera smoothly (can adjust Blend Time and Blend function)
-			SetViewTargetWithBlend(this, 1.0f, VTBlend_Cubic, 0.0f);
+			SetViewTarget(TankPlayer);
 		}
 	}
 	
@@ -214,18 +214,18 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 
 void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 {
-	TankPlayer->GetSpringArmComp()->TargetArmLength = FMath::Min(TankPlayer->GetSpringArmComp()->TargetArmLength + 200.0, TankPlayer->GetMaxZoomOut());
+	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Min(TankPlayer->GetBackSpringArmComp()->TargetArmLength + 200.0, TankPlayer->GetMaxZoomOut());
 
-	if (TankPlayer->GetSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
+	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
 	{
 		// Switch to 3rd person camera
-		if (TankPlayer->GetFrontCameraComp())
+		if (TankPlayer->GetBackCameraComp())
 		{
 			TankPlayer->GetFrontCameraComp()->SetActive(false);
 			TankPlayer->GetBackCameraComp()->SetActive(true);
 			
 			// Switch to the new camera smoothly (can adjust Blend Time and Blend function)
-			SetViewTargetWithBlend(this, 1.0f, VTBlend_Cubic, 0.0f);
+			SetViewTarget(TankPlayer);
 		}
 	}
 

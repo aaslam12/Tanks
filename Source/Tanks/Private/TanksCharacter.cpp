@@ -27,9 +27,12 @@ void ATanksCharacter::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	ShootSocket = GetShootSocke();
+
 	FrontCameraComp = GetFrontCamera();
+	FrontSpringArmComp = GetFrontSpringArm();
+
 	BackCameraComp = GetBackCamera();
-	SpringArmComp = GetSpringArm();
+	BackSpringArmComp = GetBackSpringArm();
 
 	
 }
@@ -97,7 +100,7 @@ void ATanksCharacter::SetSpeed(double Speed)
 {
 	AnimInstance->WheelSpeed = Speed;
 
-	SetWheelSmoke(Speed);
+	// SetWheelSmoke(Speed);
 }
 
 void ATanksCharacter::SetHatchesAngles(double HatchAngle)

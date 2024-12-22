@@ -13,4 +13,9 @@ UCLASS(Blueprintable)
 class TANKS_API ATankCameraManager : public APlayerCameraManager
 {
 	GENERATED_BODY()
+
+	ATankCameraManager();
+
+	// tick function
+	virtual void UpdateCamera(float DeltaTime) override;
 };

@@ -67,7 +67,10 @@ protected:
 	TObjectPtr<UCameraComponent> BackCameraComp;
 
 	UPROPERTY()
-	TObjectPtr<USpringArmComponent> SpringArmComp;
+	TObjectPtr<USpringArmComponent> BackSpringArmComp;
+
+	UPROPERTY()
+	TObjectPtr<USpringArmComponent> FrontSpringArmComp;
 
 public:
 	// Called every frame
@@ -127,7 +130,11 @@ protected:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintImplementableEvent)
-	USpringArmComponent* GetSpringArm() const;
+	USpringArmComponent* GetBackSpringArm() const;
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintImplementableEvent)
+	USpringArmComponent* GetFrontSpringArm() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
@@ -144,7 +151,8 @@ public:
 
 	UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
 
-	USpringArmComponent* GetSpringArmComp() const { return SpringArmComp; }
+	USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
+	USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
 
 	TArray<TObjectPtr<UParticleSystem>> GetShootEmitterSystems() const { return ShootEmitterSystems; }
 };
