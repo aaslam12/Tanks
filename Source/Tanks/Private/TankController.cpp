@@ -7,7 +7,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "TankCameraManager.h"
-#include "TanksCharacter.h"
+#include "TankCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -45,7 +45,8 @@ void ATankController::Tick(float DeltaSeconds)
 void ATankController::BeginPlay()
 {
 	Super::BeginPlay();
-	TankPlayer = Cast<ATanksCharacter>(GetPawn());
+	TankPlayer = Cast<ATankCharacter>(GetPawn());
+	checkf(TankPlayer, TEXT("TankPlayer is invalid in ATankController::BeginPlay:49"));
 
 	BindControls();
 }
@@ -205,6 +206,8 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 			
 			// Switch to the new camera smoothly (can adjust Blend Time and Blend function)
 			SetViewTarget(TankPlayer);
+
+			TankPlayer->bAimingIn = true;
 		}
 	}
 	
@@ -226,6 +229,8 @@ void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 			
 			// Switch to the new camera smoothly (can adjust Blend Time and Blend function)
 			SetViewTarget(TankPlayer);
+
+			TankPlayer->bAimingIn = false;
 		}
 	}
 

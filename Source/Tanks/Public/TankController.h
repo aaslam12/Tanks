@@ -9,7 +9,7 @@
 struct FInputActionValue;
 class UInputAction;
 class UInputMappingContext;
-class ATanksCharacter;
+class ATankCharacter;
 class ATankCameraManager;
 /**
  * The base class for the tank controllers
@@ -70,7 +70,7 @@ protected:
 	TSubclassOf<ATankCameraManager> TankCameraManagerClass;
 
 	UPROPERTY(BlueprintReadOnly, Category="Default", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<ATanksCharacter> TankPlayer;
+	TObjectPtr<ATankCharacter> TankPlayer;
 	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent;

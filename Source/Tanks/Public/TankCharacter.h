@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "WheeledVehiclePawn.h"
-#include "TanksCharacter.generated.h"
+#include "TankCharacter.generated.h"
 
 class ATankController;
 class UTankAnimInstance;
@@ -15,7 +15,7 @@ class UInputAction;
 struct FInputActionValue;
 
 UCLASS(Blueprintable)
-class TANKS_API ATanksCharacter : public AWheeledVehiclePawn
+class TANKS_API ATankCharacter : public AWheeledVehiclePawn
 {
 	GENERATED_BODY()
 
@@ -23,8 +23,8 @@ class TANKS_API ATanksCharacter : public AWheeledVehiclePawn
 
 public:
 	// Sets default values for this actor's properties
-	ATanksCharacter();
-	virtual ~ATanksCharacter() override;
+	ATankCharacter();
+	virtual ~ATankCharacter() override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 
@@ -33,6 +33,8 @@ protected:
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	void TurretTurningTick(float DeltaTime);
+	void GunElevationTick(float DeltaTime);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
@@ -47,6 +49,10 @@ protected:
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomOut;
+
+	// Should be greater than MaxZoomIn
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup", meta=(UIMin=0, UIMax=180, MakeStructureDefaultValue=90))
+	double MaxTurretRotationSpeed;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
@@ -81,6 +87,10 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D MoveValues;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bAimingIn;
+
 	
 	/** Please add a variable description */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
