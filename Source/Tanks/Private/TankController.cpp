@@ -128,7 +128,6 @@ void ATankController::Move(const FInputActionValue& Value)
 
 	if (MoveValues.Y >= 0)
 	{
-		
 		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
 		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
 	}
@@ -180,10 +179,10 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	if (!TankPlayer->GetShootSocket())
 		return;
 
-	if (!bCanShoot)
+	if (bCanShoot == false || bShootingBlocked == true)
 		return;
 
-	SetShoot(false);
+	SetCanShoot(false);
 
 	for (auto ParticleSystem : TankPlayer->GetShootEmitterSystems())
 	{
@@ -215,17 +214,12 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TankPlayer->GetShootHitParticleSystem(), OutHit.Location);
 
 	FTimerDelegate ShootTimerDelegate = FTimerDelegate();
-	ShootTimerDelegate.BindUFunction(this, "SetShoot", true);
+	ShootTimerDelegate.BindUFunction(this, "SetCanShoot", true);
 	
 	GetWorld()->GetTimerManager().SetTimer(
 		ShootTimerHandle, ShootTimerDelegate,
 		ShootTimerDuration, false
 	);
-}
-
-void ATankController::SetShoot(const bool bCanShootLoc)
-{
-	bCanShoot = bCanShootLoc;
 }
 
 void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)

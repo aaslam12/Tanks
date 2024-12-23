@@ -157,7 +157,7 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetSpeed(double Speed) const;
+	void SetSpeed(double Speed);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
@@ -165,7 +165,7 @@ public:
 
 protected:
 	/** Please add a function description */
-	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent)
+	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent, DisplayName="GetShootSocket")
 	USceneComponent* GetShootSocke() const;
 
 	/** Please add a function description */
@@ -185,7 +185,7 @@ protected:
 	USpringArmComponent* GetFrontSpringArm() const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="SetWheelSmokeIntensity")
 	void SetWheelSmoke(float Intensity);
 
 	//////////////////////////////////////////////////////////////////

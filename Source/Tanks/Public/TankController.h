@@ -34,6 +34,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D MoveValues;
+
+	///////////////////////////////////////////////////////////////////////////////////
+	/// Input variables
 	
 	/** MappingContext */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -70,13 +73,20 @@ protected:
 	/** Handbrake Input Action */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> HandbrakeAction;
+
+	///////////////////////////////////////////////////////////////////////////////////
+	/// Setup
+	
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ATankCameraManager> TankCameraManagerClass;
 
-	UPROPERTY(BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true", ClampMin = "0", UIMin = "0", UIMax="7", SliderExponent=0.1))
+	UPROPERTY(EditDefaultsOnly, Category="Setup", meta = (AllowPrivateAccess = "true", ClampMin = "0", UIMin = "0", UIMax="7", SliderExponent=0.1))
 	double ShootTimerDuration;
 
+	///////////////////////////////////////////////////////////////////////////////////
+	/// Variables 
+	
 private:
 	UPROPERTY(BlueprintReadOnly, Category="Timers", meta = (AllowPrivateAccess = "true"))
 	FTimerHandle ShootTimerHandle;
@@ -94,12 +104,17 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	double VehicleYaw;
 
+	// this is true when the tank is reloading
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
 	bool bCanShoot;
 
-	
-protected:
+	// if shooting is physically blocked by own tank. this is true when the gun is adjusting to its new minimum elevation.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
+	bool bShootingBlocked;
 
+	///////////////////////////////////////////////////////////////////////////////////
+	/// Input functions
+	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
@@ -112,16 +127,16 @@ protected:
 	void TurnCompleted(const FInputActionValue& InputActionValue);
 
 	void Shoot(const FInputActionValue& InputActionValue);
-private:
-	UFUNCTION(BlueprintCallable, Category="Data")
-	void SetShoot(const bool bCanShootLoc);
-protected:
+
 	void HandbrakeStarted(const FInputActionValue& InputActionValue);
 	void HandbrakeEnded(const FInputActionValue& InputActionValue);
 
 	void MouseWheelUp(const FInputActionValue& InputActionValue);
 	void MouseWheelDown(const FInputActionValue& InputActionValue);
 
+	///////////////////////////////////////////////////////////////////////////////////
+	/// Public functions
+	
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
 	FVector2D GetMoveValues() const;
@@ -130,14 +145,16 @@ public:
 	FVector2D GetLookValues() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
-	bool CanShoot() const
-	{
-		return bCanShoot;
-	}
+	bool CanShoot() const { return bCanShoot; }
 
 	UFUNCTION(BlueprintCallable, Category="Data")
-	void SetCanShoot(bool bCanShootLoc)
-	{
-		this->bCanShoot = bCanShootLoc;
-	}
+	void SetCanShoot(bool bCanShootLoc) { this->bCanShoot = bCanShootLoc; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
+	bool IsShootingBlocked() const { return bShootingBlocked; }
+
+	UFUNCTION(BlueprintCallable, Category="Data")
+	void SetShootingBlocked(bool bShootingBlockedLoc) { this->bShootingBlocked = bShootingBlockedLoc; }
+
+	
 };

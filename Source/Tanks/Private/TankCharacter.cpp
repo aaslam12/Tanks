@@ -166,7 +166,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 
 	// disable the players ability to shoot while the turret is adjusting
 	if (bBottomHit == true && bTopHit == false)
-		PlayerController->SetCanShoot(true);
+		PlayerController->SetShootingBlocked(false);
 
 	if (bTopHit || bBottomHit) 
 	{
@@ -178,9 +178,9 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		
 		if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
 		{
-			CurrentMinGunElevation += 17 * DeltaTime;
+			CurrentMinGunElevation += 0.5; // 17
 			MinGunElevation = CurrentMinGunElevation;
-			PlayerController->SetCanShoot(false);
+			PlayerController->SetShootingBlocked(true);
 		}
 	}
 	else
@@ -188,7 +188,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		// Update the last free gun elevation
 		CurrentMinGunElevation = GunElevation;
 		MinGunElevation = FMath::Min(GunElevation, DesiredGunElevation);
-		PlayerController->SetCanShoot(true);
+		PlayerController->SetShootingBlocked(false);
 	}
 }
 
@@ -203,7 +203,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 		GunLocation,
 		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
 		false,
-		{},
+		{this},
 		EDrawDebugTrace::ForOneFrame,
 		OutHit,
 		true
@@ -257,26 +257,8 @@ void ATankCharacter::Tick(float DeltaTime)
 	GunSightTick();
 	IsInAirTick();
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bAimingIn: %d"), bAimingIn),
-		true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunElevation: %.5f"), GunElevation),
-		true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) DesiredGunElevation: %.5f"), DesiredGunElevation),
-		true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) MinGunElevation: %.5f"), MinGunElevation),
-		true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) CurrentMinGunElevation: %.5f"), CurrentMinGunElevation),
-		true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) LastFreeLocation: %s"), *LastFreeLocation.ToString()),
-		true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) LastFreeGunElevation: %.5f"), LastFreeGunElevation),
-		true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bAimingIn: %d"), bAimingIn),
+	// 	true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::SetGunElevation(const double NewGunElevation) const
@@ -303,12 +285,13 @@ void ATankCharacter::SetLightsEmissivity(double LightsEmissivity) const
 		BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
 }
 
-void ATankCharacter::SetSpeed(double Speed) const
+void ATankCharacter::SetSpeed(double Speed)
 {
-	if (AnimInstance)
-		AnimInstance->WheelSpeed = Speed;
-
-	// SetWheelSmoke(Speed);
+	if (!AnimInstance)
+		return;
+	
+	AnimInstance->WheelSpeed = Speed;
+	SetWheelSmoke(!bIsInAir ? Speed : 0);
 }
 
 void ATankCharacter::SetHatchesAngles(double HatchAngle)
