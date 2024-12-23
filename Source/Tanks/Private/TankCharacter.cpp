@@ -164,24 +164,23 @@ void ATankCharacter::UpdateBarrelElevation(float DeltaTime)
 		false
 	);
 
+	// disable the players ability to shoot while the turret is adjusting
+	if (bBottomHit == true && bTopHit == false)
+		PlayerController->SetCanShoot(true);
+
 	if (bTopHit || bBottomHit) 
 	{
+		
 		if (!TopHit.PhysMaterial.IsValid() || !BottomHit.PhysMaterial.IsValid())
 			return;
 
 		auto bTopDetectTank = TopHit.PhysMaterial->SurfaceType == SurfaceType2 && TopHit.GetActor() == this;
-		auto bBottomDetectTank = BottomHit.PhysMaterial->SurfaceType == SurfaceType2 && BottomHit.GetActor() == this;
 		
-		if (bTopDetectTank || bBottomDetectTank) // if tank body physical material is detected and is the same actor
+		if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
 		{
-			if (bTopDetectTank == true)
-			{
-				CurrentMinGunElevation += 17 * DeltaTime;
-				MinGunElevation = CurrentMinGunElevation;
-			}
-
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateBarrelElevation) Barrel is blocked by something")),
-			                                  true, true, FLinearColor::Red, 2);
+			CurrentMinGunElevation += 17 * DeltaTime;
+			MinGunElevation = CurrentMinGunElevation;
+			PlayerController->SetCanShoot(false);
 		}
 	}
 	else
@@ -189,6 +188,7 @@ void ATankCharacter::UpdateBarrelElevation(float DeltaTime)
 		// Update the last free gun elevation
 		CurrentMinGunElevation = GunElevation;
 		MinGunElevation = FMath::Min(GunElevation, DesiredGunElevation);
+		PlayerController->SetCanShoot(true);
 	}
 }
 

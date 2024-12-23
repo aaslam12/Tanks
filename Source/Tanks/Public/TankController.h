@@ -128,5 +128,16 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
 	FVector2D GetLookValues() const;
-	
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
+	bool CanShoot() const
+	{
+		return bCanShoot;
+	}
+
+	UFUNCTION(BlueprintCallable, Category="Data")
+	void SetCanShoot(bool bCanShootLoc)
+	{
+		this->bCanShoot = bCanShootLoc;
+	}
 };
