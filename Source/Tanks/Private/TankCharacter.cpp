@@ -13,9 +13,10 @@
 
 
 // Sets default values
-ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevation(0), MaxGunElevation(20),
+ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevation(-15), MaxGunElevation(20),
+                                  CurrentMinGunElevation(-15),
                                   MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10),
-                                  GunElevation(0),
+                                  GunElevation(0), bIsInAir(false), LastFreeGunElevation(0),
                                   bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -41,8 +42,6 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 
 	
 }
-
-
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -131,39 +130,63 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 
 void ATankCharacter::UpdateBarrelElevation(float DeltaTime)
 {
-	const FVector TraceStart = GetMesh()->GetSocketLocation("gun_jntSocket"); // Assume "BarrelSocket" is where the barrel's root is.
-	const FVector TraceEnd = GetMesh()->GetSocketLocation("gun_1_jntSocket"); // Max length of the barrel trace.
+	FVector TopTraceStart = GetMesh()->GetSocketLocation("BarrelTraceStart");
+	FVector TopTraceEnd = GetMesh()->GetSocketLocation("BarrelTraceEnd");
+	FHitResult TopHit;
 
-	FHitResult HitResult;
+	// Perform a trace along the bottom of the barrel to check if it's colliding with anything
+	const bool bTopHit = UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TopTraceStart,
+		TopTraceEnd,
+		TraceTypeQuery1,
+		false,
+		{},
+		EDrawDebugTrace::ForOneFrame,
+		TopHit,
+		false
+	);
 
-	// Perform a trace along the barrel to check if it's colliding with anything
-	FCollisionQueryParams CollisionParams;
+	FVector BottomTraceStart = GetMesh()->GetSocketLocation("BarrelTrace2Start");
+	FVector BottomTraceEnd = GetMesh()->GetSocketLocation("BarrelTrace2End");
+	FHitResult BottomHit;
 
-	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, CollisionParams);
+	// Perform a trace along the bottom of the barrel to check if it's colliding with anything
+	const bool bBottomHit = UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		BottomTraceStart,
+		BottomTraceEnd,
+		TraceTypeQuery1,
+		false,
+		{},
+		EDrawDebugTrace::ForOneFrame,
+		BottomHit,
+		false
+	);
 
-	if (bHit) 
+	if (bTopHit || bBottomHit) 
 	{
-		// Barrel is blocked by something, prevent further elevation change
-		// Optionally, you can reset the barrel's rotation or prevent it from going lower.
-		// CurrentMinGunElevation = FMath::Clamp()
+		if (!TopHit.PhysMaterial.IsValid() || !BottomHit.PhysMaterial.IsValid())
+			return;
+
+		auto bTopDetectTank = TopHit.PhysMaterial->SurfaceType == SurfaceType2 && TopHit.GetActor() == this;
+		auto bBottomDetectTank = BottomHit.PhysMaterial->SurfaceType == SurfaceType2 && BottomHit.GetActor() == this;
+
+		if (bTopDetectTank || bBottomDetectTank) // if tank body physical material is detected and is the same actor
+		{
+			if (bTopDetectTank == false && bBottomDetectTank == true)
+				CurrentMinGunElevation += 17 * DeltaTime;
+
+			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateBarrelElevation) Barrel is blocked by something")),
+			                                  true, true, FLinearColor::Red, 2);
+		}
 	}
 	else
 	{
-		// No collision detected along the barrel, so we can adjust the elevation
-		FVector PlayerViewPointLocation;
-		FRotator PlayerViewPointRotation;
-		Controller->GetPlayerViewPoint(PlayerViewPointLocation, PlayerViewPointRotation);
-
-		// Determine if the player is looking low enough to adjust the barrel's elevation
-		// Player's rotation around the X axis (pitch) determines how low they are looking
-		if (PlayerViewPointRotation.Pitch < MinGunElevation) 
-			// Apply the new gun elevation
-			SetGunElevation(FMath::Clamp(PlayerViewPointRotation.Pitch, MinGunElevation, MaxGunElevation));
-
-		// if (HitResult.PhysMaterial && HitResult.PhysMaterial->GetFName().IsEqual())
+		// Update the last free gun elevation
+		CurrentMinGunElevation -= GunElevation;
 	}
 }
-
 
 void ATankCharacter::GunElevationTick(float DeltaTime)
 {
@@ -189,9 +212,11 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 	
 	GunElevation = FMath::Clamp(
 		UKismetMathLibrary::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
-		FMath::Abs(MinGunElevation),
+		CurrentMinGunElevation,
 		MaxGunElevation
 	);
+
+	// GunElevation = FMath::Abs(CurrentMinGunElevation);
 	
 	SetGunElevation(GunElevation);
 }
@@ -229,6 +254,18 @@ void ATankCharacter::Tick(float DeltaTime)
 	IsInAirTick();
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bAimingIn: %d"), bAimingIn),
+		true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunElevation: %.5f"), GunElevation),
+		true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) CurrentMinGunElevation: %.5f"), CurrentMinGunElevation),
+		true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) LastFreeLocation: %s"), *LastFreeLocation.ToString()),
+		true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) LastFreeGunElevation: %.5f"), LastFreeGunElevation),
 		true, true, FLinearColor::Yellow, 0);
 }
 

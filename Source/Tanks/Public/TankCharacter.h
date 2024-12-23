@@ -91,6 +91,12 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	bool bIsInAir;
+	
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
+	FVector LastFreeLocation;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
+	double LastFreeGunElevation;
 
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;
