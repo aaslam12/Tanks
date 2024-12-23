@@ -21,6 +21,7 @@ class TANKS_API ATankController : public APlayerController
 
 	ATankController();
 	virtual void Tick(float DeltaSeconds) override;
+	void SetDefaults();
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 
@@ -55,6 +56,10 @@ protected:
 	TObjectPtr<UInputAction> ShootAction;
 
 	/** Shoot Input Action */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	FTimerHandle ShootTimer;
+
+	/** Shoot Input Action */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> MouseWheelUpAction;
 	
@@ -68,6 +73,14 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ATankCameraManager> TankCameraManagerClass;
+
+	UPROPERTY(BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true", ClampMin = "0", UIMin = "0", UIMax="7", SliderExponent=0.1))
+	double ShootTimerDuration;
+
+private:
+	UPROPERTY(BlueprintReadOnly, Category="Timers", meta = (AllowPrivateAccess = "true"))
+	FTimerHandle ShootTimerHandle;
+protected:
 
 	UPROPERTY(BlueprintReadOnly, Category="Default", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<ATankCharacter> TankPlayer;
@@ -99,7 +112,10 @@ protected:
 	void TurnCompleted(const FInputActionValue& InputActionValue);
 
 	void Shoot(const FInputActionValue& InputActionValue);
-
+private:
+	UFUNCTION(BlueprintCallable, Category="Data")
+	void SetShoot(const bool bCanShootLoc);
+protected:
 	void HandbrakeStarted(const FInputActionValue& InputActionValue);
 	void HandbrakeEnded(const FInputActionValue& InputActionValue);
 

@@ -16,7 +16,7 @@
 const FName GunShootSocket = FName("gun_1_jnt");
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): bStopTurn(false), VehicleYaw(0), bCanShoot(true)
+ATankController::ATankController(): ShootTimerDuration(3), bStopTurn(false), VehicleYaw(0), bCanShoot(true)
 {
 	if (TankCameraManagerClass)
 		PlayerCameraManagerClass = TankCameraManagerClass;
@@ -40,14 +40,26 @@ void ATankController::Tick(float DeltaSeconds)
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Tick) StopTurn: %d"),
 			bStopTurn), true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bCanShoot: %d"), bCanShoot),
+		true, true, FLinearColor::Yellow, 0);
+}
+
+void ATankController::SetDefaults()
+{
+	TankPlayer = Cast<ATankCharacter>(GetPawn());
+	checkf(TankPlayer, TEXT("TankPlayer is invalid in ATankController::SetDefaults"));
+	
+	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
+		TankPlayer->bAimingIn = true;
+	else if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
+		TankPlayer->bAimingIn = false;
 }
 
 void ATankController::BeginPlay()
 {
 	Super::BeginPlay();
-	TankPlayer = Cast<ATankCharacter>(GetPawn());
-	checkf(TankPlayer, TEXT("TankPlayer is invalid in ATankController::BeginPlay:49"));
-
+	SetDefaults();
 	BindControls();
 }
 
@@ -58,11 +70,10 @@ void ATankController::SetupInputComponent()
 	// Add Input Mapping Context
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
 			UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
-	{
 		Subsystem->AddMappingContext(DefaultMappingContext, 0);
-	}
 
 	EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
+	ensure(EnhancedInputComponent);
 }
 
 void ATankController::BindControls()
@@ -77,6 +88,7 @@ void ATankController::BindControls()
 
 		// Turning left and right
 		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Triggered, this, &ATankController::Turn);
+		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Completed, this, &ATankController::Turn);
 		
 		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Started, this, &ATankController::TurnStarted);
 		
@@ -111,9 +123,12 @@ void ATankController::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	MoveValues.Y = Value.GetMagnitude();
+	if (TankPlayer->IsInAir() == false)
+		return;
 
 	if (MoveValues.Y >= 0)
 	{
+		
 		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
 		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
 	}
@@ -123,7 +138,6 @@ void ATankController::Move(const FInputActionValue& Value)
 		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(FMath::Abs(MoveValues.Y));
 	}
 }
-
 
 void ATankController::Look(const FInputActionValue& Value)
 {
@@ -138,13 +152,15 @@ void ATankController::Look(const FInputActionValue& Value)
 void ATankController::Turn(const FInputActionValue& Value)
 {
 	MoveValues.X = Value.GetMagnitude();
+	if (TankPlayer->IsInAir() == false)
+		return;
 
 	if (bStopTurn)
 		TankPlayer->GetVehicleMovementComponent()->SetYawInput(0);
 	else
 	{
 		VehicleYaw = MoveValues.X;
-		TankPlayer->GetVehicleMovementComponent()->SetYawInput(VehicleYaw);
+		TankPlayer->GetVehicleMovementComponent()->SetYawInput(VehicleYaw * 2);
 	}
 }
 
@@ -167,13 +183,49 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	if (!bCanShoot)
 		return;
 
+	SetShoot(false);
+
 	for (auto ParticleSystem : TankPlayer->GetShootEmitterSystems())
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, TankPlayer->GetShootSocket()->GetComponentTransform());
 
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) SpawnEmitterAtLocation: %s"), *ParticleSystem.GetFullName()),
-		true, true, FLinearColor::Yellow, 0);
+		true, true, FLinearColor::Yellow, 2);
 	}
+
+	auto Start = TankPlayer->GetMesh()->GetSocketLocation("gun_1_jntSocket");
+	auto End = Start + (TankPlayer->GetMesh()->GetSocketQuaternion("gun_1_jntSocket").GetForwardVector() * 15000.0);
+
+
+	FHitResult OutHit;
+	bool bHit = UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		Start,
+		End,
+		TraceTypeQuery1,
+		false,
+		{},
+		EDrawDebugTrace::ForDuration,
+		OutHit,
+		true,
+		FLinearColor::Black
+	);
+
+	if (bHit && OutHit.IsValidBlockingHit())
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TankPlayer->GetShootHitParticleSystem(), OutHit.Location);
+
+	FTimerDelegate ShootTimerDelegate = FTimerDelegate();
+	ShootTimerDelegate.BindUFunction(this, "SetShoot", true);
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		ShootTimerHandle, ShootTimerDelegate,
+		ShootTimerDuration, false
+	);
+}
+
+void ATankController::SetShoot(const bool bCanShootLoc)
+{
+	bCanShoot = bCanShootLoc;
 }
 
 void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)

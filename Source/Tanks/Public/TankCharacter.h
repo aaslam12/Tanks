@@ -34,10 +34,15 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	void TurretTurningTick(float DeltaTime);
+	void UpdateBarrelElevation(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
+	void IsInAirTick();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
+	TObjectPtr<UParticleSystem> ShootHitParticleSystem;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
 	TSubclassOf<UTankAnimInstance> TankAnimInstanceClass;
@@ -50,9 +55,24 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomOut;
 
+	// will take the absolute value of this 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
+	double MinGunElevation;
+
+	// flat max gun elevation value
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
+	double MaxGunElevation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
+	double CurrentMinGunElevation;
+
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup", meta=(UIMin=0, UIMax=180, MakeStructureDefaultValue=90))
 	double MaxTurretRotationSpeed;
+
+	// Should be greater than MaxZoomIn
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
+	double GunElevationInterpSpeed;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
@@ -62,6 +82,15 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Default")
 	TObjectPtr<ATankController> PlayerController;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	FVector GunLocation;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	double GunElevation;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	bool bIsInAir;
 
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;
@@ -103,23 +132,23 @@ public:
 public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetGunElevation(double GunElevation);
+	void SetGunElevation(double NewGunElevation) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetTurretRotation(double TurretAngle);
+	void SetTurretRotation(double NewTurretAngle) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetSkinType(double SkinType);
+	void SetSkinType(double NewSkinType) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetLightsEmissivity(double LightsEmissivity);
+	void SetLightsEmissivity(double LightsEmissivity) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetSpeed(double Speed);
+	void SetSpeed(double Speed) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
@@ -150,19 +179,22 @@ protected:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void SetWheelSmoke(float Intensity);
 
+	//////////////////////////////////////////////////////////////////
+	/// Getters
 public:
 	double GetMaxZoomIn() const { return MaxZoomIn; }
-
 	double GetMaxZoomOut() const { return MaxZoomOut; }
-
 	USceneComponent* GetShootSocket() const { return ShootSocket; }
-
 	UCameraComponent* GetFrontCameraComp() const { return FrontCameraComp; }
-
 	UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
-
 	USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
 	USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
-
 	TArray<TObjectPtr<UParticleSystem>> GetShootEmitterSystems() const { return ShootEmitterSystems; }
+	TObjectPtr<UParticleSystem> GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
+	bool IsInAir() const { return bIsInAir; }
+
+	//////////////////////////////////////////////////////////////////
+	/// Functions
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category="Tick")
+	void GunSightTick();
 };

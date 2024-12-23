@@ -6,13 +6,17 @@
 #include "EnhancedInputComponent.h"
 #include "TankController.h"
 #include "Camera/CameraComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
 
 
 // Sets default values
-ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MaxTurretRotationSpeed(90)
+ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevation(0), MaxGunElevation(20),
+                                  MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10),
+                                  GunElevation(0),
+                                  bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -61,11 +65,13 @@ void ATankCharacter::BeginPlay()
 	PlayerController->Possess(this);
 
 	// stops the player from looking under the tank and above too much.
-	PlayerController->PlayerCameraManager->ViewPitchMin = -60.0;
+	PlayerController->PlayerCameraManager->ViewPitchMin = -20.0;
 	PlayerController->PlayerCameraManager->ViewPitchMax = 15.0;
 
 	FrontCameraComp->SetActive(false);
 	BackCameraComp->SetActive(true);
+
+	SetLightsEmissivity(0);
 }
 
 void ATankCharacter::TurretTurningTick(float DeltaTime)
@@ -85,13 +91,11 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 		// Calculate the target direction
 		FVector TurretToLookDir = PlayerViewPointRotation.Vector();
 		TurretToLookDir.Z = 0.f;
-		// TurretToLookDir.Normalize();
 		if (!TurretToLookDir.IsNearlyZero())
 			TurretToLookDir.Normalize();
 
 		FVector TurretForwardVector = GetMesh()->GetSocketQuaternion("turret_jntSocket").GetForwardVector();
 		TurretForwardVector.Z = 0.f;
-		// TurretForwardVector.Normalize();
 		if (!TurretForwardVector.IsNearlyZero())
 			TurretForwardVector.Normalize();
 
@@ -112,21 +116,102 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 		if (FMath::IsNearlyEqual(TargetAngle, 1.0, Tolerance))
 			TargetAngle = 1;
 
-		// Calculate the *difference* in angle
-		double DeltaAngle = TargetAngle - AnimInstance->TurretAngle;
+		// Calculate the *difference* in angle, but now wrap it to the shortest path
+		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);
 
 		// Clamp the angle difference based on MaxTurretRotationSpeed
 		double MaxDeltaAngle = MaxTurretRotationSpeed * DeltaTime;
 		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
 
+		// Update the turret angle
 		AnimInstance->TurretAngle += DeltaAngle;
 	}
 
 }
 
+void ATankCharacter::UpdateBarrelElevation(float DeltaTime)
+{
+	const FVector TraceStart = GetMesh()->GetSocketLocation("gun_jntSocket"); // Assume "BarrelSocket" is where the barrel's root is.
+	const FVector TraceEnd = GetMesh()->GetSocketLocation("gun_1_jntSocket"); // Max length of the barrel trace.
+
+	FHitResult HitResult;
+
+	// Perform a trace along the barrel to check if it's colliding with anything
+	FCollisionQueryParams CollisionParams;
+
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, CollisionParams);
+
+	if (bHit) 
+	{
+		// Barrel is blocked by something, prevent further elevation change
+		// Optionally, you can reset the barrel's rotation or prevent it from going lower.
+		// CurrentMinGunElevation = FMath::Clamp()
+	}
+	else
+	{
+		// No collision detected along the barrel, so we can adjust the elevation
+		FVector PlayerViewPointLocation;
+		FRotator PlayerViewPointRotation;
+		Controller->GetPlayerViewPoint(PlayerViewPointLocation, PlayerViewPointRotation);
+
+		// Determine if the player is looking low enough to adjust the barrel's elevation
+		// Player's rotation around the X axis (pitch) determines how low they are looking
+		if (PlayerViewPointRotation.Pitch < MinGunElevation) 
+			// Apply the new gun elevation
+			SetGunElevation(FMath::Clamp(PlayerViewPointRotation.Pitch, MinGunElevation, MaxGunElevation));
+
+		// if (HitResult.PhysMaterial && HitResult.PhysMaterial->GetFName().IsEqual())
+	}
+}
+
+
 void ATankCharacter::GunElevationTick(float DeltaTime)
 {
+	GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
+
+	FHitResult OutHit;
+	auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
+		GetWorld(),
+		BackCameraComp->GetComponentLocation(),
+		GunLocation,
+		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
+		false,
+		{},
+		EDrawDebugTrace::ForOneFrame,
+		OutHit,
+		true
+	);
+
+	auto LookAtRot = UKismetMathLibrary::FindLookAtRotation(
+		GetMesh()->GetSocketLocation("gun_jnt"),
+		bHit ? OutHit.Location : GunLocation
+	);
 	
+	GunElevation = FMath::Clamp(
+		UKismetMathLibrary::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
+		FMath::Abs(MinGunElevation),
+		MaxGunElevation
+	);
+	
+	SetGunElevation(GunElevation);
+}
+
+void ATankCharacter::IsInAirTick()
+{
+	FVector ActorOrigin = GetActorLocation();
+
+	FHitResult Hit;
+	bIsInAir = UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		ActorOrigin + FVector(0, 0, 150),
+		ActorOrigin - FVector(0, 0, 75),
+		TraceTypeQuery1,
+		false, {this},
+		EDrawDebugTrace::ForOneFrame,
+		Hit,
+		true,
+		FLinearColor::Red
+	);
 }
 
 // Called every frame
@@ -138,39 +223,49 @@ void ATankCharacter::Tick(float DeltaTime)
 	LookValues = PlayerController->GetLookValues();
 
 	TurretTurningTick(DeltaTime);
-	
+	GunElevationTick(DeltaTime);
+	GunSightTick();
+	UpdateBarrelElevation(DeltaTime);
+	IsInAirTick();
+
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bAimingIn: %d"), bAimingIn),
 		true, true, FLinearColor::Yellow, 0);
 }
 
-void ATankCharacter::SetGunElevation(double GunElevation)
+void ATankCharacter::SetGunElevation(const double NewGunElevation) const
 {
-	AnimInstance->GunElevation = GunElevation;
+	if (AnimInstance)
+		AnimInstance->GunElevation = NewGunElevation;
 }
 
-void ATankCharacter::SetTurretRotation(double TurretAngle)
+void ATankCharacter::SetTurretRotation(const double NewTurretAngle) const
 {
-	AnimInstance->TurretAngle = TurretAngle;
+	if (AnimInstance)
+		AnimInstance->TurretAngle = NewTurretAngle;
 }
 
-void ATankCharacter::SetSkinType(double SkinType)
+void ATankCharacter::SetSkinType(const double NewSkinType) const
 {
-	BodyMaterial->SetScalarParameterValue("SkinType", SkinType);
+	if (BodyMaterial)
+		BodyMaterial->SetScalarParameterValue("SkinType", NewSkinType);
 }
 
-void ATankCharacter::SetLightsEmissivity(double LightsEmissivity)
+void ATankCharacter::SetLightsEmissivity(double LightsEmissivity) const
 {
-	BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
+	if (BodyMaterial)
+		BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
 }
 
-void ATankCharacter::SetSpeed(double Speed)
+void ATankCharacter::SetSpeed(double Speed) const
 {
-	AnimInstance->WheelSpeed = Speed;
+	if (AnimInstance)
+		AnimInstance->WheelSpeed = Speed;
 
 	// SetWheelSmoke(Speed);
 }
 
 void ATankCharacter::SetHatchesAngles(double HatchAngle)
 {
-	AnimInstance->HatchAngle = HatchAngle;
+	if (AnimInstance)
+		AnimInstance->HatchAngle = HatchAngle;
 }
