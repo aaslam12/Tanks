@@ -37,6 +37,9 @@ protected:
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();
+	void HighlightEnemyTank(AActor* EnemyTank);
+	void FindEnemyTanks(const FVector2D& GunTraceScreenPosition);
+	bool IsEnemyNearTankCrosshair(const FVector& EnemyTankLocation, const FVector2D& CrosshairScreenPosition);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
@@ -51,10 +54,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomIn;
 
+	// This is the maximum spring arm length when zooming out.
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomOut;
 
+	// This is the minimum spring arm length when zooming in.
 	// will take the absolute value of this 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double MinGunElevation;
@@ -204,6 +209,8 @@ public:
 
 	//////////////////////////////////////////////////////////////////
 	/// Functions
+
+	/* Returns the location of where the trace ends */
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category="Tick")
-	void GunSightTick();
+	void GunSightTick(UPARAM(ref) FVector& EndPoint, UPARAM(ref) FVector2D& ScreenPosition);
 };

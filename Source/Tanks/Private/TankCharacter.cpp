@@ -9,6 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
+#include "KismetProceduralMeshLibrary.h"
 
 
 
@@ -16,7 +17,7 @@
 ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevation(-15), MaxGunElevation(20),
                                   CurrentMinGunElevation(-15),
                                   MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10),
-                                  GunElevation(0), bIsInAir(false), LastFreeGunElevation(0),
+                                  GunElevation(0), bIsInAir(false), LastFreeGunElevation(0), DesiredGunElevation(0),
                                   bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -40,7 +41,10 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 	BackCameraComp = GetBackCamera();
 	BackSpringArmComp = GetBackSpringArm();
 
-	
+	// Enable custom depth for the tank mesh
+	GetMesh()->SetRenderCustomDepth(true);
+	// Set the custom depth stencil value to differentiate between different types of objects
+	GetMesh()->SetCustomDepthStencilValue(1);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -243,6 +247,66 @@ void ATankCharacter::IsInAirTick()
 	);
 }
 
+void ATankCharacter::HighlightEnemyTank(AActor* EnemyTank)
+{
+}
+
+void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
+{
+	auto Triangles = TArray<int32>{};
+	auto TraceLocations = TArray<FVector>{};
+	auto UVs = TArray<FVector2D>{};
+	UKismetProceduralMeshLibrary::CreateGridMeshWelded(4, 4, Triangles, TraceLocations, UVs, 16.0);
+
+	for (const auto& Location : TraceLocations)
+	{
+		auto temp = Location + GetActorLocation();
+		temp.Z += 300;
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::FindEnemyTanks) TraceLocations: %s"), *temp.ToString()),
+			true, true, FLinearColor::Yellow, 0);
+
+		TArray<FHitResult> Hits;
+		UKismetSystemLibrary::LineTraceMultiByProfile(
+			GetWorld(),
+			temp,
+			temp + PlayerController->PlayerCameraManager->GetActorForwardVector() * 7000,
+			TEXT("Vehicle"),
+			false,
+			{this},
+			EDrawDebugTrace::ForOneFrame,
+			Hits,
+			true,
+			FLinearColor::Blue
+		);
+
+		for (const FHitResult& Hit : Hits)
+		{
+			if (!Hit.IsValidBlockingHit())
+				continue;
+
+			if (IsEnemyNearTankCrosshair(Hit.Location, GunTraceScreenPosition))
+				HighlightEnemyTank(Hit.GetActor());
+		}
+	}
+}
+
+bool ATankCharacter::IsEnemyNearTankCrosshair(const FVector& EnemyTankLocation, const FVector2D& CrosshairScreenPosition)
+{
+	// checkf(0, TEXT("IMPLEMENT ATankCharacter::IsEnemyNearTankCrosshairTick"));
+
+	FVector2D EnemyScreenPosition;
+	PlayerController->ProjectWorldLocationToScreen(EnemyTankLocation, EnemyScreenPosition);
+
+	auto DistanceOnScreen = FVector2D::Distance(CrosshairScreenPosition, EnemyScreenPosition);
+
+	if (DistanceOnScreen < 100) // if less than 100 pixels away
+		HighlightEnemyTank(nullptr); // get tank reference here
+	else
+		HighlightEnemyTank(nullptr); // nullptr will be used to indicate no tank is to be outlined.
+	
+	return false;
+}
+
 // Called every frame
 void ATankCharacter::Tick(float DeltaTime)
 {
@@ -254,10 +318,18 @@ void ATankCharacter::Tick(float DeltaTime)
 	TurretTurningTick(DeltaTime);
 	GunElevationTick(DeltaTime);
 	CheckIfGunCanLowerElevationTick(DeltaTime);
-	GunSightTick();
+	
+	FVector2D GunTraceScreenPosition;
+	FVector GunTraceEndpoint;
+	GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
+	
 	IsInAirTick();
+	FindEnemyTanks(GunTraceScreenPosition);
 
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bAimingIn: %d"), bAimingIn),
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceEndpoint: %s"), *GunTraceEndpoint.ToString()),
+	// 	true, true, FLinearColor::Yellow, 0);
+	//
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceScreenPosition: %s"), *GunTraceScreenPosition.ToString()),
 	// 	true, true, FLinearColor::Yellow, 0);
 }
 

@@ -123,7 +123,9 @@ void ATankController::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	MoveValues.Y = Value.GetMagnitude();
-	if (TankPlayer->IsInAir() == false)
+	bCanMove = !TankPlayer->IsInAir();
+	
+	if (bCanMove == false)
 		return;
 
 	if (MoveValues.Y >= 0)
@@ -151,7 +153,9 @@ void ATankController::Look(const FInputActionValue& Value)
 void ATankController::Turn(const FInputActionValue& Value)
 {
 	MoveValues.X = Value.GetMagnitude();
-	if (TankPlayer->IsInAir() == false)
+	bCanMove = !TankPlayer->IsInAir();
+	
+	if (bCanMove == false)
 		return;
 
 	if (bStopTurn)
@@ -194,7 +198,6 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 
 	auto Start = TankPlayer->GetMesh()->GetSocketLocation("gun_1_jntSocket");
 	auto End = Start + (TankPlayer->GetMesh()->GetSocketQuaternion("gun_1_jntSocket").GetForwardVector() * 15000.0);
-
 
 	FHitResult OutHit;
 	bool bHit = UKismetSystemLibrary::LineTraceSingle(

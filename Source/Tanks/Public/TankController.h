@@ -35,6 +35,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D MoveValues;
 
+	UPROPERTY(BlueprintReadOnly)
+	bool bCanMove;
+
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Input variables
 	
@@ -155,6 +158,4 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Data")
 	void SetShootingBlocked(bool bShootingBlockedLoc) { this->bShootingBlocked = bShootingBlockedLoc; }
-
-	
 };
