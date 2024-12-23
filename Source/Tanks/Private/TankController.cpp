@@ -125,8 +125,8 @@ void ATankController::Move(const FInputActionValue& Value)
 	MoveValues.Y = Value.GetMagnitude();
 	bCanMove = !TankPlayer->IsInAir();
 	
-	if (bCanMove == false)
-		return;
+	// if (bCanMove == false)
+	// 	return;
 
 	if (MoveValues.Y >= 0)
 	{
@@ -155,8 +155,8 @@ void ATankController::Turn(const FInputActionValue& Value)
 	MoveValues.X = Value.GetMagnitude();
 	bCanMove = !TankPlayer->IsInAir();
 	
-	if (bCanMove == false)
-		return;
+	// if (bCanMove == false)
+	// 	return;
 
 	if (bStopTurn)
 		TankPlayer->GetVehicleMovementComponent()->SetYawInput(0);

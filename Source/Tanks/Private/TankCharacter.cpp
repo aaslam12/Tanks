@@ -253,23 +253,23 @@ void ATankCharacter::HighlightEnemyTank(AActor* EnemyTank)
 
 void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
 {
-	auto Triangles = TArray<int32>{};
 	auto TraceLocations = TArray<FVector>{};
-	auto UVs = TArray<FVector2D>{};
-	UKismetProceduralMeshLibrary::CreateGridMeshWelded(4, 4, Triangles, TraceLocations, UVs, 16.0);
+	const auto Spacing = 40.0;
+	const auto Num = 7.0;
 
-	for (const auto& Location : TraceLocations)
+	for (int i = 0; i < Num; ++i)
 	{
-		auto temp = Location + GetActorLocation();
-		temp.Z += 300;
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::FindEnemyTanks) TraceLocations: %s"), *temp.ToString()),
-			true, true, FLinearColor::Yellow, 0);
+		TraceLocations.Add(FVector(0, 0, (i * Spacing) - Spacing * 5.3) + GetActorLocation());
+		TraceLocations[i].Z += 300.0;
+	}
 
+	for (auto& Location : TraceLocations)
+	{
 		TArray<FHitResult> Hits;
 		UKismetSystemLibrary::LineTraceMultiByProfile(
 			GetWorld(),
-			temp,
-			temp + PlayerController->PlayerCameraManager->GetActorForwardVector() * 7000,
+			Location,
+			Location + PlayerController->PlayerCameraManager->GetActorForwardVector() * 7000,
 			TEXT("Vehicle"),
 			false,
 			{this},
