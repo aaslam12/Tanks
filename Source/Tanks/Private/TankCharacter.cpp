@@ -259,8 +259,9 @@ void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
 
 	for (int i = 0; i < Num; ++i)
 	{
-		TraceLocations.Add(FVector(0, 0, (i * Spacing) - Spacing * 5.3) + GetActorLocation());
-		TraceLocations[i].Z += 300.0;
+		auto Temp = FVector(0, 0, (i * Spacing) - (Spacing * 5.3)) + GetActorLocation();
+		Temp.Z += 300.0;
+		TraceLocations.Add(Temp);
 	}
 
 	for (auto& Location : TraceLocations)
@@ -269,7 +270,7 @@ void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
 		UKismetSystemLibrary::LineTraceMultiByProfile(
 			GetWorld(),
 			Location,
-			Location + PlayerController->PlayerCameraManager->GetActorForwardVector() * 7000,
+			Location + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 7000.0,
 			TEXT("Vehicle"),
 			false,
 			{this},
