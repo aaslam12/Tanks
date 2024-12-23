@@ -128,7 +128,7 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 
 }
 
-void ATankCharacter::UpdateBarrelElevation(float DeltaTime)
+void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 {
 	FVector TopTraceStart = GetMesh()->GetSocketLocation("BarrelTraceStart");
 	FVector TopTraceEnd = GetMesh()->GetSocketLocation("BarrelTraceEnd");
@@ -253,8 +253,8 @@ void ATankCharacter::Tick(float DeltaTime)
 
 	TurretTurningTick(DeltaTime);
 	GunElevationTick(DeltaTime);
+	CheckIfGunCanLowerElevationTick(DeltaTime);
 	GunSightTick();
-	UpdateBarrelElevation(DeltaTime);
 	IsInAirTick();
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bAimingIn: %d"), bAimingIn),

@@ -34,7 +34,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	void TurretTurningTick(float DeltaTime);
-	void UpdateBarrelElevation(float DeltaTime);
+	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();
 
