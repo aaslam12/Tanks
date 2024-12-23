@@ -171,11 +171,14 @@ void ATankCharacter::UpdateBarrelElevation(float DeltaTime)
 
 		auto bTopDetectTank = TopHit.PhysMaterial->SurfaceType == SurfaceType2 && TopHit.GetActor() == this;
 		auto bBottomDetectTank = BottomHit.PhysMaterial->SurfaceType == SurfaceType2 && BottomHit.GetActor() == this;
-
+		
 		if (bTopDetectTank || bBottomDetectTank) // if tank body physical material is detected and is the same actor
 		{
-			if (bTopDetectTank == false && bBottomDetectTank == true)
+			if (bTopDetectTank == true)
+			{
 				CurrentMinGunElevation += 17 * DeltaTime;
+				MinGunElevation = CurrentMinGunElevation;
+			}
 
 			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateBarrelElevation) Barrel is blocked by something")),
 			                                  true, true, FLinearColor::Red, 2);
@@ -184,7 +187,8 @@ void ATankCharacter::UpdateBarrelElevation(float DeltaTime)
 	else
 	{
 		// Update the last free gun elevation
-		CurrentMinGunElevation -= GunElevation;
+		CurrentMinGunElevation = GunElevation;
+		MinGunElevation = FMath::Min(GunElevation, DesiredGunElevation);
 	}
 }
 
@@ -209,15 +213,15 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 		GetMesh()->GetSocketLocation("gun_jnt"),
 		bHit ? OutHit.Location : GunLocation
 	);
+
+	DesiredGunElevation = LookAtRot.Pitch;
 	
 	GunElevation = FMath::Clamp(
 		UKismetMathLibrary::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
-		CurrentMinGunElevation,
+		MinGunElevation,
 		MaxGunElevation
 	);
 
-	// GunElevation = FMath::Abs(CurrentMinGunElevation);
-	
 	SetGunElevation(GunElevation);
 }
 
@@ -257,6 +261,12 @@ void ATankCharacter::Tick(float DeltaTime)
 		true, true, FLinearColor::Yellow, 0);
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunElevation: %.5f"), GunElevation),
+		true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) DesiredGunElevation: %.5f"), DesiredGunElevation),
+		true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) MinGunElevation: %.5f"), MinGunElevation),
 		true, true, FLinearColor::Yellow, 0);
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) CurrentMinGunElevation: %.5f"), CurrentMinGunElevation),

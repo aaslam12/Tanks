@@ -98,6 +98,9 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
 	double LastFreeGunElevation;
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
+	double DesiredGunElevation;
+
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;
 
