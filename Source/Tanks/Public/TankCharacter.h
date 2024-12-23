@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TankInterface.h"
 #include "WheeledVehiclePawn.h"
 #include "TankCharacter.generated.h"
 
@@ -15,7 +16,7 @@ class UInputAction;
 struct FInputActionValue;
 
 UCLASS(Blueprintable)
-class TANKS_API ATankCharacter : public AWheeledVehiclePawn
+class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterface
 {
 	GENERATED_BODY()
 
@@ -37,7 +38,7 @@ protected:
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();
-	void HighlightEnemyTank(AActor* EnemyTank);
+	virtual void HighlightTank_Implementation(const bool bActivate) override;
 	void FindEnemyTanks(const FVector2D& GunTraceScreenPosition);
 	bool IsEnemyNearTankCrosshair(const FVector& EnemyTankLocation, const FVector2D& CrosshairScreenPosition);
 
@@ -105,6 +106,21 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
 	double DesiredGunElevation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
+	double LineTraceOffset;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
+	FVector VerticalLineTraceOffset; // 300
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
+	double VerticalLineTraceSpacingOffset; // 5.3
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
+	FVector HorizontalLineTraceOffset; // 165
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
+	double HorizontalLineTraceSpacingMultiplier; // 3
 
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;

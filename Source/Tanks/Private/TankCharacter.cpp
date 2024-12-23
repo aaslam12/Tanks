@@ -9,7 +9,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
-#include "KismetProceduralMeshLibrary.h"
 
 
 
@@ -18,6 +17,10 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevat
                                   CurrentMinGunElevation(-15),
                                   MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10),
                                   GunElevation(0), bIsInAir(false), LastFreeGunElevation(0), DesiredGunElevation(0),
+                                  VerticalLineTraceOffset(FVector(0, 0, 300.0)),
+                                  VerticalLineTraceSpacingOffset(5.3),
+                                  HorizontalLineTraceOffset(FVector(0, 0, 175.0)),
+                                  HorizontalLineTraceSpacingMultiplier(3),
                                   bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -105,10 +108,11 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 		// Calculate the target angle
 		double DotProduct = FVector::DotProduct(TurretForwardVector, TurretToLookDir);
 
-		double Tolerance = 0.05;
-		if (FMath::IsNearlyEqual(DotProduct, 1.0f, 0.01f))
+		// DO NOT CHANGE TOLERANCE
+		constexpr double Tolerance = 0.01; // setting it to 0.01 fixed it now somehow when it wasnt working before. DO NOT CHANGE
+		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
 			DotProduct = 1.f; // Prevent any small rounding errors
-		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, 0.01f))
+		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
 			DotProduct = -1.f; // Handle opposite direction
 
 		double Det = FVector::CrossProduct(TurretForwardVector, TurretToLookDir).Z;
@@ -123,7 +127,7 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);
 
 		// Clamp the angle difference based on MaxTurretRotationSpeed
-		double MaxDeltaAngle = MaxTurretRotationSpeed * DeltaTime;
+		const double MaxDeltaAngle = MaxTurretRotationSpeed * DeltaTime;
 		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
 
 		// Update the turret angle
@@ -247,30 +251,85 @@ void ATankCharacter::IsInAirTick()
 	);
 }
 
-void ATankCharacter::HighlightEnemyTank(AActor* EnemyTank)
+void ATankCharacter::HighlightTank_Implementation(const bool bActivate)
 {
+	if (bActivate)
+	{
+		
+	}
+	else
+	{
+		
+	}
 }
 
 void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
 {
-	auto TraceLocations = TArray<FVector>{};
-	const auto Spacing = 40.0;
-	const auto Num = 7.0;
+	auto HorizontalTraceLocations = TArray<FVector>{};
+	auto VerticalTraceLocations = TArray<FVector>{};
+	constexpr auto Spacing = 60.0;
+	constexpr auto Num = 7.0;
 
+	// loop that creates the vertical line of line traces
 	for (int i = 0; i < Num; ++i)
 	{
-		auto Temp = FVector(0, 0, (i * Spacing) - (Spacing * 5.3)) + GetActorLocation();
-		Temp.Z += 300.0;
-		TraceLocations.Add(Temp);
+		auto Temp = FVector(0, 0, (i * Spacing) - (Spacing * VerticalLineTraceSpacingOffset)) + GetActorLocation();
+		Temp += VerticalLineTraceOffset;
+		VerticalTraceLocations.Add(Temp);
 	}
 
-	for (auto& Location : TraceLocations)
+	// loop that creates the horizontal line of line traces.
+	for (int i = 0; i < Num; ++i)
 	{
+		auto Temp = FVector((i * Spacing) - (Spacing * HorizontalLineTraceSpacingMultiplier), 0, 0) + GetActorLocation();
+		Temp += HorizontalLineTraceOffset;
+		HorizontalTraceLocations.Add(Temp);
+	}
+
+	for (auto& Offset : HorizontalTraceLocations)
+	{
+		FTransform Temp = FTransform();
+		FVector Start = Temp.TransformPosition(GetMesh()->GetSocketTransform("GunShootSocket", RTS_Actor).GetLocation() + Offset);
+		Start.Z += LineTraceOffset;
+		FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 7000.0;
+		
 		TArray<FHitResult> Hits;
 		UKismetSystemLibrary::LineTraceMultiByProfile(
 			GetWorld(),
-			Location,
-			Location + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 7000.0,
+			Start,
+			End,
+			TEXT("Vehicle"),
+			false,
+			{this},
+			EDrawDebugTrace::ForOneFrame,
+			Hits,
+			true,
+			FLinearColor::Blue
+		);
+
+		// GetMesh()->GetSocketTransform("GunShootSocket", RTS_Actor).GetLocation()
+
+		for (const FHitResult& Hit : Hits)
+		{
+			if (!Hit.IsValidBlockingHit())
+				continue;
+
+			// if (IsEnemyNearTankCrosshair(Hit.Location, GunTraceScreenPosition))
+			// 	Execute_HighlightTank(Hit.GetActor(), true); // TODO
+		}
+	}
+
+	for (auto& Offset : VerticalTraceLocations)
+	{
+		FVector Start = Offset + GetMesh()->GetSocketLocation("GunShootSocket");
+		Start.Z += LineTraceOffset;
+		FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 7000.0;
+		
+		TArray<FHitResult> Hits;
+		UKismetSystemLibrary::LineTraceMultiByProfile(
+			GetWorld(),
+			Start,
+			End,
 			TEXT("Vehicle"),
 			false,
 			{this},
@@ -285,8 +344,8 @@ void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
 			if (!Hit.IsValidBlockingHit())
 				continue;
 
-			if (IsEnemyNearTankCrosshair(Hit.Location, GunTraceScreenPosition))
-				HighlightEnemyTank(Hit.GetActor());
+			// if (IsEnemyNearTankCrosshair(Hit.Location, GunTraceScreenPosition))
+			// 	Execute_HighlightTank(Hit.GetActor(), true); // TODO
 		}
 	}
 }
@@ -300,10 +359,10 @@ bool ATankCharacter::IsEnemyNearTankCrosshair(const FVector& EnemyTankLocation, 
 
 	auto DistanceOnScreen = FVector2D::Distance(CrosshairScreenPosition, EnemyScreenPosition);
 
-	if (DistanceOnScreen < 100) // if less than 100 pixels away
-		HighlightEnemyTank(nullptr); // get tank reference here
-	else
-		HighlightEnemyTank(nullptr); // nullptr will be used to indicate no tank is to be outlined.
+	// if (DistanceOnScreen < 100) // if less than 100 pixels away
+	// 	Execute_HighlightTank(nullptr, true); // get tank reference here. TODO
+	// else
+	// 	Execute_HighlightTank(nullptr, false);// TODO
 	
 	return false;
 }
