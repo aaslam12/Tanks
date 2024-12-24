@@ -23,6 +23,8 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevat
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	bReplicates = true;
 }
 
 ATankCharacter::~ATankCharacter()
@@ -42,10 +44,19 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 	BackCameraComp = GetBackCamera();
 	BackSpringArmComp = GetBackSpringArm();
 
-	// Enable custom depth for the tank mesh
-	GetMesh()->SetRenderCustomDepth(true);
-	// Set the custom depth stencil value to differentiate between different types of objects
-	GetMesh()->SetCustomDepthStencilValue(0);
+	if (GetMesh())
+	{
+		// Enable custom depth for the tank mesh
+		GetMesh()->SetRenderCustomDepth(true);
+		// Set the custom depth stencil value to differentiate between different types of objects
+		GetMesh()->SetCustomDepthStencilValue(0);
+	}
+
+	for (auto Element : GetComponents())
+	{
+		// if (Element->StaticClass() == UStaticMeshComponent::StaticClass() || Element->StaticClass() == USkeletalMeshComponent::StaticClass())
+		Element->SetIsReplicated(true);
+	}
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -53,32 +64,47 @@ void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	// cache the EnhancedInputComponent to bind controls later in BeginPlay after the controller is available.
-	if (Cast<UEnhancedInputComponent>(PlayerInputComponent))
-		EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	if (PlayerInputComponent)
+		if (Cast<UEnhancedInputComponent>(PlayerInputComponent))
+			EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+}
+
+void ATankCharacter::SetDefaults()
+{
+	SetActorScale3D(FVector(0.95));
+	AnimInstance = Cast<UTankAnimInstance>(GetMesh()->GetAnimInstance());
+
+	PlayerController = Cast<ATankController>(GetController());
+	// PlayerController->Possess(this);
+
+	// stops the player from looking under the tank and above too much.
+	if (PlayerController)
+	{
+		PlayerController->PlayerCameraManager->ViewPitchMin = -20.0;
+		PlayerController->PlayerCameraManager->ViewPitchMax = 15.0;
+	}
+
+	if (FrontCameraComp)
+		FrontCameraComp->SetActive(false);
+
+	if (BackCameraComp)
+		BackCameraComp->SetActive(true);
+
+	SetLightsEmissivity(0);
 }
 
 void ATankCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetActorScale3D(FVector(0.95));
-	AnimInstance = CastChecked<UTankAnimInstance>(GetMesh()->GetAnimInstance());
-
-	PlayerController = Cast<ATankController>(GetController());
-	PlayerController->Possess(this);
-
-	// stops the player from looking under the tank and above too much.
-	PlayerController->PlayerCameraManager->ViewPitchMin = -20.0;
-	PlayerController->PlayerCameraManager->ViewPitchMax = 15.0;
-
-	FrontCameraComp->SetActive(false);
-	BackCameraComp->SetActive(true);
-
-	SetLightsEmissivity(0);
+	SetDefaults();
 }
 
-void ATankCharacter::TurretTurningTick(float DeltaTime)
+void ATankCharacter::TurretTurningTick(float DeltaTime) const
 {
+	if (!Controller || !GetMesh() || !AnimInstance)
+		return;
+	
 	if (bAimingIn)
 	{
 		// first person turret rotation
@@ -135,6 +161,9 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 
 void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 {
+	if (!PlayerController)
+		return;
+	
 	FVector TopTraceStart = GetMesh()->GetSocketLocation("BarrelTraceStart");
 	FVector TopTraceEnd = GetMesh()->GetSocketLocation("BarrelTraceEnd");
 	FHitResult TopHit;
@@ -199,7 +228,10 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 
 void ATankCharacter::GunElevationTick(float DeltaTime)
 {
-	GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
+	if (!BackCameraComp)
+		return;
+	
+	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
 
 	FHitResult OutHit;
 	auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
@@ -250,6 +282,9 @@ void ATankCharacter::IsInAirTick()
 
 void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
 {
+	if (!GetMesh())
+		return;
+	
 	if (bActivate)
 		GetMesh()->SetCustomDepthStencilValue(1);
 	else
@@ -332,8 +367,14 @@ void ATankCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	MoveValues = PlayerController->GetMoveValues();
-	LookValues = PlayerController->GetLookValues();
+	if (!GetWorld())
+		return;
+
+	if (PlayerController)
+	{
+		MoveValues = PlayerController->GetMoveValues();
+		LookValues = PlayerController->GetLookValues();
+	}
 
 	TurretTurningTick(DeltaTime);
 	GunElevationTick(DeltaTime);

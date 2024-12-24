@@ -20,10 +20,12 @@ class TANKS_API ATankController : public APlayerController
 	GENERATED_BODY()
 
 	ATankController();
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void Tick(float DeltaSeconds) override;
 	void SetDefaults();
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void OnPossess(APawn* InPawn) override;
 
 protected:
 	UFUNCTION(BlueprintCallable)

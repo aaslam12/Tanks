@@ -30,8 +30,6 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 {
 	GENERATED_BODY()
 
-
-
 public:
 	// Sets default values for this actor's properties
 	ATankCharacter();
@@ -41,10 +39,11 @@ public:
 
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-	
+	void SetDefaults();
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	void TurretTurningTick(float DeltaTime);
+	void TurretTurningTick(float DeltaTime) const;
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();
@@ -99,22 +98,19 @@ protected:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Default")
 	TObjectPtr<ATankController> PlayerController;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
-	FVector GunLocation;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Default")
 	double GunElevation;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Default")
 	bool bIsInAir;
 	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	FVector LastFreeLocation;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double LastFreeGunElevation;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double DesiredGunElevation;
 
 private:

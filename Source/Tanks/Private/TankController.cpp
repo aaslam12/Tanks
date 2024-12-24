@@ -21,6 +21,18 @@ ATankController::ATankController(): bCanMove(true), ShootTimerDuration(3), bStop
 {
 	if (TankCameraManagerClass)
 		PlayerCameraManagerClass = TankCameraManagerClass;
+
+	bReplicates = true;
+}
+
+void ATankController::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	for (auto Element : GetComponents())
+	{
+		Element->SetIsReplicated(true);
+	}
 }
 
 void ATankController::Tick(float DeltaSeconds)
@@ -37,13 +49,23 @@ void ATankController::Tick(float DeltaSeconds)
 void ATankController::SetDefaults()
 {
 	TankPlayer = Cast<ATankCharacter>(GetPawn());
-	checkf(TankPlayer, TEXT("TankPlayer is invalid in ATankController::SetDefaults"));
+	// checkf(TankPlayer, TEXT("TankPlayer is invalid in ATankController::SetDefaults"));
 	
-	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
-		TankPlayer->bAimingIn = true;
-	else if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
-		TankPlayer->bAimingIn = false;
+	if (TankPlayer)
+		if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
+			TankPlayer->bAimingIn = true;
+		else if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
+			TankPlayer->bAimingIn = false;
 }
+
+void ATankController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	SetDefaults();
+	BindControls();
+}
+
 
 void ATankController::BeginPlay()
 {
@@ -110,6 +132,9 @@ void ATankController::BindControls()
 
 void ATankController::Move(const FInputActionValue& Value)
 {
+	if (!TankPlayer)
+		return;
+	
 	// input is a Vector2D
 	MoveValues.Y = Value.GetMagnitude();
 	bCanMove = !TankPlayer->IsInAir();
@@ -131,6 +156,9 @@ void ATankController::Move(const FInputActionValue& Value)
 
 void ATankController::Look(const FInputActionValue& Value)
 {
+	if (!TankPlayer)
+		return;
+	
 	// input is a Vector2D
 	LookValues = Value.Get<FVector2D>();
 
@@ -141,6 +169,9 @@ void ATankController::Look(const FInputActionValue& Value)
 
 void ATankController::Turn(const FInputActionValue& Value)
 {
+	if (!TankPlayer)
+    		return;
+    		
 	MoveValues.X = Value.GetMagnitude();
 	bCanMove = !TankPlayer->IsInAir();
 	
@@ -158,17 +189,24 @@ void ATankController::Turn(const FInputActionValue& Value)
 
 void ATankController::TurnStarted(const FInputActionValue& InputActionValue)
 {
+	if (!TankPlayer)
+		return;
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0.1);
 }
 
 void ATankController::TurnCompleted(const FInputActionValue& InputActionValue)
 {
+	if (!TankPlayer)
+		return;
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
 	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
 }
 
 void ATankController::Shoot(const FInputActionValue& InputActionValue)
 {
+	if (!TankPlayer)
+		return;
+	
 	if (!TankPlayer->GetShootSocket())
 		return;
 
@@ -217,6 +255,9 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 
 void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)
 {
+	if (!TankPlayer)
+		return;
+	
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(true);
 	
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::HandbrakeStarted)")),
@@ -225,6 +266,9 @@ void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue
 
 void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
 {
+	if (!TankPlayer)
+    		return;
+    		
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(false);
 	
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::HandbrakeEnded)")),
@@ -233,6 +277,9 @@ void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
 
 void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 {
+	if (!TankPlayer)
+		return;
+	
 	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Max(TankPlayer->GetBackSpringArmComp()->TargetArmLength - 200.0, TankPlayer->GetMaxZoomIn());
 
 	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
@@ -256,6 +303,9 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 
 void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 {
+	if (!TankPlayer)
+		return;
+	
 	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Min(TankPlayer->GetBackSpringArmComp()->TargetArmLength + 200.0, TankPlayer->GetMaxZoomOut());
 
 	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
