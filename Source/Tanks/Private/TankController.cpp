@@ -13,10 +13,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-const FName GunShootSocket = FName("gun_1_jnt");
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): ShootTimerDuration(3), bStopTurn(false), VehicleYaw(0), bCanShoot(true)
+ATankController::ATankController(): bCanMove(true), ShootTimerDuration(3), bStopTurn(false), VehicleYaw(0),
+                                    bCanShoot(true),
+                                    bShootingBlocked(false)
 {
 	if (TankCameraManagerClass)
 		PlayerCameraManagerClass = TankCameraManagerClass;
@@ -31,18 +32,6 @@ void ATankController::Tick(float DeltaSeconds)
 		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
 		TankPlayer->SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
 	}
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Tick) MovementValues: %s"),
-			*MoveValues.ToString()), true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Tick) LookValues: %s"),
-			*LookValues.ToString()), true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Tick) StopTurn: %d"),
-			bStopTurn), true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) bCanShoot: %d"), bCanShoot),
-		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankController::SetDefaults()

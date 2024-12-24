@@ -11,16 +11,14 @@
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
 
-
 // Sets default values
 ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevation(-15), MaxGunElevation(20),
                                   CurrentMinGunElevation(-15),
                                   MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10),
                                   GunElevation(0), bIsInAir(false), LastFreeGunElevation(0), DesiredGunElevation(0),
-                                  VerticalLineTraceOffset(FVector(0, 0, 300.0)),
-                                  VerticalLineTraceSpacingOffset(5.3),
-                                  HorizontalLineTraceOffset(FVector(0, 0, 175.0)),
-                                  HorizontalLineTraceSpacingMultiplier(3),
+                                  LineTraceOffset(0), LineTraceForwardVectorMultiplier(8000),
+                                  VerticalLineTraceHalfSize(FVector(10, 10, 300)),
+                                  HorizontalLineTraceHalfSize(FVector(10, 300, 10)),
                                   bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -47,7 +45,7 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 	// Enable custom depth for the tank mesh
 	GetMesh()->SetRenderCustomDepth(true);
 	// Set the custom depth stencil value to differentiate between different types of objects
-	GetMesh()->SetCustomDepthStencilValue(1);
+	GetMesh()->SetCustomDepthStencilValue(0);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -59,7 +57,6 @@ void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 }
 
-// Called when the game starts or when spawned
 void ATankCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -251,120 +248,87 @@ void ATankCharacter::IsInAirTick()
 	);
 }
 
-void ATankCharacter::HighlightTank_Implementation(const bool bActivate)
+void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
 {
 	if (bActivate)
 	{
-		
+		GetMesh()->SetCustomDepthStencilValue(1);
 	}
 	else
 	{
-		
+		GetMesh()->SetCustomDepthStencilValue(0);
 	}
 }
 
 void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
 {
-	auto HorizontalTraceLocations = TArray<FVector>{};
-	auto VerticalTraceLocations = TArray<FVector>{};
-	constexpr auto Spacing = 60.0;
-	constexpr auto Num = 7.0;
-
-	// loop that creates the vertical line of line traces
-	for (int i = 0; i < Num; ++i)
-	{
-		auto Temp = FVector(0, 0, (i * Spacing) - (Spacing * VerticalLineTraceSpacingOffset)) + GetActorLocation();
-		Temp += VerticalLineTraceOffset;
-		VerticalTraceLocations.Add(Temp);
-	}
-
-	// loop that creates the horizontal line of line traces.
-	for (int i = 0; i < Num; ++i)
-	{
-		auto Temp = FVector((i * Spacing) - (Spacing * HorizontalLineTraceSpacingMultiplier), 0, 0) + GetActorLocation();
-		Temp += HorizontalLineTraceOffset;
-		HorizontalTraceLocations.Add(Temp);
-	}
-
-	for (auto& Offset : HorizontalTraceLocations)
-	{
-		FTransform Temp = FTransform();
-		FVector Start = Temp.TransformPosition(GetMesh()->GetSocketTransform("GunShootSocket", RTS_Actor).GetLocation() + Offset);
-		Start.Z += LineTraceOffset;
-		FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 7000.0;
-		
-		TArray<FHitResult> Hits;
-		UKismetSystemLibrary::LineTraceMultiByProfile(
-			GetWorld(),
-			Start,
-			End,
-			TEXT("Vehicle"),
-			false,
-			{this},
-			EDrawDebugTrace::ForOneFrame,
-			Hits,
-			true,
-			FLinearColor::Blue
-		);
-
-		// GetMesh()->GetSocketTransform("GunShootSocket", RTS_Actor).GetLocation()
-
-		for (const FHitResult& Hit : Hits)
-		{
-			if (!Hit.IsValidBlockingHit())
-				continue;
-
-			// if (IsEnemyNearTankCrosshair(Hit.Location, GunTraceScreenPosition))
-			// 	Execute_HighlightTank(Hit.GetActor(), true); // TODO
-		}
-	}
-
-	for (auto& Offset : VerticalTraceLocations)
-	{
-		FVector Start = Offset + GetMesh()->GetSocketLocation("GunShootSocket");
-		Start.Z += LineTraceOffset;
-		FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 7000.0;
-		
-		TArray<FHitResult> Hits;
-		UKismetSystemLibrary::LineTraceMultiByProfile(
-			GetWorld(),
-			Start,
-			End,
-			TEXT("Vehicle"),
-			false,
-			{this},
-			EDrawDebugTrace::ForOneFrame,
-			Hits,
-			true,
-			FLinearColor::Blue
-		);
-
-		for (const FHitResult& Hit : Hits)
-		{
-			if (!Hit.IsValidBlockingHit())
-				continue;
-
-			// if (IsEnemyNearTankCrosshair(Hit.Location, GunTraceScreenPosition))
-			// 	Execute_HighlightTank(Hit.GetActor(), true); // TODO
-		}
-	}
-}
-
-bool ATankCharacter::IsEnemyNearTankCrosshair(const FVector& EnemyTankLocation, const FVector2D& CrosshairScreenPosition)
-{
-	// checkf(0, TEXT("IMPLEMENT ATankCharacter::IsEnemyNearTankCrosshairTick"));
-
-	FVector2D EnemyScreenPosition;
-	PlayerController->ProjectWorldLocationToScreen(EnemyTankLocation, EnemyScreenPosition);
-
-	auto DistanceOnScreen = FVector2D::Distance(CrosshairScreenPosition, EnemyScreenPosition);
-
-	// if (DistanceOnScreen < 100) // if less than 100 pixels away
-	// 	Execute_HighlightTank(nullptr, true); // get tank reference here. TODO
-	// else
-	// 	Execute_HighlightTank(nullptr, false);// TODO
+	CurrentHitResults.Empty();
 	
-	return false;
+	FVector Start = GetMesh()->GetSocketTransform("GunShootSocket").GetLocation();
+	Start.Z += LineTraceOffset;
+	FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * LineTraceForwardVectorMultiplier;
+
+	// horizontal box trace
+	UKismetSystemLibrary::BoxTraceMultiForObjects(
+		GetWorld(),
+		Start,
+		End,
+		HorizontalLineTraceHalfSize,
+		GetMesh()->GetSocketRotation("GunShootSocket"),
+		{ObjectTypeQuery5},
+		false,
+		{this},
+		EDrawDebugTrace::ForOneFrame,
+		HorizontalHits,
+		true,
+		FLinearColor::Yellow
+	);
+
+	// vertical box trace
+	UKismetSystemLibrary::BoxTraceMultiForObjects(
+		GetWorld(),
+		Start,
+		End,
+		VerticalLineTraceHalfSize,
+		GetMesh()->GetSocketRotation("GunShootSocket"),
+		{ObjectTypeQuery5},
+		false,
+		{this},
+		EDrawDebugTrace::ForOneFrame,
+		VerticalHits,
+		true,
+		FLinearColor::Yellow
+	);
+
+	// removes duplicates
+	for (auto Hit : VerticalHits)
+		CurrentHitResults.Add(Hit);
+	for (auto Hit : HorizontalHits)
+		CurrentHitResults.Add(Hit);
+
+	// removes hit results with actors that are no longer detected by the trace.
+	for (auto It = SortedHitResults.CreateIterator(); It; ++It)
+	{
+		if (!CurrentHitResults.Contains(*It))
+		{
+			// Actor no longer detected, remove it and remove outline
+			Execute_OutlineTank(It->GetActor(), false);
+			It.RemoveCurrent();
+		}
+	}
+
+	// adding any actors that are not already in the SortedHitResults
+	for (const FHitResult& Element : CurrentHitResults)
+		SortedHitResults.Add(Element);
+
+	// loop through SortedHitResults to highlight any and all actors that implement the interface
+	for (const FHitResult& Hit : SortedHitResults)
+	{
+		if (!Hit.IsValidBlockingHit())
+			continue;
+
+		Execute_OutlineTank(Hit.GetActor(), true);
+	}
 }
 
 // Called every frame
@@ -387,9 +351,6 @@ void ATankCharacter::Tick(float DeltaTime)
 	FindEnemyTanks(GunTraceScreenPosition);
 
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceEndpoint: %s"), *GunTraceEndpoint.ToString()),
-	// 	true, true, FLinearColor::Yellow, 0);
-	//
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceScreenPosition: %s"), *GunTraceScreenPosition.ToString()),
 	// 	true, true, FLinearColor::Yellow, 0);
 }
 

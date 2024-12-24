@@ -15,6 +15,16 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
+FORCEINLINE uint32 GetTypeHash(const FHitResult& Hit)
+{
+	return FCrc::StrCrc32(*Hit.GetActor()->GetName());
+}
+
+FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
+{
+	return A.GetActor() == B.GetActor();
+}
+
 UCLASS(Blueprintable)
 class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterface
 {
@@ -38,9 +48,9 @@ protected:
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();
-	virtual void HighlightTank_Implementation(const bool bActivate) override;
+	virtual void OutlineTank_Implementation(const bool bActivate) override;
+	// Creates two box traces that combine to create a "+" sign attached to the gun turret.
 	void FindEnemyTanks(const FVector2D& GunTraceScreenPosition);
-	bool IsEnemyNearTankCrosshair(const FVector& EnemyTankLocation, const FVector2D& CrosshairScreenPosition);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
@@ -107,21 +117,36 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Default")
 	double DesiredGunElevation;
 
+private:
+	// should only be used in the ATankCharacter::FindEnemyTanks function.
+	UPROPERTY(meta=(AllowPrivateAccess="true"))
+	TSet<FHitResult> SortedHitResults;
+	
+	// should only be used in the ATankCharacter::FindEnemyTanks function.
+	UPROPERTY(meta=(AllowPrivateAccess="true"))
+	TSet<FHitResult> CurrentHitResults;
+
+	// should only be used in the ATankCharacter::FindEnemyTanks function.
+	UPROPERTY(meta=(AllowPrivateAccess="true"))
+	TArray<FHitResult> VerticalHits;
+
+	// should only be used in the ATankCharacter::FindEnemyTanks function.
+	UPROPERTY(meta=(AllowPrivateAccess="true"))
+	TArray<FHitResult> HorizontalHits;
+
+protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
 	double LineTraceOffset;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	FVector VerticalLineTraceOffset; // 300
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	double VerticalLineTraceSpacingOffset; // 5.3
+	double LineTraceForwardVectorMultiplier;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	FVector HorizontalLineTraceOffset; // 165
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	double HorizontalLineTraceSpacingMultiplier; // 3
+	FVector VerticalLineTraceHalfSize; // FVector(10,10,300)
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
+	FVector HorizontalLineTraceHalfSize; // FVector(10,300,10)
+	
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;
 

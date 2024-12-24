@@ -14,7 +14,7 @@ class UTankInterface : public UInterface
 };
 
 /**
- * 
+ *  Main tank interface
  */
 class TANKS_API ITankInterface
 {
@@ -23,5 +23,5 @@ class TANKS_API ITankInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void HighlightTank(const bool bActivate);
+	void OutlineTank(const bool bActivate);
 };
