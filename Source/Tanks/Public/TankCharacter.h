@@ -116,11 +116,11 @@ protected:
 private:
 	// should only be used in the ATankCharacter::FindEnemyTanks function.
 	UPROPERTY(meta=(AllowPrivateAccess="true"))
-	TSet<FHitResult> SortedHitResults;
+	TArray<FHitResult> SortedHitResults;
 	
 	// should only be used in the ATankCharacter::FindEnemyTanks function.
 	UPROPERTY(meta=(AllowPrivateAccess="true"))
-	TSet<FHitResult> CurrentHitResults;
+	TArray<FHitResult> CurrentHitResults;
 
 	// should only be used in the ATankCharacter::FindEnemyTanks function.
 	UPROPERTY(meta=(AllowPrivateAccess="true"))

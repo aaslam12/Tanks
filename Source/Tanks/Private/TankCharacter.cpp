@@ -309,7 +309,7 @@ void ATankCharacter::HighlightEnemyTanksIfDetected()
 		{ObjectTypeQuery5},
 		false,
 		{this},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		HorizontalHits,
 		true,
 		FLinearColor::Yellow
@@ -325,42 +325,46 @@ void ATankCharacter::HighlightEnemyTanksIfDetected()
 		{ObjectTypeQuery5},
 		false,
 		{this},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		VerticalHits,
 		true,
 		FLinearColor::Yellow
 	);
 
-	// removes duplicates
-	for (auto Hit : VerticalHits)
-		CurrentHitResults.Add(Hit);
-	for (auto Hit : HorizontalHits)
-		CurrentHitResults.Add(Hit);
+    // remove duplicates
+    for (auto& Hit : VerticalHits)
+        if (!CurrentHitResults.Contains(Hit))
+            CurrentHitResults.Add(Hit);
+    for (auto& Hit : HorizontalHits)
+        if (!CurrentHitResults.Contains(Hit))
+            CurrentHitResults.Add(Hit);
 
-	// removes hit results with actors that are no longer detected by the trace.
-	for (auto It = SortedHitResults.CreateIterator(); It; ++It)
-	{
-		if (!CurrentHitResults.Contains(*It))
-		{
-			// Actor no longer detected, remove it and remove outline
-			Execute_OutlineTank(It->GetActor(), false);
-			It.RemoveCurrent();
-		}
-	}
+    // Removes hit results with actors that are no longer detected by the trace.
+    for (auto It = SortedHitResults.CreateIterator(); It; ++It)
+    {
+        if (!CurrentHitResults.Contains(*It))
+        {
+            // Actor no longer detected, remove it and remove outline
+            Execute_OutlineTank(It->GetActor(), false);
+            It.RemoveCurrent();
+        }
+    }
 
-	// adding any actors that are not already in the SortedHitResults
-	for (const FHitResult& Element : CurrentHitResults)
-		SortedHitResults.Add(Element);
+    // add any hit results that were previously not present
+    for (const FHitResult& Element : CurrentHitResults)
+        if (!SortedHitResults.Contains(Element))
+            SortedHitResults.Add(Element);
 
-	// loop through SortedHitResults to highlight any and all actors that implement the interface
-	for (const FHitResult& Hit : SortedHitResults)
-	{
-		if (!Hit.IsValidBlockingHit())
-			continue;
+    // highlight any and all actors that implement the interface
+    for (const FHitResult& Hit : SortedHitResults)
+    {
+        if (!Hit.IsValidBlockingHit())
+            continue;
 
-		Execute_OutlineTank(Hit.GetActor(), true);
-	}
+        Execute_OutlineTank(Hit.GetActor(), true); // need to change this when trying to get replication working.
+    }
 }
+
 
 // Called every frame
 void ATankCharacter::Tick(float DeltaTime)
