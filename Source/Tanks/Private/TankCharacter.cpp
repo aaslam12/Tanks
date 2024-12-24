@@ -90,7 +90,7 @@ void ATankCharacter::SetDefaults()
 	if (BackCameraComp)
 		BackCameraComp->SetActive(true);
 
-	SetLightsEmissivity(0);
+	MC_SetLightsEmissivity(0);
 }
 
 void ATankCharacter::BeginPlay()
@@ -259,7 +259,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 		MaxGunElevation
 	);
 
-	SetGunElevation(GunElevation);
+	MC_SetGunElevation(GunElevation);
 }
 
 void ATankCharacter::IsInAirTick()
@@ -397,10 +397,20 @@ void ATankCharacter::SetGunElevation(const double NewGunElevation) const
 		AnimInstance->GunElevation = NewGunElevation;
 }
 
+void ATankCharacter::MC_SetGunElevation_Implementation(double NewGunElevation) const
+{
+	SetGunElevation(NewGunElevation);
+}
+
 void ATankCharacter::SetTurretRotation(const double NewTurretAngle) const
 {
 	if (AnimInstance)
 		AnimInstance->TurretAngle = NewTurretAngle;
+}
+
+void ATankCharacter::MC_SetTurretRotation_Implementation(double NewTurretAngle) const
+{
+	SetTurretRotation(NewTurretAngle);
 }
 
 void ATankCharacter::SetSkinType(const double NewSkinType) const
@@ -415,17 +425,37 @@ void ATankCharacter::SetLightsEmissivity(double LightsEmissivity) const
 		BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
 }
 
+void ATankCharacter::MC_SetLightsEmissivity_Implementation(double LightsEmissivity) const
+{
+	SetLightsEmissivity(LightsEmissivity);
+}
+
 void ATankCharacter::SetSpeed(double Speed)
 {
 	if (!AnimInstance)
 		return;
 	
 	AnimInstance->WheelSpeed = Speed;
-	SetWheelSmoke(!bIsInAir ? Speed : 0);
+	MC_SetWheelSmoke(!bIsInAir ? Speed : 0);
+}
+
+void ATankCharacter::MC_SetSpeed_Implementation(double Speed)
+{
+	SetSpeed(Speed);
 }
 
 void ATankCharacter::SetHatchesAngles(double HatchAngle)
 {
 	if (AnimInstance)
 		AnimInstance->HatchAngle = HatchAngle;
+}
+
+void ATankCharacter::MC_SetWheelSmoke_Implementation(float Intensity)
+{
+	SetWheelSmoke(Intensity);
+}
+
+void ATankCharacter::MC_SetHatchesAngles_Implementation(double HatchAngle)
+{
+	SetHatchesAngles(HatchAngle);
 }

@@ -186,8 +186,16 @@ public:
 	void SetGunElevation(double NewGunElevation) const;
 
 	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_SetGunElevation(double NewGunElevation) const;
+	
+	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetTurretRotation(double NewTurretAngle) const;
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_SetTurretRotation(double NewTurretAngle) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
@@ -198,12 +206,24 @@ public:
 	void SetLightsEmissivity(double LightsEmissivity) const;
 
 	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_SetLightsEmissivity(double LightsEmissivity) const;
+
+	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetSpeed(double Speed);
 
 	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_SetSpeed(double Speed);
+
+	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetHatchesAngles(double HatchAngle);
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_SetHatchesAngles(double HatchAngle);
 
 protected:
 	/** Please add a function description */
@@ -229,6 +249,10 @@ protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="SetWheelSmokeIntensity")
 	void SetWheelSmoke(float Intensity);
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, DisplayName="MC_SetWheelSmokeIntensity", NetMulticast, Reliable)
+	void MC_SetWheelSmoke(float Intensity);
 
 	//////////////////////////////////////////////////////////////////
 	/// Getters

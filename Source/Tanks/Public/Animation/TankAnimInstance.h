@@ -15,33 +15,34 @@ class TANKS_API UTankAnimInstance : public UVehicleAnimationInstance
 	GENERATED_BODY()
 
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
 	double WheelSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
 	double WheelSpeedOffset;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
 	double TurretAngle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
 	double GunElevation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
 	double HatchAngle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	FRotator WheelRotation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	FRotator HatchRotation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	FRotator TurretRotation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	FRotator GunRotation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -61,6 +62,21 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void UpdateTracksMaterial();
+	
+	UFUNCTION(BlueprintCallable)
+	void MC_UpdateSpeedOffset(const double Increment);
+	
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_UpdateWheels();
+	
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_UpdateHatches();
+
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_UpdateTurret();
+
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_UpdateTracksMaterial();
 
 	UFUNCTION(BlueprintCallable)
 	void SetTracksMID(UMaterialInstanceDynamic* MID)

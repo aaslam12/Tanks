@@ -42,7 +42,7 @@ void ATankController::Tick(float DeltaSeconds)
 	if (TankPlayer)
 	{
 		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
-		TankPlayer->SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
+		TankPlayer->MC_SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
 	}
 }
 
@@ -65,7 +65,6 @@ void ATankController::OnPossess(APawn* InPawn)
 	SetDefaults();
 	BindControls();
 }
-
 
 void ATankController::BeginPlay()
 {

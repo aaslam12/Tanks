@@ -4,16 +4,32 @@
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
 #include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 void UTankAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	UpdateSpeedOffset(DeltaSeconds);
-	UpdateWheels();
-	UpdateHatches();
-	UpdateTurret();
-	UpdateTracksMaterial();
+	MC_UpdateSpeedOffset(DeltaSeconds);
+	MC_UpdateWheels();
+	MC_UpdateHatches();
+	MC_UpdateTurret();
+	MC_UpdateTracksMaterial();
+}
+
+void UTankAnimInstance::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UTankAnimInstance, WheelSpeed);
+	DOREPLIFETIME(UTankAnimInstance, WheelSpeedOffset);
+	DOREPLIFETIME(UTankAnimInstance, TurretAngle);
+	DOREPLIFETIME(UTankAnimInstance, GunElevation);
+	DOREPLIFETIME(UTankAnimInstance, HatchAngle);
+	DOREPLIFETIME(UTankAnimInstance, WheelRotation);
+	DOREPLIFETIME(UTankAnimInstance, HatchRotation);
+	DOREPLIFETIME(UTankAnimInstance, TurretRotation);
+	DOREPLIFETIME(UTankAnimInstance, GunRotation);
 }
 
 void UTankAnimInstance::UpdateSpeedOffset(const double Increment)
@@ -37,3 +53,27 @@ void UTankAnimInstance::UpdateTurret()
 	GunRotation = FRotator(GunElevation, 0, 0);
 }
 
+void UTankAnimInstance::MC_UpdateSpeedOffset(const double Increment)
+{
+	UpdateSpeedOffset(Increment);
+}
+
+void UTankAnimInstance::MC_UpdateTracksMaterial_Implementation()
+{
+	UpdateTracksMaterial();
+}
+
+void UTankAnimInstance::MC_UpdateWheels_Implementation()
+{
+	UpdateWheels();
+}
+
+void UTankAnimInstance::MC_UpdateHatches_Implementation()
+{
+	UpdateHatches();
+}
+
+void UTankAnimInstance::MC_UpdateTurret_Implementation()
+{
+	UpdateTurret();
+}
