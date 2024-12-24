@@ -251,16 +251,12 @@ void ATankCharacter::IsInAirTick()
 void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
 {
 	if (bActivate)
-	{
 		GetMesh()->SetCustomDepthStencilValue(1);
-	}
 	else
-	{
 		GetMesh()->SetCustomDepthStencilValue(0);
-	}
 }
 
-void ATankCharacter::FindEnemyTanks(const FVector2D& GunTraceScreenPosition)
+void ATankCharacter::HighlightEnemyTanksIfDetected()
 {
 	CurrentHitResults.Empty();
 	
@@ -348,7 +344,7 @@ void ATankCharacter::Tick(float DeltaTime)
 	GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
 	
 	IsInAirTick();
-	FindEnemyTanks(GunTraceScreenPosition);
+	HighlightEnemyTanksIfDetected();
 
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceEndpoint: %s"), *GunTraceEndpoint.ToString()),
 	// 	true, true, FLinearColor::Yellow, 0);

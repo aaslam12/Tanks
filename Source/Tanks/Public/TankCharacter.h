@@ -50,7 +50,7 @@ protected:
 	void IsInAirTick();
 	virtual void OutlineTank_Implementation(const bool bActivate) override;
 	// Creates two box traces that combine to create a "+" sign attached to the gun turret.
-	void FindEnemyTanks(const FVector2D& GunTraceScreenPosition);
+	void HighlightEnemyTanksIfDetected();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;

@@ -4,4 +4,4 @@
 #include "TankInterface.h"
 
 
-// Add default functionality here for any ITankCharacterInterface functions that are not pure virtual.
+// Add default functionality here for any ITankInterface functions that are not pure virtual.
