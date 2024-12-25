@@ -219,6 +219,10 @@ public:
 	void SetSpeed(double Speed);
 
 	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_SetSpeed(double Speed);
+
+	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetSpeed(double Speed);
 public:

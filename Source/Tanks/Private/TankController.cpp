@@ -15,9 +15,10 @@
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): bCanMove(true), ShootTimerDuration(3), bStopTurn(false), VehicleYaw(0),
-                                    bCanShoot(true),
-                                    bShootingBlocked(false)
+ATankController::ATankController(): LookValues(), MoveValues(), bCanMove(true), ShootTimerDuration(3), MouseSensitivity(FVector(0.4)),
+                                    bStopTurn(false),
+                                    VehicleYaw(0),
+                                    bCanShoot(true), bShootingBlocked(false)
 {
 	if (TankCameraManagerClass)
 		PlayerCameraManagerClass = TankCameraManagerClass;
@@ -42,7 +43,7 @@ void ATankController::Tick(float DeltaSeconds)
 	if (TankPlayer)
 	{
 		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
-		TankPlayer->MC_SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
+		TankPlayer->SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
 	}
 }
 
@@ -152,7 +153,7 @@ void ATankController::Look(const FInputActionValue& Value)
 		return;
 	
 	// input is a Vector2D
-	LookValues = Value.Get<FVector2D>();
+	LookValues = Value.Get<FVector2D>() * MouseSensitivity;
 
 	// add yaw and pitch input to controller
 	AddYawInput(LookValues.X);

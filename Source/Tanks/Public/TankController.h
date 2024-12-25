@@ -89,6 +89,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Setup", meta = (AllowPrivateAccess = "true", ClampMin = "0", UIMin = "0", UIMax="7", SliderExponent=0.1))
 	double ShootTimerDuration;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Controls")
+	FVector2D MouseSensitivity;
+
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Variables 
 	

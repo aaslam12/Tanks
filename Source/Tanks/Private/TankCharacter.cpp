@@ -26,6 +26,20 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevat
 	PrimaryActorTick.bCanEverTick = true;
 
 	bReplicates = true;
+
+	if (GetMesh())
+	{
+		// Enable custom depth for the tank mesh
+		GetMesh()->SetRenderCustomDepth(true);
+		// Set the custom depth stencil value to differentiate between different types of objects
+		GetMesh()->SetCustomDepthStencilValue(0);
+	}
+
+	for (auto Element : GetComponents())
+	{
+		// if (Element->StaticClass() == UStaticMeshComponent::StaticClass() || Element->StaticClass() == USkeletalMeshComponent::StaticClass())
+		Element->SetIsReplicated(true);
+	}
 }
 
 ATankCharacter::~ATankCharacter() {}
@@ -41,20 +55,6 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 
 	BackCameraComp = GetBackCamera();
 	BackSpringArmComp = GetBackSpringArm();
-
-	if (GetMesh())
-	{
-		// Enable custom depth for the tank mesh
-		GetMesh()->SetRenderCustomDepth(true);
-		// Set the custom depth stencil value to differentiate between different types of objects
-		GetMesh()->SetCustomDepthStencilValue(0);
-	}
-
-	for (auto Element : GetComponents())
-	{
-		// if (Element->StaticClass() == UStaticMeshComponent::StaticClass() || Element->StaticClass() == USkeletalMeshComponent::StaticClass())
-		Element->SetIsReplicated(true);
-	}
 }
 
 // Called every frame
@@ -117,7 +117,7 @@ void ATankCharacter::SetDefaults()
 	if (BackCameraComp)
 		BackCameraComp->SetActive(true);
 
-	MC_SetLightsEmissivity(0);
+	SetLightsEmissivity(0);
 }
 
 void ATankCharacter::BeginPlay()
@@ -456,27 +456,51 @@ void ATankCharacter::SetSkinType(const double NewSkinType) const
 
 void ATankCharacter::SetLightsEmissivity(double LightsEmissivity) const
 {
-	if (BodyMaterial)
+	if (BodyMaterial == nullptr)
+		return;
+
+	if (HasAuthority())
 		BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
+	else
+		MC_SetLightsEmissivity(LightsEmissivity);
 }
 
 void ATankCharacter::MC_SetLightsEmissivity_Implementation(double LightsEmissivity) const
 {
-	SetLightsEmissivity(LightsEmissivity);
+	if (BodyMaterial == nullptr)
+		return;
+	
+	BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
 }
 
 void ATankCharacter::SetSpeed(double Speed)
 {
-	if (!AnimInstance)
+	if (AnimInstance == nullptr)
 		return;
 	
-	AnimInstance->WheelSpeed = Speed;
-	MC_SetWheelSmoke(!bIsInAir ? Speed : 0);
+	if (HasAuthority())
+	{
+		AnimInstance->WheelSpeed = Speed;
+		SetWheelSmoke(!bIsInAir ? Speed : 0);
+	}
+	else
+	{
+		SR_SetSpeed(Speed);
+	}
+}
+
+void ATankCharacter::SR_SetSpeed_Implementation(double Speed)
+{
+	MC_SetSpeed(Speed);
 }
 
 void ATankCharacter::MC_SetSpeed_Implementation(double Speed)
 {
-	SetSpeed(Speed);
+	if (AnimInstance == nullptr)
+		return;
+	
+	AnimInstance->WheelSpeed = Speed;
+	SetWheelSmoke(!bIsInAir ? Speed : 0);
 }
 
 void ATankCharacter::SetHatchesAngles(double HatchAngle)
