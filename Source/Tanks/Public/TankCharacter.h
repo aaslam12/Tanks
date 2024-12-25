@@ -30,13 +30,13 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 {
 	GENERATED_BODY()
 
-public:
 	// Sets default values for this actor's properties
 	ATankCharacter();
 	virtual ~ATankCharacter() override;
-
 	virtual void OnConstruction(const FTransform& Transform) override;
 
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	void SetDefaults();
@@ -159,9 +159,6 @@ protected:
 	TObjectPtr<USpringArmComponent> FrontSpringArmComp;
 
 public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-	
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D LookValues;
 
@@ -184,7 +181,7 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetGunElevation(double NewGunElevation) const;
-
+protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SR_SetGunElevation(double NewGunElevation) const;
@@ -192,11 +189,11 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetGunElevation(double NewGunElevation) const;
-	
+public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetTurretRotation(double NewTurretAngle) const;
-
+protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SR_SetTurretRotation(double NewTurretAngle) const;
@@ -204,7 +201,7 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetTurretRotation(double NewTurretAngle) const;
-
+public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetSkinType(double NewSkinType) const;
@@ -212,11 +209,11 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetLightsEmissivity(double LightsEmissivity) const;
-
+protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetLightsEmissivity(double LightsEmissivity) const;
-
+public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetSpeed(double Speed);
@@ -224,16 +221,15 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetSpeed(double Speed);
-
+public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetHatchesAngles(double HatchAngle);
-
+protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetHatchesAngles(double HatchAngle);
 
-protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent, DisplayName="GetShootSocket")
 	USceneComponent* GetShootSocke() const;

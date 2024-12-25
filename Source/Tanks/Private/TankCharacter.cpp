@@ -28,10 +28,7 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevat
 	bReplicates = true;
 }
 
-ATankCharacter::~ATankCharacter()
-{
-	
-}
+ATankCharacter::~ATankCharacter() {}
 
 void ATankCharacter::OnConstruction(const FTransform& Transform)
 {
@@ -58,6 +55,35 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 		// if (Element->StaticClass() == UStaticMeshComponent::StaticClass() || Element->StaticClass() == USkeletalMeshComponent::StaticClass())
 		Element->SetIsReplicated(true);
 	}
+}
+
+// Called every frame
+void ATankCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!GetWorld())
+		return;
+
+	if (PlayerController)
+	{
+		MoveValues = PlayerController->GetMoveValues();
+		LookValues = PlayerController->GetLookValues();
+	}
+
+	TurretTurningTick(DeltaTime);
+	GunElevationTick(DeltaTime);
+	CheckIfGunCanLowerElevationTick(DeltaTime);
+	
+	FVector2D GunTraceScreenPosition;
+	FVector GunTraceEndpoint;
+	GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
+	
+	IsInAirTick();
+	HighlightEnemyTanksIfDetected();
+
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceEndpoint: %s"), *GunTraceEndpoint.ToString()),
+	// 	true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -177,7 +203,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		TopHit,
 		false
 	);
@@ -194,7 +220,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		BottomHit,
 		false
 	);
@@ -242,7 +268,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
 		false,
 		{this},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		OutHit,
 		true
 	);
@@ -255,7 +281,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 	DesiredGunElevation = LookAtRot.Pitch;
 	
 	GunElevation = FMath::Clamp(
-		UKismetMathLibrary::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
+		FMath::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
 		MinGunElevation,
 		MaxGunElevation
 	);
@@ -274,7 +300,7 @@ void ATankCharacter::IsInAirTick()
 		ActorOrigin - FVector(0, 0, 75),
 		TraceTypeQuery1,
 		false, {this},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		Hit,
 		true,
 		FLinearColor::Red
@@ -364,36 +390,6 @@ void ATankCharacter::HighlightEnemyTanksIfDetected()
 
         Execute_OutlineTank(Hit.GetActor(), true); // need to change this when trying to get replication working.
     }
-}
-
-
-// Called every frame
-void ATankCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	if (!GetWorld())
-		return;
-
-	if (PlayerController)
-	{
-		MoveValues = PlayerController->GetMoveValues();
-		LookValues = PlayerController->GetLookValues();
-	}
-
-	TurretTurningTick(DeltaTime);
-	GunElevationTick(DeltaTime);
-	CheckIfGunCanLowerElevationTick(DeltaTime);
-	
-	FVector2D GunTraceScreenPosition;
-	FVector GunTraceEndpoint;
-	GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
-	
-	IsInAirTick();
-	HighlightEnemyTanksIfDetected();
-
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceEndpoint: %s"), *GunTraceEndpoint.ToString()),
-	// 	true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::SetGunElevation(const double NewGunElevation) const
