@@ -15,15 +15,16 @@
 ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevation(-15), MaxGunElevation(20),
                                   CurrentMinGunElevation(-15),
                                   MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10),
-                                  GunElevation(0), bIsInAir(false), LastFreeGunElevation(0), DesiredGunElevation(0),
+                                  GunElevation(0), bIsInAir(false), LastFreeLocation(), LastFreeGunElevation(0),
+                                  DesiredGunElevation(0),
                                   LineTraceOffset(0), LineTraceForwardVectorMultiplier(8000),
                                   VerticalLineTraceHalfSize(FVector(10, 10, 300)),
-                                  HorizontalLineTraceHalfSize(FVector(10, 300, 10)),
+                                  HorizontalLineTraceHalfSize(FVector(10, 300, 10)), LookValues(), MoveValues(),
                                   bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	bReplicates = true;
 }
 
@@ -154,7 +155,7 @@ void ATankCharacter::TurretTurningTick(float DeltaTime) const
 		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
 
 		// Update the turret angle
-		AnimInstance->TurretAngle += DeltaAngle;
+		SetTurretRotation(AnimInstance->TurretAngle + DeltaAngle);
 	}
 
 }
@@ -259,7 +260,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 		MaxGunElevation
 	);
 
-	MC_SetGunElevation(GunElevation);
+	SetGunElevation(GunElevation);
 }
 
 void ATankCharacter::IsInAirTick()
@@ -397,24 +398,58 @@ void ATankCharacter::Tick(float DeltaTime)
 
 void ATankCharacter::SetGunElevation(const double NewGunElevation) const
 {
-	if (AnimInstance)
+	if (AnimInstance == nullptr)
+		return;
+	
+	if (HasAuthority())
 		AnimInstance->GunElevation = NewGunElevation;
+	else
+		// Clients should not update the GunElevation directly.
+		SR_SetGunElevation(NewGunElevation);
+}
+
+void ATankCharacter::SR_SetGunElevation_Implementation(double NewGunElevation) const
+{
+	if (AnimInstance == nullptr)
+		return;
+
+	AnimInstance->GunElevation = NewGunElevation;
+
+	MC_SetGunElevation(NewGunElevation);
 }
 
 void ATankCharacter::MC_SetGunElevation_Implementation(double NewGunElevation) const
 {
-	SetGunElevation(NewGunElevation);
+	if (AnimInstance)
+		AnimInstance->GunElevation = NewGunElevation;
 }
 
 void ATankCharacter::SetTurretRotation(const double NewTurretAngle) const
 {
-	if (AnimInstance)
+	if (AnimInstance == nullptr)
+		return;
+	
+	if (HasAuthority())
 		AnimInstance->TurretAngle = NewTurretAngle;
+	else
+		SR_SetTurretRotation(NewTurretAngle);
+}
+
+void ATankCharacter::SR_SetTurretRotation_Implementation(double NewTurretAngle) const
+{
+	if (AnimInstance == nullptr)
+		return;
+
+	AnimInstance->TurretAngle = NewTurretAngle;
+	MC_SetTurretRotation(NewTurretAngle);
 }
 
 void ATankCharacter::MC_SetTurretRotation_Implementation(double NewTurretAngle) const
 {
-	SetTurretRotation(NewTurretAngle);
+	if (AnimInstance == nullptr)
+		return;
+	
+	AnimInstance->TurretAngle = NewTurretAngle;
 }
 
 void ATankCharacter::SetSkinType(const double NewSkinType) const

@@ -10,11 +10,11 @@ void UTankAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	MC_UpdateSpeedOffset(DeltaSeconds);
-	MC_UpdateWheels();
-	MC_UpdateHatches();
-	MC_UpdateTurret();
-	MC_UpdateTracksMaterial();
+	UpdateSpeedOffset(DeltaSeconds);
+	SR_UpdateWheels();
+	SR_UpdateHatches();
+	SR_UpdateTurret();
+	SR_UpdateTracksMaterial();
 }
 
 void UTankAnimInstance::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -53,9 +53,14 @@ void UTankAnimInstance::UpdateTurret()
 	GunRotation = FRotator(GunElevation, 0, 0);
 }
 
-void UTankAnimInstance::MC_UpdateSpeedOffset(const double Increment)
+void UTankAnimInstance::MC_SetGunElevation_Implementation(const double NewGunElevation)
 {
-	UpdateSpeedOffset(Increment);
+	GunElevation = NewGunElevation;
+}
+
+void UTankAnimInstance::SR_SetGunElevation_Implementation(const double NewGunElevation)
+{
+	MC_SetGunElevation(NewGunElevation);
 }
 
 void UTankAnimInstance::MC_UpdateTracksMaterial_Implementation()
@@ -76,4 +81,24 @@ void UTankAnimInstance::MC_UpdateHatches_Implementation()
 void UTankAnimInstance::MC_UpdateTurret_Implementation()
 {
 	UpdateTurret();
+}
+
+void UTankAnimInstance::SR_UpdateWheels_Implementation()
+{
+	MC_UpdateWheels();
+}
+
+void UTankAnimInstance::SR_UpdateHatches_Implementation()
+{
+	MC_UpdateHatches();
+}
+
+void UTankAnimInstance::SR_UpdateTurret_Implementation()
+{
+	MC_UpdateTurret();
+}
+
+void UTankAnimInstance::SR_UpdateTracksMaterial_Implementation()
+{
+	MC_UpdateTracksMaterial();
 }

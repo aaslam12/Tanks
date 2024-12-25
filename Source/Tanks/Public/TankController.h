@@ -130,6 +130,11 @@ protected:
 	void Turn(const FInputActionValue& Value);
 	void TurnStarted(const FInputActionValue& InputActionValue);
 	void TurnCompleted(const FInputActionValue& InputActionValue);
+	void SpawnShootEmitters() const;
+	UFUNCTION(Server, Unreliable)
+	void SR_SpawnShootEmitters();
+	UFUNCTION(NetMulticast, Unreliable)
+	void MC_SpawnShootEmitters();
 
 	void Shoot(const FInputActionValue& InputActionValue);
 

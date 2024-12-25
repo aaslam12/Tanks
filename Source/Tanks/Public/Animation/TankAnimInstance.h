@@ -63,9 +63,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void UpdateTracksMaterial();
 	
-	UFUNCTION(BlueprintCallable)
-	void MC_UpdateSpeedOffset(const double Increment);
-	
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_UpdateWheels();
 	
@@ -78,11 +75,28 @@ public:
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_UpdateTracksMaterial();
 
-	UFUNCTION(BlueprintCallable)
-	void SetTracksMID(UMaterialInstanceDynamic* MID)
-	{
-		this->TracksMID = MID;
-	}
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_UpdateWheels();
+	
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_UpdateHatches();
 
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_UpdateTurret();
+
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_UpdateTracksMaterial();
+
+	UFUNCTION(BlueprintCallable)
+	void SetTracksMID(UMaterialInstanceDynamic* MID) { this->TracksMID = MID; }
+
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_SetGunElevation(const double NewGunElevation);
+
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void MC_SetGunElevation(const double NewGunElevation);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	double GetGunElevation() { return GunElevation; }
 
 };

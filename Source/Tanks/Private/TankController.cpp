@@ -201,6 +201,22 @@ void ATankController::TurnCompleted(const FInputActionValue& InputActionValue)
 	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
 }
 
+void ATankController::SpawnShootEmitters() const
+{
+	for (auto ParticleSystem : TankPlayer->GetShootEmitterSystems())
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, TankPlayer->GetShootSocket()->GetComponentTransform());
+}
+
+void ATankController::SR_SpawnShootEmitters_Implementation()
+{
+	MC_SpawnShootEmitters();
+}
+
+void ATankController::MC_SpawnShootEmitters_Implementation()
+{
+	SpawnShootEmitters();
+}
+
 void ATankController::Shoot(const FInputActionValue& InputActionValue)
 {
 	if (!TankPlayer)
@@ -215,13 +231,7 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	SetCanShoot(false);
 
 	// Spawning muzzle fire and dust around the tank 
-	for (auto ParticleSystem : TankPlayer->GetShootEmitterSystems())
-	{
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, TankPlayer->GetShootSocket()->GetComponentTransform());
-
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) SpawnEmitterAtLocation: %s"), *ParticleSystem.GetFullName()),
-		true, true, FLinearColor::Yellow, 2);
-	}
+	SR_SpawnShootEmitters();
 
 	auto Start = TankPlayer->GetMesh()->GetSocketLocation("GunShootSocket");
 	auto End = Start + (TankPlayer->GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 15000.0);

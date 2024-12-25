@@ -186,12 +186,20 @@ public:
 	void SetGunElevation(double NewGunElevation) const;
 
 	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_SetGunElevation(double NewGunElevation) const;
+	
+	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetGunElevation(double NewGunElevation) const;
 	
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetTurretRotation(double NewTurretAngle) const;
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_SetTurretRotation(double NewTurretAngle) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
