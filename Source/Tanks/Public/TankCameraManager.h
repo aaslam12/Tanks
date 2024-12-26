@@ -9,7 +9,7 @@
 /**
  * The base class for the tank camera managers
  */
-UCLASS(Blueprintable)
+UCLASS(Abstract)
 class TANKS_API ATankCameraManager : public APlayerCameraManager
 {
 	GENERATED_BODY()

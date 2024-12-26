@@ -14,7 +14,7 @@ class ATankCameraManager;
 /**
  * The base class for the tank controllers
  */
-UCLASS(Blueprintable)
+UCLASS(Abstract)
 class TANKS_API ATankController : public APlayerController
 {
 	GENERATED_BODY()

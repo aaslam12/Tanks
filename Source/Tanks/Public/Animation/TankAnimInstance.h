@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS(Blueprintable)
+UCLASS(Abstract)
 class TANKS_API UTankAnimInstance : public UVehicleAnimationInstance
 {
 	GENERATED_BODY()

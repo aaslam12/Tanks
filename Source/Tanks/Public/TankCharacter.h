@@ -25,7 +25,7 @@ FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
 	return A.GetActor() == B.GetActor();
 }
 
-UCLASS(Blueprintable)
+UCLASS(Abstract)
 class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterface
 {
 	GENERATED_BODY()
