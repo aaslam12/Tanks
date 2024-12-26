@@ -14,7 +14,7 @@
 // Sets default values
 ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
                                   MinGunElevation(-15),
-                                  MaxGunElevation(20), CurrentMinGunElevation(-15),
+                                  MaxGunElevation(20), BaseMinGunElevation(MinGunElevation),BaseMaxGunElevation(MaxGunElevation), CurrentMinGunElevation(-15),
                                   MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10), GunElevation(0), bIsInAir(false),
                                   LastFreeLocation(),
                                   LastFreeGunElevation(0), DesiredGunElevation(0),
@@ -71,7 +71,7 @@ void ATankCharacter::Tick(float DeltaTime)
 		LookValues = PlayerController->GetLookValues();
 	}
 
-	UpdateCameraPitchLimitsTick();
+	// UpdateCameraPitchLimitsTick();
 	TurretTurningTick(DeltaTime);
 	GunElevationTick(DeltaTime);
 	CheckIfGunCanLowerElevationTick(DeltaTime);
@@ -105,8 +105,8 @@ void ATankCharacter::SetDefaults()
 	// stops the player from looking under the tank and above too much.
 	if (PlayerController)
 	{
-		PlayerController->PlayerCameraManager->ViewPitchMin = -20.0;
-		PlayerController->PlayerCameraManager->ViewPitchMax = 15.0;
+		PlayerController->PlayerCameraManager->ViewPitchMin = -60.0;
+		PlayerController->PlayerCameraManager->ViewPitchMax = 30.0;
 	}
 
 	if (FrontCameraComp)
@@ -133,7 +133,7 @@ void ATankCharacter::TurretTurningTick(float DeltaTime) const
 	if (bAimingIn)
 	{
 		// first person turret rotation
-		
+		SetTurretRotation(AnimInstance->TurretAngle + LookValues.X);
 	}
 	else
 	{
@@ -259,6 +259,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 	if (bAimingIn)
 	{
 		GunElevation += LookValues.Y * -1;
+		GunElevation = FMath::Clamp(GunElevation, BaseMinGunElevation, BaseMaxGunElevation);
 		SetGunElevation(GunElevation);
 	}
 	else
@@ -398,7 +399,7 @@ void ATankCharacter::HighlightEnemyTanksIfDetected()
     }
 }
 
-void ATankCharacter::UpdateCameraPitchLimitsTick()
+void ATankCharacter::UpdateCameraPitchLimitsTick() const
 {
 	if (!PlayerController)
 		return;

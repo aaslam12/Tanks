@@ -50,7 +50,7 @@ protected:
 	virtual void OutlineTank_Implementation(const bool bActivate) override;
 	// Creates two box traces that combine to create a "+" sign attached to the gun turret.
 	void HighlightEnemyTanksIfDetected();
-	void UpdateCameraPitchLimitsTick();
+	void UpdateCameraPitchLimitsTick() const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
@@ -77,13 +77,22 @@ protected:
 	double BasePitchMax;
 
 	// This is the minimum spring arm length when zooming in.
-	// will take the absolute value of this 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double MinGunElevation;
 
 	// flat max gun elevation value
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
 	double MaxGunElevation;
+
+	// This is the minimum spring arm length when zooming in.
+	// will take the absolute value of this 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
+	double BaseMinGunElevation;
+
+	// flat max gun elevation value
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
+	double BaseMaxGunElevation;
+
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
 	double CurrentMinGunElevation;
