@@ -13,12 +13,11 @@
 
 // Sets default values
 ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
-                                  MinGunElevation(-15), AbsoluteMinGunElevation(-30), MaxGunElevation(20),
-                                  AbsoluteMaxGunElevation(30), AimingMinGunElevation(MinGunElevation), AimingMaxGunElevation(MaxGunElevation),
-                                  MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10), GunElevation(0), bIsInAir(false),
-                                  LastFreeLocation(),
-                                  LastFreeGunElevation(0), DesiredGunElevation(0),
-                                  LineTraceOffset(0),
+                                  AbsoluteMinGunElevation(-30), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
+                                  GunElevationInterpSpeed(10),
+                                  MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
+                                  bIsInAir(false), 
+                                  DesiredGunElevation(0), LineTraceOffset(0),
                                   LineTraceForwardVectorMultiplier(8000), VerticalLineTraceHalfSize(FVector(10, 10, 300)), HorizontalLineTraceHalfSize(FVector(10, 300, 10)),
                                   LookValues(), MoveValues(), bAimingIn(false)
 {
@@ -125,7 +124,7 @@ void ATankCharacter::BeginPlay()
 	SetDefaults();
 }
 
-void ATankCharacter::TurretTurningTick(float DeltaTime) const
+void ATankCharacter::TurretTurningTick(float DeltaTime)
 {
 	if (!Controller || !GetMesh() || !AnimInstance)
 		return;
@@ -133,7 +132,18 @@ void ATankCharacter::TurretTurningTick(float DeltaTime) const
 	if (bAimingIn)
 	{
 		// first person turret rotation
-		SetTurretRotation(AnimInstance->TurretAngle + LookValues.X);
+		float DesiredTurretAngle = AnimInstance->TurretAngle + FMath::Clamp(LookValues.X * 25, -MaxTurretRotationSpeed / 2, MaxTurretRotationSpeed / 2);
+
+		// Smoothly interpolate towards the desired angle
+		CurrentTurretAngle = FMath::FInterpTo(
+			CurrentTurretAngle, // Current value
+			DesiredTurretAngle, // Target value
+			DeltaTime, // Time delta
+			3.0f // Interpolation speed (adjust for more lag or responsiveness)
+		);
+
+		// Apply the interpolated value to the turret rotation
+		SetTurretRotation(CurrentTurretAngle);
 	}
 	else
 	{
@@ -234,6 +244,13 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 			return;
 
 		auto bTopDetectTank = TopHit.PhysMaterial->SurfaceType == SurfaceType2 && TopHit.GetActor() == this;
+		auto bBottomDetectTank = BottomHit.PhysMaterial->SurfaceType == SurfaceType2 && BottomHit.GetActor() == this;
+
+		if (bBottomDetectTank == true && bTopDetectTank == false)
+		{
+			MinGunElevation = GunElevation;
+			return;
+		}
 		
 		if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
 		{
@@ -244,7 +261,14 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 	else
 	{
 		// Update the last free gun elevation
-		MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
+		if (bAimingIn)
+		{
+			MinGunElevation = AbsoluteMinGunElevation;
+		}
+		else
+		{
+			MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
+		}
 		PlayerController->SetShootingBlocked(false);
 	}
 }
@@ -283,13 +307,22 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 		);
 
 		DesiredGunElevation = LookAtRot.Pitch;
-	
+
+		// Clamp the change rate using the max speed variable
+		const float MaxGunElevationChangeSpeed = 10.0f; // Maximum degrees per second
+		float MaxDeltaElevation = MaxGunElevationChangeSpeed * DeltaTime;
+
+		// Interpolate and clamp to the maximum allowed change rate
 		GunElevation = FMath::Clamp(
-			FMath::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
-			MinGunElevation,
-			MaxGunElevation
+		  FMath::FInterpTo(GunElevation, DesiredGunElevation, DeltaTime, GunElevationInterpSpeed),
+		  GunElevation - MaxDeltaElevation,
+		  GunElevation + MaxDeltaElevation
 		);
 
+		// Clamp the final value within valid elevation bounds
+		GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
+
+		// Apply the final gun elevation
 		SetGunElevation(GunElevation);
 	}
 }

@@ -43,7 +43,7 @@ protected:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	void TurretTurningTick(float DeltaTime) const;
+	void TurretTurningTick(float DeltaTime);
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();
@@ -76,32 +76,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30))
 	double BasePitchMax;
 
-	// This is the minimum spring arm length when zooming in.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
-	double MinGunElevation;
+	
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double AbsoluteMinGunElevation;
 
-	// flat max gun elevation value
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
-	double MaxGunElevation;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double AbsoluteMaxGunElevation;
-
-	// This is the minimum spring arm length when zooming in.
-	// will take the absolute value of this 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
-	double AimingMinGunElevation;
-
-	// flat max gun elevation value
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
-	double AimingMaxGunElevation;
-
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
-	double CurrentMinGunElevation;
 
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup", meta=(UIMin=0, UIMax=180, MakeStructureDefaultValue=90))
@@ -110,6 +91,17 @@ protected:
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double GunElevationInterpSpeed;
+
+	// This is the minimum spring arm length when zooming in.
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Setup")
+	double MinGunElevation;
+
+	// flat max gun elevation value
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	double MaxGunElevation;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	double CurrentTurretAngle;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
@@ -126,12 +118,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Default")
 	bool bIsInAir;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
-	FVector LastFreeLocation;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
-	double LastFreeGunElevation;
-
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double DesiredGunElevation;
 
@@ -303,6 +289,10 @@ public:
 	TObjectPtr<UParticleSystem> GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
 	bool IsInAir() const { return bIsInAir; }
 	const TArray<FHitResult>& GetHighlightedEnemyTanks() const { return HighlightedEnemyTanks; }
+	double GetAbsoluteMinGunElevation() const { return AbsoluteMinGunElevation; }
+	double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
+	void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
+	void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
 
 	//////////////////////////////////////////////////////////////////
 	/// Functions

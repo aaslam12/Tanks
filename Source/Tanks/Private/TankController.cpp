@@ -367,6 +367,9 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 {
 	if (!TankPlayer)
 		return;
+
+	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
+		return;
 	
 	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Max(TankPlayer->GetBackSpringArmComp()->TargetArmLength - 200.0, TankPlayer->GetMaxZoomIn());
 
@@ -382,6 +385,7 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 			SetViewTarget(TankPlayer);
 
 			TankPlayer->bAimingIn = true;
+			TankPlayer->SetMinGunElevation(TankPlayer->GetAbsoluteMinGunElevation()); // reset the value. will be overwritten in tick later
 		}
 	}
 	
@@ -392,6 +396,9 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 {
 	if (!TankPlayer)
+		return;
+
+	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomOut())
 		return;
 	
 	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Min(TankPlayer->GetBackSpringArmComp()->TargetArmLength + 200.0, TankPlayer->GetMaxZoomOut());
