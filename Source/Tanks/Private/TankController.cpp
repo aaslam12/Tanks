@@ -108,6 +108,7 @@ void ATankController::BindControls()
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATankController::Look);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Completed, this, &ATankController::Look);
 
 		// Shooting
 		EnhancedInputComponent->BindAction(ShootAction, ETriggerEvent::Started, this, &ATankController::Shoot);
@@ -211,6 +212,35 @@ void ATankController::MC_SpawnShootEmitters_Implementation()
 	SpawnShootEmitters();
 }
 
+void ATankController::SpawnHitParticleSystem(const FVector& Location)
+{
+	UGameplayStatics::SpawnEmitterAtLocation( GetWorld(),
+		TankPlayer->GetShootHitParticleSystem(), Location);
+}
+
+void ATankController::StartShootTimer()
+{
+	FTimerDelegate ShootTimerDelegate = FTimerDelegate();
+	ShootTimerDelegate.BindUFunction(this, "SetCanShoot", true);
+
+	// set a timer to reenable shooting
+	GetWorld()->GetTimerManager().SetTimer(
+		ShootTimerHandle, ShootTimerDelegate,
+		ShootTimerDuration, false
+	);
+}
+
+AActor* ATankController::FindClosestHighlightedActor() const
+{
+	AActor* ClosestActor = nullptr;
+	for (const auto& Hit : TankPlayer->GetHighlightedEnemyTanks())
+		if (ClosestActor == nullptr)
+			ClosestActor = Hit.GetActor(); // just sets the first actor in the array as ClosestActor
+		else if (ClosestActor != Hit.GetActor() && TankPlayer->GetDistanceTo(Hit.GetActor()) < TankPlayer->GetDistanceTo(ClosestActor))
+			ClosestActor = Hit.GetActor(); // tries to find the closest actor to the player
+	return ClosestActor;
+}
+
 void ATankController::Shoot(const FInputActionValue& InputActionValue)
 {
 	if (!TankPlayer)
@@ -221,19 +251,22 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 
 	if (bCanShoot == false || bShootingBlocked == true)
 		return;
+	
+	constexpr double ShootTraceDistance = 15000.0;
 
+	// disable shooting
 	SetCanShoot(false);
+	StartShootTimer();
 
 	// Spawning muzzle fire and dust around the tank 
 	SR_SpawnShootEmitters();
-
-	auto Start = TankPlayer->GetMesh()->GetSocketLocation("GunShootSocket");
-	auto End = Start + (TankPlayer->GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * 15000.0);
+	auto TurretStart = TankPlayer->GetMesh()->GetSocketLocation("GunShootSocket");
+	FVector End = TurretStart + TankPlayer->GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * ShootTraceDistance;
 
 	FHitResult OutHit;
 	bool bHit = UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
-		Start,
+		TurretStart,
 		End,
 		TraceTypeQuery1,
 		false,
@@ -244,16 +277,68 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 		FLinearColor::Black
 	);
 
-	if (bHit && OutHit.IsValidBlockingHit())
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TankPlayer->GetShootHitParticleSystem(), OutHit.Location);
+	// check if trace hit something
+	if (bHit)
+	{
+		for (const auto& Element : TankPlayer->GetHighlightedEnemyTanks()) // check if the hit actor is in the highlighted enemy tanks
+		{
+			if (Element.GetActor() == OutHit.GetActor())
+			{
+				// if it does exist in the array, spawn the hit particle system and return.
+				SpawnHitParticleSystem(OutHit.Location);
+				return;
+			}
+		}
+	}
 
-	FTimerDelegate ShootTimerDelegate = FTimerDelegate();
-	ShootTimerDelegate.BindUFunction(this, "SetCanShoot", true);
+	// if it either did not hit anything or the hit actor is not in the highlighted enemy tanks array,
+	// then we try to find the closest location where we can shoot to actually hit the tank.
+	if (TankPlayer->GetHighlightedEnemyTanks().IsEmpty())
+		return;
 	
-	GetWorld()->GetTimerManager().SetTimer(
-		ShootTimerHandle, ShootTimerDelegate,
-		ShootTimerDuration, false
-	);
+	// finds closest actor to player
+	AActor* ClosestHighlightedActor = FindClosestHighlightedActor();
+
+	if (ClosestHighlightedActor == nullptr)
+		return;
+	
+	auto ActorSkeletalMesh = ClosestHighlightedActor->GetComponentByClass<USkeletalMeshComponent>();
+
+	if (ActorSkeletalMesh == nullptr)
+		return;
+
+	// get geometric center of the enemy tank
+	auto ActorCenter = ActorSkeletalMesh->Bounds.GetBox().GetCenter();
+
+	FVector2D ScreenPosition;
+	ProjectWorldLocationToScreen(ActorCenter, ScreenPosition); // find where the geometric center of the tank is on screen
+
+	for (int i = 0; i <= 10; ++i)
+	{
+		auto Lerp = FMath::Lerp(TankPlayer->GunTraceScreenPosition, ScreenPosition, i * 0.1);
+
+		FVector WorldLocation;
+		FVector WorldDirection;
+		DeprojectScreenPositionToWorld(Lerp.X, Lerp.Y, WorldLocation, WorldDirection);
+
+		FHitResult LerpHit;
+		bool bLerpHit = UKismetSystemLibrary::LineTraceSingle(
+			GetWorld(),
+			TurretStart,
+			WorldLocation + WorldDirection * ShootTraceDistance,
+			TraceTypeQuery1,
+			false,
+			{},
+			EDrawDebugTrace::ForDuration,
+			LerpHit,
+			true,
+			FLinearColor::Red
+		);
+
+		if (bLerpHit)
+			if (ClosestHighlightedActor == LerpHit.GetActor())
+				SpawnHitParticleSystem(LerpHit.Location);
+	}
 }
 
 void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)

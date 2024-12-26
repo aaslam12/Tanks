@@ -139,6 +139,9 @@ protected:
 	UFUNCTION(NetMulticast, Unreliable)
 	void MC_SpawnShootEmitters();
 
+	void SpawnHitParticleSystem(const FVector& Location);
+	void StartShootTimer();
+	AActor* FindClosestHighlightedActor() const;
 	void Shoot(const FInputActionValue& InputActionValue);
 
 	void HandbrakeStarted(const FInputActionValue& InputActionValue);
@@ -168,4 +171,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Data")
 	void SetShootingBlocked(bool bShootingBlockedLoc) { this->bShootingBlocked = bShootingBlockedLoc; }
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void DrawDebugCircle(const FVector2D& Position);
 };

@@ -50,6 +50,7 @@ protected:
 	virtual void OutlineTank_Implementation(const bool bActivate) override;
 	// Creates two box traces that combine to create a "+" sign attached to the gun turret.
 	void HighlightEnemyTanksIfDetected();
+	void UpdateCameraPitchLimitsTick();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
@@ -68,6 +69,12 @@ protected:
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomOut;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-40, UIMax=0))
+	double BasePitchMin;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30))
+	double BasePitchMax;
 
 	// This is the minimum spring arm length when zooming in.
 	// will take the absolute value of this 
@@ -116,7 +123,7 @@ protected:
 private:
 	// should only be used in the ATankCharacter::FindEnemyTanks function.
 	UPROPERTY(meta=(AllowPrivateAccess="true"))
-	TArray<FHitResult> SortedHitResults;
+	TArray<FHitResult> HighlightedEnemyTanks;
 	
 	// should only be used in the ATankCharacter::FindEnemyTanks function.
 	UPROPERTY(meta=(AllowPrivateAccess="true"))
@@ -168,6 +175,11 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool bAimingIn;
 
+	UPROPERTY(BlueprintReadOnly)
+	FVector2D GunTraceScreenPosition;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector GunTraceEndpoint;
 	
 	/** Please add a variable description */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
@@ -275,6 +287,7 @@ public:
 	TArray<TObjectPtr<UParticleSystem>> GetShootEmitterSystems() const { return ShootEmitterSystems; }
 	TObjectPtr<UParticleSystem> GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
 	bool IsInAir() const { return bIsInAir; }
+	const TArray<FHitResult>& GetHighlightedEnemyTanks() const { return HighlightedEnemyTanks; }
 
 	//////////////////////////////////////////////////////////////////
 	/// Functions

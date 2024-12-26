@@ -12,15 +12,15 @@
 
 
 // Sets default values
-ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), MinGunElevation(-15), MaxGunElevation(20),
-                                  CurrentMinGunElevation(-15),
-                                  MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10),
-                                  GunElevation(0), bIsInAir(false), LastFreeLocation(), LastFreeGunElevation(0),
-                                  DesiredGunElevation(0),
-                                  LineTraceOffset(0), LineTraceForwardVectorMultiplier(8000),
-                                  VerticalLineTraceHalfSize(FVector(10, 10, 300)),
-                                  HorizontalLineTraceHalfSize(FVector(10, 300, 10)), LookValues(), MoveValues(),
-                                  bAimingIn(false)
+ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
+                                  MinGunElevation(-15),
+                                  MaxGunElevation(20), CurrentMinGunElevation(-15),
+                                  MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10), GunElevation(0), bIsInAir(false),
+                                  LastFreeLocation(),
+                                  LastFreeGunElevation(0), DesiredGunElevation(0),
+                                  LineTraceOffset(0),
+                                  LineTraceForwardVectorMultiplier(8000), VerticalLineTraceHalfSize(FVector(10, 10, 300)), HorizontalLineTraceHalfSize(FVector(10, 300, 10)),
+                                  LookValues(), MoveValues(), bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -71,12 +71,10 @@ void ATankCharacter::Tick(float DeltaTime)
 		LookValues = PlayerController->GetLookValues();
 	}
 
+	UpdateCameraPitchLimitsTick();
 	TurretTurningTick(DeltaTime);
 	GunElevationTick(DeltaTime);
 	CheckIfGunCanLowerElevationTick(DeltaTime);
-	
-	FVector2D GunTraceScreenPosition;
-	FVector GunTraceEndpoint;
 	GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
 	
 	IsInAirTick();
@@ -257,36 +255,44 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 {
 	if (!BackCameraComp)
 		return;
+
+	if (bAimingIn)
+	{
+		GunElevation += LookValues.Y * -1;
+		SetGunElevation(GunElevation);
+	}
+	else
+	{
+		FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
+
+		FHitResult OutHit;
+		auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
+			GetWorld(),
+			BackCameraComp->GetComponentLocation(),
+			GunLocation,
+			{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
+			false,
+			{this},
+			EDrawDebugTrace::None,
+			OutHit,
+			true
+		);
+
+		auto LookAtRot = UKismetMathLibrary::FindLookAtRotation(
+			GetMesh()->GetSocketLocation("gun_jnt"),
+			bHit ? OutHit.Location : GunLocation
+		);
+
+		DesiredGunElevation = LookAtRot.Pitch;
 	
-	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
+		GunElevation = FMath::Clamp(
+			FMath::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
+			MinGunElevation,
+			MaxGunElevation
+		);
 
-	FHitResult OutHit;
-	auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
-		GetWorld(),
-		BackCameraComp->GetComponentLocation(),
-		GunLocation,
-		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
-		false,
-		{this},
-		EDrawDebugTrace::None,
-		OutHit,
-		true
-	);
-
-	auto LookAtRot = UKismetMathLibrary::FindLookAtRotation(
-		GetMesh()->GetSocketLocation("gun_jnt"),
-		bHit ? OutHit.Location : GunLocation
-	);
-
-	DesiredGunElevation = LookAtRot.Pitch;
-	
-	GunElevation = FMath::Clamp(
-		FMath::FInterpTo(GunElevation, LookAtRot.Pitch, DeltaTime, GunElevationInterpSpeed),
-		MinGunElevation,
-		MaxGunElevation
-	);
-
-	SetGunElevation(GunElevation);
+		SetGunElevation(GunElevation);
+	}
 }
 
 void ATankCharacter::IsInAirTick()
@@ -297,7 +303,7 @@ void ATankCharacter::IsInAirTick()
 	bIsInAir = UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
 		ActorOrigin + FVector(0, 0, 150),
-		ActorOrigin - FVector(0, 0, 75),
+		ActorOrigin - FVector(0, 0, 40),
 		TraceTypeQuery1,
 		false, {this},
 		EDrawDebugTrace::None,
@@ -367,7 +373,7 @@ void ATankCharacter::HighlightEnemyTanksIfDetected()
             CurrentHitResults.Add(Hit);
 
     // Removes hit results with actors that are no longer detected by the trace.
-    for (auto It = SortedHitResults.CreateIterator(); It; ++It)
+    for (auto It = HighlightedEnemyTanks.CreateIterator(); It; ++It)
     {
         if (!CurrentHitResults.Contains(*It))
         {
@@ -379,17 +385,33 @@ void ATankCharacter::HighlightEnemyTanksIfDetected()
 
     // add any hit results that were previously not present
     for (const FHitResult& Element : CurrentHitResults)
-        if (!SortedHitResults.Contains(Element))
-            SortedHitResults.Add(Element);
+        if (!HighlightedEnemyTanks.Contains(Element))
+            HighlightedEnemyTanks.Add(Element);
 
     // highlight any and all actors that implement the interface
-    for (const FHitResult& Hit : SortedHitResults)
+    for (const FHitResult& Hit : HighlightedEnemyTanks)
     {
         if (!Hit.IsValidBlockingHit())
             continue;
 
         Execute_OutlineTank(Hit.GetActor(), true); // need to change this when trying to get replication working.
     }
+}
+
+void ATankCharacter::UpdateCameraPitchLimitsTick()
+{
+	if (!PlayerController)
+		return;
+
+	float TankPitch = GetActorRotation().Pitch;
+
+	// Adjust the pitch limits based on the tank's current pitch
+	float AdjustedPitchMin = BasePitchMin + TankPitch;
+	float AdjustedPitchMax = BasePitchMax + TankPitch;
+
+	// Apply the adjusted limits
+	PlayerController->PlayerCameraManager->ViewPitchMin = FMath::Clamp(AdjustedPitchMin, -90.0f, 90.0f);
+	PlayerController->PlayerCameraManager->ViewPitchMax = FMath::Clamp(AdjustedPitchMax, -90.0f, 90.0f);
 }
 
 void ATankCharacter::SetGunElevation(const double NewGunElevation) const
