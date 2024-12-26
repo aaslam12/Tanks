@@ -13,8 +13,8 @@
 
 // Sets default values
 ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
-                                  MinGunElevation(-15),
-                                  MaxGunElevation(20), BaseMinGunElevation(MinGunElevation),BaseMaxGunElevation(MaxGunElevation), CurrentMinGunElevation(-15),
+                                  MinGunElevation(-15), AbsoluteMinGunElevation(-30), MaxGunElevation(20),
+                                  AbsoluteMaxGunElevation(30), AimingMinGunElevation(MinGunElevation), AimingMaxGunElevation(MaxGunElevation),
                                   MaxTurretRotationSpeed(90), GunElevationInterpSpeed(10), GunElevation(0), bIsInAir(false),
                                   LastFreeLocation(),
                                   LastFreeGunElevation(0), DesiredGunElevation(0),
@@ -201,7 +201,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		TopHit,
 		false
 	);
@@ -218,7 +218,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		BottomHit,
 		false
 	);
@@ -237,16 +237,14 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		
 		if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
 		{
-			CurrentMinGunElevation += 0.5; // 17
-			MinGunElevation = CurrentMinGunElevation;
+			MinGunElevation = FMath::Clamp(MinGunElevation + 1, AbsoluteMinGunElevation, AbsoluteMaxGunElevation); // 17
 			PlayerController->SetShootingBlocked(true);
 		}
 	}
 	else
 	{
 		// Update the last free gun elevation
-		CurrentMinGunElevation = GunElevation;
-		MinGunElevation = FMath::Min(GunElevation, DesiredGunElevation);
+		MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
 		PlayerController->SetShootingBlocked(false);
 	}
 }
@@ -259,7 +257,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 	if (bAimingIn)
 	{
 		GunElevation += LookValues.Y * -1;
-		GunElevation = FMath::Clamp(GunElevation, BaseMinGunElevation, BaseMaxGunElevation);
+		GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
 		SetGunElevation(GunElevation);
 	}
 	else
@@ -274,7 +272,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 			{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
 			false,
 			{this},
-			EDrawDebugTrace::None,
+			EDrawDebugTrace::ForOneFrame,
 			OutHit,
 			true
 		);

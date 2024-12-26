@@ -80,18 +80,24 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double MinGunElevation;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
+	double AbsoluteMinGunElevation;
+
 	// flat max gun elevation value
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
 	double MaxGunElevation;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
+	double AbsoluteMaxGunElevation;
+
 	// This is the minimum spring arm length when zooming in.
 	// will take the absolute value of this 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
-	double BaseMinGunElevation;
+	double AimingMinGunElevation;
 
 	// flat max gun elevation value
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
-	double BaseMaxGunElevation;
+	double AimingMaxGunElevation;
 
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30, MakeStructureDefaultValue=20))
