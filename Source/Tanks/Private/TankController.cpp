@@ -8,10 +8,14 @@
 #include "EnhancedInputSubsystems.h"
 #include "TankCameraManager.h"
 #include "TankCharacter.h"
+#include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Projectiles/ProjectilePool.h"
+#include "Projectiles/TankProjectile.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
@@ -290,54 +294,26 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 			}
 		}
 	}
-
-	// if it either did not hit anything or the hit actor is not in the highlighted enemy tanks array,
-	// then we try to find the closest location where we can shoot to actually hit the tank.
-	if (TankPlayer->GetHighlightedEnemyTanks().IsEmpty())
-		return;
-	
-	// finds closest actor to player
-	AActor* ClosestHighlightedActor = FindClosestHighlightedActor();
-
-	if (ClosestHighlightedActor == nullptr)
-		return;
-	
-	auto ActorSkeletalMesh = ClosestHighlightedActor->GetComponentByClass<USkeletalMeshComponent>();
-
-	if (ActorSkeletalMesh == nullptr)
-		return;
-
-	// get geometric center of the enemy tank
-	auto ActorCenter = ActorSkeletalMesh->Bounds.GetBox().GetCenter();
-
-	FVector2D ScreenPosition;
-	ProjectWorldLocationToScreen(ActorCenter, ScreenPosition); // find where the geometric center of the tank is on screen
-
-	for (int i = 0; i <= 10; ++i)
+	else
 	{
-		auto Lerp = FMath::Lerp(TankPlayer->GunTraceScreenPosition, ScreenPosition, i * 0.1);
+		// spawn projectile for the rest of the way.
+		auto GameMode = Cast<ATanksGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+		
+		if (GameMode != nullptr)
+		{
+			auto Rot = UKismetMathLibrary::FindLookAtRotation(OutHit.TraceStart, OutHit.TraceEnd);
+			if (GameMode->ProjectilePool)
+			{
+				auto Projectile = GameMode->ProjectilePool->FindFirstAvailableProjectile();
+				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
 
-		FVector WorldLocation;
-		FVector WorldDirection;
-		DeprojectScreenPositionToWorld(Lerp.X, Lerp.Y, WorldLocation, WorldDirection);
+				if (Projectile)
+					Projectile->bDebug = true;
 
-		FHitResult LerpHit;
-		bool bLerpHit = UKismetSystemLibrary::LineTraceSingle(
-			GetWorld(),
-			TurretStart,
-			WorldLocation + WorldDirection * ShootTraceDistance,
-			TraceTypeQuery1,
-			false,
-			{},
-			EDrawDebugTrace::ForDuration,
-			LerpHit,
-			true,
-			FLinearColor::Red
-		);
-
-		if (bLerpHit)
-			if (ClosestHighlightedActor == LerpHit.GetActor())
-				SpawnHitParticleSystem(LerpHit.Location);
+				UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) ProjectilePool->SpawnFromPool called")),
+					true, true, FLinearColor::Yellow, 0);
+			}
+		}
 	}
 }
 

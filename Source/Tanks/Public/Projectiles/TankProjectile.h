@@ -6,20 +6,73 @@
 #include "GameFramework/Actor.h"
 #include "TankProjectile.generated.h"
 
+class UNiagaraSystem;
+class UProjectileMovementComponent;
 class AProjectilePool;
 class UNiagaraComponent;
+
+USTRUCT(BlueprintType)
+struct FProjectileSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FTransform RelativeTransform;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UParticleSystem> ParticleSystem;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UNiagaraSystem> NiagaraSystem;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bUseNiagaraSystem;
+};
 
 UCLASS(Abstract)
 class TANKS_API ATankProjectile : public AActor
 {
 	GENERATED_BODY()
 
-	/* Set when spawned */
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
-	TObjectPtr<AProjectilePool> ProjectilePool;
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	FTimerHandle TimerHandle;
 
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Instanced, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovementComponent;
+
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	TArray<TObjectPtr<UParticleSystemComponent>> TrailParticleComponents;
+
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	TArray<TObjectPtr<UParticleSystemComponent>> HitParticleComponents;
+
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	TArray<TObjectPtr<UNiagaraComponent>> TrailNiagaraComponents;
+
+	/* Please add a variable description */
+	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
+	TArray<TObjectPtr<UNiagaraComponent>> HitNiagaraComponents;
+
+	/* Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Projectile Pool")
 	bool bIsInUse;
+
+	/* if a projectile has not hit anything after this time has passed, it will deactivate on its own. */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Projectile Pool")
+	double TimeToLive;
+	
+	/* Set when spawned */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	TObjectPtr<AProjectilePool> ProjectilePool;
+
+	/* Please add a variable description */
+	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	bool bUseSkeletalMesh;
 	
 	/* Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
@@ -28,50 +81,38 @@ class TANKS_API ATankProjectile : public AActor
 	/* Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
-	
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
-	bool bUseSkeletalMesh;
-	
-	/* Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
-	TArray<TObjectPtr<UParticleSystemComponent>> TrailParticleSystems;
 
-	/* Please add a variable description */
+	/* Will be created in the constructor */
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
-	TArray<TObjectPtr<UParticleSystemComponent>> HitParticleSystems;
+	TArray<FProjectileSettings> TrailParticleSystems;
 
-	/* Please add a variable description */
+	/* Will be created in the constructor */
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
-	TArray<TObjectPtr<UNiagaraComponent>> TrailNiagaraSystems;
+	TArray<FProjectileSettings> HitParticleSystems;
 
-	/* Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
-	TArray<TObjectPtr<UNiagaraComponent>> HitNiagaraSystems;
-
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
-	bool bUseNiagaraSystemForTrail;
-
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
-	bool bUseNiagaraSystemForHit;
-
+	void CreateSystems();
 	// Sets default values for this actor's properties
 	ATankProjectile();
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	virtual void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+	void ActivateTrails();
+	void DeactivateHitSystems();
+	void DeactivateTrails();
+	void ActivateHitSystems();
 
+public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void Activate();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void Deactivate();
-
-	virtual void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
-
-public:
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
 
@@ -84,21 +125,18 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsInUse() const { return bIsInUse; }
 	
-	UFUNCTION(BlueprintCallable)
-	void SetInUse(bool bNewInUse) { bIsInUse = bNewInUse; }
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	const TArray<UParticleSystemComponent*>&  GetTrailParticleComponents() const { return TrailParticleComponents; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	const TArray<TObjectPtr<UParticleSystemComponent>>&  GetTrailParticleSystems() const { return TrailParticleSystems; }
+	const TArray<UParticleSystemComponent*>& GetHitParticleComponents() const { return HitParticleComponents; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	const TArray<TObjectPtr<UParticleSystemComponent>>& GetHitParticleSystems() const { return HitParticleSystems; }
+	const TArray<FProjectileSettings>& GetTrailParticleSystems() const { return TrailParticleSystems; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	const TArray<TObjectPtr<UNiagaraComponent>>& GetTrailNiagaraSystems() const { return TrailNiagaraSystems; }
+	const TArray<FProjectileSettings>& GetHitParticleSystems() const { return HitParticleSystems; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	const TArray<TObjectPtr<UNiagaraComponent>>& GetHitNiagaraSystems() const { return HitNiagaraSystems; }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsUsingNiagaraSystem() const { return bUseNiagaraSystemForTrail; }
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	bool bDebug;
 };

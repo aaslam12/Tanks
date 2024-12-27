@@ -3,6 +3,7 @@
 
 #include "Tanks/Public/TankCharacter.h"
 
+#include "ChaosVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "TankController.h"
 #include "Camera/CameraComponent.h"
@@ -13,7 +14,7 @@
 
 // Sets default values
 ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
-                                  AbsoluteMinGunElevation(-30), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
+                                  AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
                                   GunElevationInterpSpeed(10),
                                   MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
                                   bIsInAir(false), 
@@ -211,7 +212,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		TopHit,
 		false
 	);
@@ -228,14 +229,16 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		BottomHit,
 		false
 	);
 
 	// disable the players ability to shoot while the turret is adjusting
-	if (bBottomHit == true && bTopHit == false)
+	if (bBottomHit == true && bTopHit == false || bBottomHit == true && bTopHit == true)
 		PlayerController->SetShootingBlocked(false);
+
+	
 
 	if (bTopHit || bBottomHit) 
 	{
@@ -246,29 +249,39 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		auto bTopDetectTank = TopHit.PhysMaterial->SurfaceType == SurfaceType2 && TopHit.GetActor() == this;
 		auto bBottomDetectTank = BottomHit.PhysMaterial->SurfaceType == SurfaceType2 && BottomHit.GetActor() == this;
 
-		if (bBottomDetectTank == true && bTopDetectTank == false)
+		if (bAimingIn)
 		{
-			MinGunElevation = GunElevation;
-			return;
+			// MinGunElevation = AbsoluteMinGunElevation;
+			
+			if (bBottomDetectTank == true && bTopDetectTank == false)
+			{
+				
+				MinGunElevation = GunElevation;
+				return;
+			}
+			
+		}
+		else // 3rd person
+		{
+			if (bBottomDetectTank == true && bTopDetectTank == false)
+			{
+				MinGunElevation = GunElevation;
+				return;
+			}
+		
+			if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
+			{
+				MinGunElevation = FMath::Clamp(MinGunElevation + 1, AbsoluteMinGunElevation, AbsoluteMaxGunElevation); // 17
+				PlayerController->SetShootingBlocked(true);
+			}
 		}
 		
-		if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
-		{
-			MinGunElevation = FMath::Clamp(MinGunElevation + 1, AbsoluteMinGunElevation, AbsoluteMaxGunElevation); // 17
-			PlayerController->SetShootingBlocked(true);
-		}
 	}
 	else
 	{
 		// Update the last free gun elevation
-		if (bAimingIn)
-		{
-			MinGunElevation = AbsoluteMinGunElevation;
-		}
-		else
-		{
-			MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
-		}
+		MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
+
 		PlayerController->SetShootingBlocked(false);
 	}
 }
@@ -283,48 +296,43 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 		GunElevation += LookValues.Y * -1;
 		GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
 		SetGunElevation(GunElevation);
+		return;
 	}
-	else
-	{
-		FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
 
-		FHitResult OutHit;
-		auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
-			GetWorld(),
-			BackCameraComp->GetComponentLocation(),
-			GunLocation,
-			{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
-			false,
-			{this},
-			EDrawDebugTrace::ForOneFrame,
-			OutHit,
-			true
-		);
+	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
 
-		auto LookAtRot = UKismetMathLibrary::FindLookAtRotation(
-			GetMesh()->GetSocketLocation("gun_jnt"),
-			bHit ? OutHit.Location : GunLocation
-		);
+	FHitResult OutHit;
+	auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
+		GetWorld(),
+		BackCameraComp->GetComponentLocation(),
+		GunLocation,
+		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
+		false,
+		{this},
+		EDrawDebugTrace::None,
+		OutHit,
+		true
+	);
 
-		DesiredGunElevation = LookAtRot.Pitch;
+	auto LookAtRot = UKismetMathLibrary::FindLookAtRotation(
+		GetMesh()->GetSocketLocation("gun_jnt"),
+		bHit ? OutHit.Location : GunLocation
+	);
 
-		// Clamp the change rate using the max speed variable
-		const float MaxGunElevationChangeSpeed = 10.0f; // Maximum degrees per second
-		float MaxDeltaElevation = MaxGunElevationChangeSpeed * DeltaTime;
+	DesiredGunElevation = LookAtRot.Pitch;
+	
+	// Interpolate and clamp to the maximum allowed change rate
+	GunElevation = FMath::Clamp(
+		FMath::FInterpTo(GunElevation, DesiredGunElevation, DeltaTime, GunElevationInterpSpeed),
+		MinGunElevation,
+		MaxGunElevation
+	);
 
-		// Interpolate and clamp to the maximum allowed change rate
-		GunElevation = FMath::Clamp(
-		  FMath::FInterpTo(GunElevation, DesiredGunElevation, DeltaTime, GunElevationInterpSpeed),
-		  GunElevation - MaxDeltaElevation,
-		  GunElevation + MaxDeltaElevation
-		);
+	// Clamp the final value within valid elevation bounds
+	GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
 
-		// Clamp the final value within valid elevation bounds
-		GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
-
-		// Apply the final gun elevation
-		SetGunElevation(GunElevation);
-	}
+	// Apply the final gun elevation
+	SetGunElevation(GunElevation);
 }
 
 void ATankCharacter::IsInAirTick()
