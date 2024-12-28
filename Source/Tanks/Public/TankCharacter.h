@@ -7,6 +7,7 @@
 #include "WheeledVehiclePawn.h"
 #include "TankCharacter.generated.h"
 
+class UTankHealthComponent;
 class ATankController;
 class UTankAnimInstance;
 class USpringArmComponent;
@@ -30,6 +31,10 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 {
 	GENERATED_BODY()
 
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UTankHealthComponent> HealthComponent;
+
+	void InitializeHealthComponent();
 	// Sets default values for this actor's properties
 	ATankCharacter();
 	virtual ~ATankCharacter() override;
@@ -60,6 +65,9 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
 	TSubclassOf<UTankAnimInstance> TankAnimInstanceClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
+	TSubclassOf<UTankHealthComponent> TankHealthComponentClass;
 
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))

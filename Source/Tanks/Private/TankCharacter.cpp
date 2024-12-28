@@ -7,13 +7,32 @@
 #include "EnhancedInputComponent.h"
 #include "TankController.h"
 #include "Camera/CameraComponent.h"
+#include "Components/TankHealthComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
 
+void ATankCharacter::InitializeHealthComponent()
+{
+	if (!TankHealthComponentClass)
+	{
+		// create the pure c++ version if bp version is not specified
+		HealthComponent = CreateDefaultSubobject<UTankHealthComponent>("HealthComponent");
+	}
+	else
+	{
+		// create the bp version of the component
+		HealthComponent = Cast<UTankHealthComponent>(CreateDefaultSubobject("HealthComponent",
+		                                                                    TankHealthComponentClass, TankHealthComponentClass,
+		                                                                    true, false));
+	}
+
+	
+}
+
 // Sets default values
-ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
+ATankCharacter::ATankCharacter(): HealthComponent(), MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
                                   AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
                                   GunElevationInterpSpeed(10),
                                   MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
@@ -24,8 +43,9 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 	bReplicates = true;
+
+	InitializeHealthComponent();
 
 	if (GetMesh())
 	{
