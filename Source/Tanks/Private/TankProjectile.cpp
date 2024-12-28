@@ -47,7 +47,7 @@ ATankProjectile::ATankProjectile(): SphereCollision(CreateDefaultSubobject<USphe
 
 ATankProjectile::~ATankProjectile()
 {
-	// just here to stop the errors you get in debugger but it doesnt seem to help
+	// just here to stop the errors you get in debugger, but it doesn't seem to help
 	for (auto Component : TrailParticleComponents)
 		if (UKismetSystemLibrary::IsValid(Component))
 			Component->DestroyComponent();
