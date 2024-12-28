@@ -10,10 +10,12 @@
 #include "TankCharacter.h"
 #include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "PhysicsEngine/PhysicsObjectBlueprintLibrary.h"
 #include "Projectiles/ProjectilePool.h"
 #include "Projectiles/TankProjectile.h"
 
@@ -304,14 +306,8 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 			auto Rot = UKismetMathLibrary::FindLookAtRotation(OutHit.TraceStart, OutHit.TraceEnd);
 			if (GameMode->ProjectilePool)
 			{
-				auto Projectile = GameMode->ProjectilePool->FindFirstAvailableProjectile();
-				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
+				Projectile = GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
 
-				if (Projectile)
-					Projectile->bDebug = true;
-
-				UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) ProjectilePool->SpawnFromPool called")),
-					true, true, FLinearColor::Yellow, 0);
 			}
 		}
 	}

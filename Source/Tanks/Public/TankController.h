@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "TankController.generated.h"
 
+class ATankProjectile;
 struct FInputActionValue;
 class UInputAction;
 class UInputMappingContext;
@@ -39,6 +40,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bCanMove;
+
+	UPROPERTY(BlueprintReadWrite)
+	ATankProjectile* Projectile;
 
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Input variables

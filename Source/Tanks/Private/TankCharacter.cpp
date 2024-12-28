@@ -238,8 +238,6 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 	if (bBottomHit == true && bTopHit == false || bBottomHit == true && bTopHit == true)
 		PlayerController->SetShootingBlocked(false);
 
-	
-
 	if (bTopHit || bBottomHit) 
 	{
 		
