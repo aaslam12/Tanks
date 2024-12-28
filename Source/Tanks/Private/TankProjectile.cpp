@@ -4,7 +4,10 @@
 #include "Projectiles/TankProjectile.h"
 
 #include "NiagaraComponent.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Projectiles/ProjectilePool.h"
 
 
 void ATankProjectile::CreateSystems()
@@ -19,7 +22,12 @@ void ATankProjectile::CreateSystems()
 			);
 
 			Comp->RegisterComponent();
-			Comp->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
+			if (bUseSkeletalMesh)
+				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			else
+				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
 			Comp->SetRelativeTransform(Element.RelativeTransform);
 			Comp->SetAsset(Element.NiagaraSystem);
 			Comp->bAutoActivate = false;
@@ -32,7 +40,12 @@ void ATankProjectile::CreateSystems()
 			);
 
 			Comp->RegisterComponent();
-			Comp->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
+			if (bUseSkeletalMesh)
+				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			else
+				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
 			Comp->SetRelativeTransform(Element.RelativeTransform);
 			Comp->SetTemplate(Element.ParticleSystem);
 			Comp->bAutoActivate = false;
@@ -50,7 +63,12 @@ void ATankProjectile::CreateSystems()
 			);
 
 			Comp->RegisterComponent();
-			Comp->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
+			if (bUseSkeletalMesh)
+				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			else
+				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
 			Comp->SetRelativeTransform(Element.RelativeTransform);
 			Comp->SetAsset(Element.NiagaraSystem);
 			Comp->bAutoActivate = false;
@@ -63,7 +81,12 @@ void ATankProjectile::CreateSystems()
 			);
 
 			Comp->RegisterComponent();
-			Comp->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
+			if (bUseSkeletalMesh)
+				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			else
+				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			
 			Comp->SetRelativeTransform(Element.RelativeTransform);
 			Comp->SetTemplate(Element.ParticleSystem);
 			Comp->bAutoActivate = false;
@@ -75,10 +98,11 @@ void ATankProjectile::CreateSystems()
 }
 
 // Sets default values
-ATankProjectile::ATankProjectile(): ProjectileMovementComponent(
-	                                    CreateDefaultSubobject<UProjectileMovementComponent>(
-		                                    "ProjectileMovementComponent")),
-                                    bIsInUse(false), TimeToLive(5), bUseSkeletalMesh(false), bDebug(false)
+ATankProjectile::ATankProjectile(): SphereCollision(CreateDefaultSubobject<USphereComponent>("SphereCollision")),
+									ProjectileMovementComponent(
+										CreateDefaultSubobject<UProjectileMovementComponent>(
+											"ProjectileMovementComponent")),
+                                    bIsInUse(false), TimeToLive(5), bUseSkeletalMesh(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -87,12 +111,72 @@ ATankProjectile::ATankProjectile(): ProjectileMovementComponent(
 	ProjectileMovementComponent->bForceSubStepping = true;
 	ProjectileMovementComponent->bInterpMovement = true;
 
+	SetRootComponent(SphereCollision);
+	SphereCollision->InitSphereRadius(850);
+	SphereCollision->SetSimulatePhysics(true);
+	SphereCollision->SetLinearDamping(20);
+	SphereCollision->SetCollisionProfileName("PhysicsActor");
+	SphereCollision->OnComponentHit.AddDynamic(this, &ATankProjectile::OnSphereComponentHit);
+}
+
+ATankProjectile::~ATankProjectile()
+{
+	for (auto Component : TrailParticleComponents)
+		if (UKismetSystemLibrary::IsValid(Component))
+			Component->DestroyComponent();
+
+	for (auto Component : HitParticleComponents)
+		if (UKismetSystemLibrary::IsValid(Component))
+			Component->DestroyComponent();
+
+	for (auto Component : TrailNiagaraComponents)
+		if (UKismetSystemLibrary::IsValid(Component))
+			Component->DestroyComponent();
+
+	for (auto Component : HitNiagaraComponents)
+		if (UKismetSystemLibrary::IsValid(Component))
+			Component->DestroyComponent();
+
+	TimerHandle.Invalidate();
+}
+
+void ATankProjectile::OnSphereComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	Deactivate();
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankProjectile::OnSphereComponentHit) Deactivate() called")),
+												  true, true, FLinearColor::Yellow, 15);
+}
+
+void ATankProjectile::CreateMesh()
+{
+	if (bUseSkeletalMesh)
+	{
+		auto Comp = NewObject<USkeletalMeshComponent>(this, USkeletalMeshComponent::StaticClass(),
+		                                                               FName(FString::Printf(TEXT("SkeletalMesh"))));
+
+		Comp->RegisterComponent();
+		Comp->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		Comp->SetRelativeTransform(MeshTransform);
+		Comp->SetSkinnedAssetAndUpdate(SkeletalMesh);
+	}
+	else
+	{
+		auto Comp = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(),
+		                                                           FName(FString::Printf(TEXT("StaticMesh"))));
+
+		Comp->RegisterComponent();
+		Comp->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		Comp->SetRelativeTransform(MeshTransform);
+		Comp->SetStaticMesh(StaticMesh);
+	}
 }
 
 void ATankProjectile::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
+	CreateMesh();
 	CreateSystems();
 }
 
@@ -106,14 +190,6 @@ void ATankProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-}
-
-void ATankProjectile::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp,
-                                bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse,
-                                const FHitResult& Hit)
-{
-	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
-	Deactivate();
 }
 
 void ATankProjectile::ActivateTrails()

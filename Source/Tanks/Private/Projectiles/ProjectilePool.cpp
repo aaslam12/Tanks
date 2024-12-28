@@ -3,6 +3,7 @@
 
 #include "Projectiles/ProjectilePool.h"
 
+#include "Kismet/GameplayStatics.h"
 #include "Projectiles/TankProjectile.h"
 
 
@@ -12,6 +13,13 @@ AProjectilePool::AProjectilePool(): PoolSize(20)
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+}
+
+AProjectilePool::~AProjectilePool()
+{
+	for (auto Element : PooledActors)
+		if (UKismetSystemLibrary::IsValid(Element))
+			Element->Destroy();
 }
 
 // Called when the game starts or when spawned
@@ -39,6 +47,9 @@ void AProjectilePool::InitPool()
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn
 		);
 
+		SpawnedActor->SetProjectilePool(this);
+		UGameplayStatics::FinishSpawningActor(SpawnedActor, FTransform());
+
 		if (SpawnedActor)
 			PooledActors.AddUnique(SpawnedActor);
 	}
@@ -59,7 +70,7 @@ ATankProjectile* AProjectilePool::FindFirstAvailableProjectile()
 	return nullptr;
 }
 
-void AProjectilePool::SpawnFromPool(const FTransform& SpawnTransform)
+ATankProjectile* AProjectilePool::SpawnFromPool(const FTransform& SpawnTransform)
 {
 	auto FirstAvailableProjectile = FindFirstAvailableProjectile();
 	
@@ -72,4 +83,6 @@ void AProjectilePool::SpawnFromPool(const FTransform& SpawnTransform)
 	{
 		ensureMsgf(0, TEXT("PROJECTILE POOL IS EITHER EMPTY OR FULL %s"), *GetFullName());
 	}
+
+	return FirstAvailableProjectile;
 }

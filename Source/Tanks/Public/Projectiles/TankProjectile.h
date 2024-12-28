@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "TankProjectile.generated.h"
 
+class USphereComponent;
 class UNiagaraSystem;
 class UProjectileMovementComponent;
 class AProjectilePool;
@@ -39,7 +40,11 @@ class TANKS_API ATankProjectile : public AActor
 	FTimerHandle TimerHandle;
 
 	/* Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, Instanced, meta=(AllowPrivateAccess="true"))
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<USphereComponent> SphereCollision;
+
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovementComponent;
 
 	/* Please add a variable description */
@@ -76,11 +81,23 @@ class TANKS_API ATankProjectile : public AActor
 	
 	/* Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
-	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
+	TObjectPtr<UStaticMesh> StaticMesh;
 
 	/* Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	TObjectPtr<USkeletalMesh> SkeletalMesh;
+	
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
+
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
+
+	/* Please add a variable description */
+	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	FTransform MeshTransform;
 
 	/* Will be created in the constructor */
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
@@ -91,8 +108,12 @@ class TANKS_API ATankProjectile : public AActor
 	TArray<FProjectileSettings> HitParticleSystems;
 
 	void CreateSystems();
+	UFUNCTION()
+	void OnSphereComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	// Sets default values for this actor's properties
 	ATankProjectile();
+	virtual ~ATankProjectile() override;
+	void CreateMesh();
 	virtual void OnConstruction(const FTransform& Transform) override;
 
 	// Called when the game starts or when spawned
@@ -100,7 +121,6 @@ class TANKS_API ATankProjectile : public AActor
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	virtual void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
 	void ActivateTrails();
 	void DeactivateHitSystems();
 	void DeactivateTrails();
@@ -137,6 +157,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	const TArray<FProjectileSettings>& GetHitParticleSystems() const { return HitParticleSystems; }
 
-	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
-	bool bDebug;
+	USphereComponent* GetSphereCollision() const
+	{
+		return SphereCollision;
+	}
+
+	AProjectilePool* GetProjectilePool() const { return ProjectilePool; }
+
+	void SetProjectilePool(AProjectilePool* NewProjectilePool) { this->ProjectilePool = NewProjectilePool; }
 };

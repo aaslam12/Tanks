@@ -27,6 +27,7 @@ class TANKS_API AProjectilePool : public AActor
 
 	// Sets default values for this actor's properties
 	AProjectilePool();
+	virtual ~AProjectilePool() override;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -41,5 +42,5 @@ public:
 	ATankProjectile* FindFirstAvailableProjectile();
 	
 	UFUNCTION()
-	void SpawnFromPool(const FTransform& SpawnTransform);
+	ATankProjectile* SpawnFromPool(const FTransform& SpawnTransform);
 };
