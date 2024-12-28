@@ -29,6 +29,8 @@ struct FProjectileSettings
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bUseNiagaraSystem;
+
+	FProjectileSettings() : bUseNiagaraSystem(false) {}
 };
 
 UCLASS(Abstract)

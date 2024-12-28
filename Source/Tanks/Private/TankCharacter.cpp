@@ -212,7 +212,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		TopHit,
 		false
 	);
@@ -229,7 +229,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		BottomHit,
 		false
 	);
@@ -251,26 +251,33 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 		{
 			// MinGunElevation = AbsoluteMinGunElevation;
 			
+			if (bBottomDetectTank == true && bTopDetectTank == true)
+			{
+				MinGunElevation = FMath::Clamp(MinGunElevation + 1, AbsoluteMinGunElevation, AbsoluteMaxGunElevation); // 17
+				PlayerController->SetShootingBlocked(true);
+				return;
+			}
+
 			if (bBottomDetectTank == true && bTopDetectTank == false)
 			{
-				
 				MinGunElevation = GunElevation;
+				PlayerController->SetShootingBlocked(false);
 				return;
 			}
 			
 		}
 		else // 3rd person
 		{
-			if (bBottomDetectTank == true && bTopDetectTank == false)
-			{
-				MinGunElevation = GunElevation;
-				return;
-			}
-		
 			if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
 			{
 				MinGunElevation = FMath::Clamp(MinGunElevation + 1, AbsoluteMinGunElevation, AbsoluteMaxGunElevation); // 17
 				PlayerController->SetShootingBlocked(true);
+			}
+
+			if (bBottomDetectTank == true && bTopDetectTank == false)
+			{
+				MinGunElevation = GunElevation;
+				return;
 			}
 		}
 		
@@ -278,7 +285,9 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 	else
 	{
 		// Update the last free gun elevation
-		MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
+		// if (bAimingIn)
+		// 	MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
+		MinGunElevation = FMath::Clamp(MinGunElevation - 0.2, AbsoluteMinGunElevation, GunElevation);
 
 		PlayerController->SetShootingBlocked(false);
 	}
