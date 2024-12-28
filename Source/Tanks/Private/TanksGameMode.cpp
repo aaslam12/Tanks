@@ -25,7 +25,7 @@ void ATanksGameMode::PostInitializeComponents()
 	auto SpawnRotation = FRotator::ZeroRotator;
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	
 	auto SpawnedActor = GetWorld()->SpawnActor(
 		ProjectilePoolClass,
@@ -54,11 +54,12 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	if (NewPlayer->GetPawn())
 		return;
 
-	auto SpawnLocation = FVector(PlayerControllers.Num() * -1200.0, 0, 0);
+	auto SpawnLocation = FVector(PlayerControllers.Num() * -1200.0, 0, 70);
 	auto SpawnRotation = FRotator(0, 0, 0);
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = NewPlayer;
-	
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
 	auto SpawnedActor = GetWorld()->SpawnActor(
 		DefaultPawnClass,
 		&SpawnLocation,

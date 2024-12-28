@@ -22,7 +22,6 @@ void UTankAnimInstance::GetLifetimeReplicatedProps(TArray<class FLifetimePropert
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UTankAnimInstance, WheelSpeed);
-	DOREPLIFETIME(UTankAnimInstance, WheelSpeedOffset);
 	DOREPLIFETIME(UTankAnimInstance, TurretAngle);
 	DOREPLIFETIME(UTankAnimInstance, GunElevation);
 	DOREPLIFETIME(UTankAnimInstance, HatchAngle);

@@ -31,14 +31,15 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UTankHealthComponent> HealthComponent;
+	// UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	// TObjectPtr<UTankHealthComponent> HealthComponent;
 
 	void InitializeHealthComponent();
 	// Sets default values for this actor's properties
 	ATankCharacter();
 	virtual ~ATankCharacter() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual auto GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -48,7 +49,13 @@ protected:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UFUNCTION()
 	void TurretTurningTick(float DeltaTime);
+	
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_TurretTurningTick(const bool bAimingIn_, const float TurretAngle_, const FVector2D& LookValues_, const double MaxTurretRotationSpeed_);
+	
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();
@@ -106,7 +113,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	double MaxGunElevation;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default", Replicated)
 	double CurrentTurretAngle;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")

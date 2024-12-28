@@ -10,29 +10,28 @@
 #include "Components/TankHealthComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
 
 void ATankCharacter::InitializeHealthComponent()
 {
-	if (!TankHealthComponentClass)
-	{
-		// create the pure c++ version if bp version is not specified
-		HealthComponent = CreateDefaultSubobject<UTankHealthComponent>("HealthComponent");
-	}
-	else
-	{
-		// create the bp version of the component
-		HealthComponent = Cast<UTankHealthComponent>(CreateDefaultSubobject("HealthComponent",
-		                                                                    TankHealthComponentClass, TankHealthComponentClass,
-		                                                                    true, false));
-	}
-
-	
+	// if (!TankHealthComponentClass)
+	// {
+	// 	// create the pure c++ version if bp version is not specified
+	// 	HealthComponent = CreateDefaultSubobject<UTankHealthComponent>("HealthComponent");
+	// }
+	// else
+	// {
+	// 	// create the bp version of the component
+	// 	HealthComponent = Cast<UTankHealthComponent>(CreateDefaultSubobject("HealthComponent",
+	// 	                                                                    TankHealthComponentClass, TankHealthComponentClass,
+	// 	                                                                    true, false));
+	// }
 }
 
 // Sets default values
-ATankCharacter::ATankCharacter(): HealthComponent(), MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
+ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
                                   AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
                                   GunElevationInterpSpeed(10),
                                   MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
@@ -75,6 +74,13 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 
 	BackCameraComp = GetBackCamera();
 	BackSpringArmComp = GetBackSpringArm();
+}
+
+void ATankCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, CurrentTurretAngle);
 }
 
 // Called every frame
@@ -150,26 +156,23 @@ void ATankCharacter::BeginPlay()
 	SetDefaults();
 }
 
-void ATankCharacter::TurretTurningTick(float DeltaTime)
+void ATankCharacter::SR_TurretTurningTick_Implementation(const bool bAimingIn_, const float TurretAngle_, const FVector2D& LookValues_, const double MaxTurretRotationSpeed_)
 {
-	if (!Controller || !GetMesh() || !AnimInstance)
-		return;
-	
-	if (bAimingIn)
+	if (bAimingIn_)
 	{
 		// first person turret rotation
-		float DesiredTurretAngle = AnimInstance->TurretAngle + FMath::Clamp(LookValues.X * 25, -MaxTurretRotationSpeed / 2, MaxTurretRotationSpeed / 2);
+		float DesiredTurretAngle = TurretAngle_ + FMath::Clamp(LookValues_.X * 25, -MaxTurretRotationSpeed_ / 2, MaxTurretRotationSpeed_ / 2);
 
 		// Smoothly interpolate towards the desired angle
 		CurrentTurretAngle = FMath::FInterpTo(
 			CurrentTurretAngle, // Current value
 			DesiredTurretAngle, // Target value
-			DeltaTime, // Time delta
+			GetWorld()->GetDeltaSeconds(), // Time delta
 			3.0f // Interpolation speed (adjust for more lag or responsiveness)
 		);
 
 		// Apply the interpolated value to the turret rotation
-		SetTurretRotation(CurrentTurretAngle);
+		MC_SetTurretRotation(CurrentTurretAngle);
 	}
 	else
 	{
@@ -208,16 +211,24 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 			TargetAngle = 1;
 
 		// Calculate the *difference* in angle, but now wrap it to the shortest path
-		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);
+		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - TurretAngle_);
 
 		// Clamp the angle difference based on MaxTurretRotationSpeed
-		const double MaxDeltaAngle = MaxTurretRotationSpeed * DeltaTime;
+		const double MaxDeltaAngle = MaxTurretRotationSpeed_ * GetWorld()->GetDeltaSeconds();
 		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
 
 		// Update the turret angle
-		SetTurretRotation(AnimInstance->TurretAngle + DeltaAngle);
+		MC_SetTurretRotation(TurretAngle_ + DeltaAngle);
 	}
+}
 
+void ATankCharacter::TurretTurningTick(float DeltaTime)
+{
+	if (!Controller || !GetMesh() || !AnimInstance)
+		return;
+
+	if (!IsLocallyControlled())
+		SR_TurretTurningTick(bAimingIn, AnimInstance->TurretAngle, LookValues, MaxTurretRotationSpeed);
 }
 
 void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)

@@ -21,7 +21,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
 	double WheelSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup")
 	double WheelSpeedOffset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Setup", Replicated)
