@@ -52,10 +52,6 @@ protected:
 
 	UFUNCTION()
 	void TurretTurningTick(float DeltaTime);
-	
-	UFUNCTION(BlueprintCallable, Server, Reliable)
-	void SR_TurretTurningTick(const bool bAimingIn_, const float TurretAngle_, const FVector2D& LookValues_, const double MaxTurretRotationSpeed_);
-	
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
 	void GunElevationTick(float DeltaTime);
 	void IsInAirTick();

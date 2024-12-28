@@ -156,12 +156,15 @@ void ATankCharacter::BeginPlay()
 	SetDefaults();
 }
 
-void ATankCharacter::SR_TurretTurningTick_Implementation(const bool bAimingIn_, const float TurretAngle_, const FVector2D& LookValues_, const double MaxTurretRotationSpeed_)
+void ATankCharacter::TurretTurningTick(float DeltaTime)
 {
-	if (bAimingIn_)
+	if (!Controller || !GetMesh() || !AnimInstance)
+		return;
+
+	if (bAimingIn)
 	{
 		// first person turret rotation
-		float DesiredTurretAngle = TurretAngle_ + FMath::Clamp(LookValues_.X * 25, -MaxTurretRotationSpeed_ / 2, MaxTurretRotationSpeed_ / 2);
+		float DesiredTurretAngle = AnimInstance->TurretAngle + FMath::Clamp(LookValues.X * 25, -MaxTurretRotationSpeed / 2, MaxTurretRotationSpeed / 2);
 
 		// Smoothly interpolate towards the desired angle
 		CurrentTurretAngle = FMath::FInterpTo(
@@ -172,7 +175,7 @@ void ATankCharacter::SR_TurretTurningTick_Implementation(const bool bAimingIn_, 
 		);
 
 		// Apply the interpolated value to the turret rotation
-		MC_SetTurretRotation(CurrentTurretAngle);
+		SetTurretRotation(CurrentTurretAngle);
 	}
 	else
 	{
@@ -211,24 +214,15 @@ void ATankCharacter::SR_TurretTurningTick_Implementation(const bool bAimingIn_, 
 			TargetAngle = 1;
 
 		// Calculate the *difference* in angle, but now wrap it to the shortest path
-		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - TurretAngle_);
+		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);
 
 		// Clamp the angle difference based on MaxTurretRotationSpeed
-		const double MaxDeltaAngle = MaxTurretRotationSpeed_ * GetWorld()->GetDeltaSeconds();
+		const double MaxDeltaAngle = MaxTurretRotationSpeed * GetWorld()->GetDeltaSeconds();
 		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
 
 		// Update the turret angle
-		MC_SetTurretRotation(TurretAngle_ + DeltaAngle);
+		SetTurretRotation(AnimInstance->TurretAngle + DeltaAngle);
 	}
-}
-
-void ATankCharacter::TurretTurningTick(float DeltaTime)
-{
-	if (!Controller || !GetMesh() || !AnimInstance)
-		return;
-
-	if (!IsLocallyControlled())
-		SR_TurretTurningTick(bAimingIn, AnimInstance->TurretAngle, LookValues, MaxTurretRotationSpeed);
 }
 
 void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
