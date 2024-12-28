@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "TankProjectile.generated.h"
 
+class UArrowComponent;
 class USphereComponent;
 class UNiagaraSystem;
 class UProjectileMovementComponent;
@@ -42,6 +43,10 @@ class TANKS_API ATankProjectile : public AActor
 	/* Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USphereComponent> SphereCollision;
+
+	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UArrowComponent> ArrowComponent;
 
 	/* Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
@@ -116,17 +121,19 @@ class TANKS_API ATankProjectile : public AActor
 	void CreateMesh();
 	virtual void OnConstruction(const FTransform& Transform) override;
 
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-	void ActivateTrails();
-	void DeactivateHitSystems();
-	void DeactivateTrails();
-	void ActivateHitSystems();
-
 public:
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void ActivateTrails();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void DeactivateHitSystems();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void DeactivateTrails();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void ActivateHitSystems(const FVector& HitLocation);
+
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void Activate();
 

@@ -51,12 +51,6 @@ void ATankController::Tick(float DeltaSeconds)
 		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
 		TankPlayer->SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
 	}
-
-	if (Projectile)
-	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) Projectile Location: %s"), *Projectile->GetActorLocation().ToString()),
-				true, true, FLinearColor::Yellow, 0);
-	}
 }
 
 void ATankController::SetDefaults()
@@ -314,24 +308,6 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 			{
 				Projectile = GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
 
-				if (Projectile)
-					if (Projectile->GetSphereCollision())
-					{
-						UPhysicsObjectBlueprintLibrary::ApplyRadialImpulse(
-							Cast<UPrimitiveComponent>(Projectile->GetSphereCollision()),
-							OutHit.TraceEnd,
-							1500,
-							3000,
-							RIF_Linear,
-							false, 0
-						);
-
-						UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) UPhysicsObjectBlueprintLibrary::ApplyRadialImpulse called")),
-												  true, true, FLinearColor::Yellow, 15);
-					}
-
-				UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Shoot) ProjectilePool->SpawnFromPool called")),
-				                                  true, true, FLinearColor::Yellow, 15);
 			}
 		}
 	}
