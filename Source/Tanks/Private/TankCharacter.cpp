@@ -85,23 +85,28 @@ void ATankCharacter::Tick(float DeltaTime)
 	if (!GetWorld())
 		return;
 
-	if (PlayerController)
+	// Only run trace logic for the local player or server, not unnecessary clients
+	if (HasAuthority() || IsLocallyControlled())
 	{
-		MoveValues = PlayerController->GetMoveValues();
-		LookValues = PlayerController->GetLookValues();
+		// If we're the server or the local player, run the traces and related logic
+		if (PlayerController)
+		{
+			MoveValues = PlayerController->GetMoveValues();
+			LookValues = PlayerController->GetLookValues();
+		}
+
+		// Execute other logic
+		TurretTurningTick(DeltaTime);
+		GunElevationTick(DeltaTime);
+		CheckIfGunCanLowerElevationTick(DeltaTime);
+		GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
+
+		IsInAirTick();
+		HighlightEnemyTanksIfDetected();
+
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
+			true, true, FLinearColor::Yellow, 0);
 	}
-
-	// UpdateCameraPitchLimitsTick();
-	TurretTurningTick(DeltaTime);
-	GunElevationTick(DeltaTime);
-	CheckIfGunCanLowerElevationTick(DeltaTime);
-	GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
-	
-	IsInAirTick();
-	HighlightEnemyTanksIfDetected();
-
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) GunTraceEndpoint: %s"), *GunTraceEndpoint.ToString()),
-	// 	true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

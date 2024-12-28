@@ -72,14 +72,16 @@ void UTankHealthComponent::SetHealth(int NewHealth)
 	}
 	else
 	{
-		GetWorld()->GetTimerManager().SetTimer(StartHealthRegenTimerHandle, this, &UMultiplayerHealthComponent::StartHealthRegen, TimeToStartHealthRegen, false, TimeToStartHealthRegen);
+		// GetWorld()->GetTimerManager().SetTimer(StartHealthRegenTimerHandle, this, &UMultiplayerHealthComponent::StartHealthRegen, TimeToStartHealthRegen, false, TimeToStartHealthRegen);
 	}
 }
 
 int UTankHealthComponent::GetHealth()
 {
+	return CurrentHealth;
 }
 
 bool UTankHealthComponent::GetIsDead()
 {
+	return CurrentHealth <= MinHealth;
 }
