@@ -134,16 +134,16 @@ void ATankController::Move(const FInputActionValue& Value)
 	// if (bCanMove == false)
 	// 	return;
 
-	// if (MoveValues.Y >= 0)
-	// {
-	// 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
-	// 	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
-	// }
-	// else
-	// {
-	// 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
-	// 	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(FMath::Abs(MoveValues.Y));
-	// }
+	if (MoveValues.Y >= 0)
+	{
+		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
+		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
+	}
+	else
+	{
+		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
+		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(FMath::Abs(MoveValues.Y));
+	}
 	
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Move) Move: %s"), *MoveValues.ToString()),
