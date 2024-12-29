@@ -36,8 +36,8 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin
                                   GunElevationInterpSpeed(10),
                                   MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
                                   bIsInAir(false), 
-                                  DesiredGunElevation(0), LineTraceOffset(0),
-                                  LineTraceForwardVectorMultiplier(8000), VerticalLineTraceHalfSize(FVector(10, 10, 300)), HorizontalLineTraceHalfSize(FVector(10, 300, 10)),
+                                  DesiredGunElevation(0), BoxTraceZOffset(0),
+                                  BoxTraceLength(8000), VerticalLineTraceHalfSize(FVector(10, 10, 300)), HorizontalLineTraceHalfSize(FVector(10, 300, 10)),
                                   LookValues(), MoveValues(), bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -52,6 +52,9 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin
 		GetMesh()->SetRenderCustomDepth(true);
 		// Set the custom depth stencil value to differentiate between different types of objects
 		GetMesh()->SetCustomDepthStencilValue(0);
+
+		if (TankAnimInstanceClass)
+			GetMesh()->SetAnimInstanceClass(TankAnimInstanceClass);
 	}
 
 	for (auto Element : GetComponents())
@@ -83,38 +86,6 @@ void ATankCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 	DOREPLIFETIME(ThisClass, CurrentTurretAngle);
 }
 
-// Called every frame
-void ATankCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	if (!GetWorld())
-		return;
-
-	// Only run trace logic for the local player or server, not unnecessary clients
-	if (HasAuthority() || IsLocallyControlled())
-	{
-		// If we're the server or the local player, run the traces and related logic
-		if (PlayerController)
-		{
-			MoveValues = PlayerController->GetMoveValues();
-			LookValues = PlayerController->GetLookValues();
-		}
-
-		// Execute other logic
-		TurretTurningTick(DeltaTime);
-		GunElevationTick(DeltaTime);
-		CheckIfGunCanLowerElevationTick(DeltaTime);
-		GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
-
-		IsInAirTick();
-		HighlightEnemyTanksIfDetected();
-
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
-			true, true, FLinearColor::Yellow, 0);
-	}
-}
-
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -125,7 +96,7 @@ void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 			EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 }
 
-void ATankCharacter::SetDefaults()
+void ATankCharacter::SetDefaults_Implementation()
 {
 	SetActorScale3D(FVector(0.95));
 	AnimInstance = Cast<UTankAnimInstance>(GetMesh()->GetAnimInstance());
@@ -156,7 +127,39 @@ void ATankCharacter::BeginPlay()
 	SetDefaults();
 }
 
-void ATankCharacter::TurretTurningTick(float DeltaTime)
+// Called every frame
+void ATankCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!GetWorld())
+		return;
+
+	// Only run trace logic for the local player or server, not unnecessary clients
+	if (HasAuthority() || IsLocallyControlled())
+	{
+		// If we're the server or the local player, run the traces and related logic
+		if (PlayerController)
+		{
+			MoveValues = PlayerController->GetMoveValues();
+			LookValues = PlayerController->GetLookValues();
+		}
+
+		// Execute other logic
+		UpdateTurretTurning(DeltaTime);
+		UpdateGunElevation(DeltaTime);
+		CheckIfGunCanLowerElevationTick(DeltaTime);
+		GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
+
+		UpdateIsInAir();
+		HighlightEnemyTanksIfDetected();
+
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
+			true, true, FLinearColor::Yellow, 0);
+	}
+}
+
+void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 {
 	if (!Controller || !GetMesh() || !AnimInstance)
 		return;
@@ -225,7 +228,7 @@ void ATankCharacter::TurretTurningTick(float DeltaTime)
 	}
 }
 
-void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
+void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaTime)
 {
 	if (!PlayerController)
 		return;
@@ -323,7 +326,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick(float DeltaTime)
 	}
 }
 
-void ATankCharacter::GunElevationTick(float DeltaTime)
+void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 {
 	if (!BackCameraComp)
 		return;
@@ -372,7 +375,7 @@ void ATankCharacter::GunElevationTick(float DeltaTime)
 	SetGunElevation(GunElevation);
 }
 
-void ATankCharacter::IsInAirTick()
+void ATankCharacter::UpdateIsInAir_Implementation()
 {
 	FVector ActorOrigin = GetActorLocation();
 
@@ -401,13 +404,13 @@ void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
 		GetMesh()->SetCustomDepthStencilValue(0);
 }
 
-void ATankCharacter::HighlightEnemyTanksIfDetected()
+void ATankCharacter::HighlightEnemyTanksIfDetected_Implementation()
 {
 	CurrentHitResults.Empty();
 	
 	FVector Start = GetMesh()->GetSocketTransform("GunShootSocket").GetLocation();
-	Start.Z += LineTraceOffset;
-	FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * LineTraceForwardVectorMultiplier;
+	Start.Z += BoxTraceZOffset;
+	FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * BoxTraceLength;
 
 	// horizontal box trace
 	UKismetSystemLibrary::BoxTraceMultiForObjects(
@@ -475,7 +478,7 @@ void ATankCharacter::HighlightEnemyTanksIfDetected()
     }
 }
 
-void ATankCharacter::UpdateCameraPitchLimitsTick() const
+void ATankCharacter::UpdateCameraPitchLimitsTick_Implementation() const
 {
 	if (!PlayerController)
 		return;

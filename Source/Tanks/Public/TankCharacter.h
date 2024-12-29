@@ -35,40 +35,62 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	// TObjectPtr<UTankHealthComponent> HealthComponent;
 
 	void InitializeHealthComponent();
-	// Sets default values for this actor's properties
 	ATankCharacter();
 	virtual ~ATankCharacter() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual auto GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-protected:
+	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	virtual void Tick(float DeltaTime) override;
+
+protected:
+	/** Sets all the needed references to other classes */
+	UFUNCTION(BlueprintNativeEvent)
 	void SetDefaults();
 
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	/** Updates turret angle to where the camera is looking */
+	UFUNCTION(BlueprintNativeEvent)
+	void UpdateTurretTurning(float DeltaTime);
 
-	UFUNCTION()
-	void TurretTurningTick(float DeltaTime);
+	/** Checks on tick if the gun can lower elevation. */
+	UFUNCTION(BlueprintNativeEvent)
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
-	void GunElevationTick(float DeltaTime);
-	void IsInAirTick();
+
+	/** Updates the gun elevation to where the camera is looking */
+	UFUNCTION(BlueprintNativeEvent)
+	void UpdateGunElevation(float DeltaTime);
+
+	/** Line traces from the bottom of the tank to the floor to check if the tank is in the air. */
+	UFUNCTION(BlueprintNativeEvent)
+	void UpdateIsInAir();
+
+	// ITankInterface functions start
 	virtual void OutlineTank_Implementation(const bool bActivate) override;
-	// Creates two box traces that combine to create a "+" sign attached to the gun turret.
+	// ITankInterface functions end
+	
+	/** Creates two box traces that combine to create a "+" sign attached to the gun turret. */
+	UFUNCTION(BlueprintNativeEvent)
 	void HighlightEnemyTanksIfDetected();
+
+	/** Updates how much up or down you can look based on the tank rotation */
+	UFUNCTION(BlueprintNativeEvent)
 	void UpdateCameraPitchLimitsTick() const;
 
+	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
 
+	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
 	TObjectPtr<UParticleSystem> ShootHitParticleSystem;
 	
+	/** The anim class to use for the tank. This is mainly here to set the anim bp in C++ */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
 	TSubclassOf<UTankAnimInstance> TankAnimInstanceClass;
 
+	/** The health component class to use for the tank. Allows for blueprints to
+	 * be added to the actor instead of pure C++ */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
 	TSubclassOf<UTankHealthComponent> TankHealthComponentClass;
 
@@ -81,15 +103,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomOut;
 
+	/** Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-40, UIMax=0))
 	double BasePitchMin;
 
+	/** Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30))
 	double BasePitchMax;
 
+	/** Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double AbsoluteMinGunElevation;
 
+	/** Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double AbsoluteMaxGunElevation;
 
@@ -109,24 +135,31 @@ protected:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	double MaxGunElevation;
 
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default", Replicated)
 	double CurrentTurretAngle;
 
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
 	
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent;
 
+	/** The Player controller of this pawn */
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Default")
 	TObjectPtr<ATankController> PlayerController;
 
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Default")
 	double GunElevation;
 
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Default")
 	bool bIsInAir;
 	
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double DesiredGunElevation;
 
@@ -148,46 +181,60 @@ private:
 	TArray<FHitResult> HorizontalHits;
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	double LineTraceOffset;
+	/** The Z offset of the "+" trace */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces", DisplayName="Box Trace Z Offset")
+	double BoxTraceZOffset;
 
+	/** How far to check and highlight enemy tanks */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	double LineTraceForwardVectorMultiplier;
+	double BoxTraceLength;
 	
+	/** The vertical component of the "+" trace */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
 	FVector VerticalLineTraceHalfSize; // FVector(10,10,300)
 
+	/** The horizontal component of the "+" trace */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
 	FVector HorizontalLineTraceHalfSize; // FVector(10,300,10)
 	
+	/** Please add a variable description */
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;
 
+	/** Please add a variable description */
 	UPROPERTY()
 	TObjectPtr<UCameraComponent> FrontCameraComp;
 	
+	/** Please add a variable description */
 	UPROPERTY()
 	TObjectPtr<UCameraComponent> BackCameraComp;
 
+	/** Please add a variable description */
 	UPROPERTY()
 	TObjectPtr<USpringArmComponent> BackSpringArmComp;
 
+	/** Please add a variable description */
 	UPROPERTY()
 	TObjectPtr<USpringArmComponent> FrontSpringArmComp;
 
 public:
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D LookValues;
 
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D MoveValues;
 
+	/** Is the player in first person mode? */
 	UPROPERTY(BlueprintReadOnly)
 	bool bAimingIn;
 
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D GunTraceScreenPosition;
 
+	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly)
 	FVector GunTraceEndpoint;
 	
@@ -285,7 +332,7 @@ protected:
 	void MC_SetWheelSmoke(float Intensity);
 
 	//////////////////////////////////////////////////////////////////
-	/// Getters
+	/// C++ Getters
 public:
 	double GetMaxZoomIn() const { return MaxZoomIn; }
 	double GetMaxZoomOut() const { return MaxZoomOut; }
@@ -304,7 +351,7 @@ public:
 	void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
 
 	//////////////////////////////////////////////////////////////////
-	/// Functions
+	/// Blueprint-Only Functions
 
 	/* Returns the location of where the trace ends */
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category="Tick")
