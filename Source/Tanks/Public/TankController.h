@@ -12,6 +12,10 @@ class UInputAction;
 class UInputMappingContext;
 class ATankCharacter;
 class ATankCameraManager;
+
+UDELEGATE(DisplayName="On Shoot Event")
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootEvent);
+
 /**
  * The base class for the tank controllers
  */
@@ -27,7 +31,12 @@ class TANKS_API ATankController : public APlayerController
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void OnPossess(APawn* InPawn) override;
-
+	
+public:
+	/** Runs after the shoot input has been processed */
+	UPROPERTY(BlueprintAssignable, Category = "Delegate Functions")
+	FOnShootEvent OnShoot;
+	
 protected:
 	UFUNCTION(BlueprintCallable)
 	void BindControls();
@@ -40,9 +49,6 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bCanMove;
-
-	UPROPERTY(BlueprintReadWrite)
-	ATankProjectile* Projectile;
 
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Input variables
@@ -68,7 +74,7 @@ protected:
 	TObjectPtr<UInputAction> ShootAction;
 
 	/** Shoot Input Action */
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	FTimerHandle ShootTimer;
 
 	/** Shoot Input Action */
@@ -102,8 +108,8 @@ protected:
 private:
 	UPROPERTY(BlueprintReadOnly, Category="Timers", meta = (AllowPrivateAccess = "true"))
 	FTimerHandle ShootTimerHandle;
+	
 protected:
-
 	UPROPERTY(BlueprintReadOnly, Category="Default", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<ATankCharacter> TankPlayer;
 	
@@ -137,15 +143,7 @@ protected:
 	void Turn(const FInputActionValue& Value);
 	void TurnStarted(const FInputActionValue& InputActionValue);
 	void TurnCompleted(const FInputActionValue& InputActionValue);
-	void SpawnShootEmitters() const;
-	UFUNCTION(Server, Unreliable)
-	void SR_SpawnShootEmitters();
-	UFUNCTION(NetMulticast, Unreliable)
-	void MC_SpawnShootEmitters();
-
-	void SpawnHitParticleSystem(const FVector& Location);
-	void StartShootTimer();
-	AActor* FindClosestHighlightedActor() const;
+	
 	void Shoot(const FInputActionValue& InputActionValue);
 
 	void HandbrakeStarted(const FInputActionValue& InputActionValue);
@@ -153,6 +151,10 @@ protected:
 
 	void MouseWheelUp(const FInputActionValue& InputActionValue);
 	void MouseWheelDown(const FInputActionValue& InputActionValue);
+
+	///////////////////////////////////////////////////////////////////////////////////
+	/// Functions
+	void StartShootTimer();
 
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Public functions

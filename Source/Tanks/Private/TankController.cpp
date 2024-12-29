@@ -8,16 +8,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "TankCameraManager.h"
 #include "TankCharacter.h"
-#include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
-#include "Components/SphereComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "PhysicsEngine/PhysicsObjectBlueprintLibrary.h"
-#include "Projectiles/ProjectilePool.h"
-#include "Projectiles/TankProjectile.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
@@ -35,11 +28,6 @@ ATankController::ATankController(): LookValues(), MoveValues(), bCanMove(true), 
 void ATankController::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-
-	for (auto Element : GetComponents())
-	{
-		Element->SetIsReplicated(true);
-	}
 }
 
 void ATankController::Tick(float DeltaSeconds)
@@ -56,13 +44,19 @@ void ATankController::Tick(float DeltaSeconds)
 void ATankController::SetDefaults()
 {
 	TankPlayer = Cast<ATankCharacter>(GetPawn());
-	// checkf(TankPlayer, TEXT("TankPlayer is invalid in ATankController::SetDefaults"));
+	ensureMsgf(TankPlayer, TEXT("(ATankController::SetDefaults) TankPlayer is NULL!!!"));
 	
-	if (TankPlayer)
-		if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
-			TankPlayer->bAimingIn = true;
-		else if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
-			TankPlayer->bAimingIn = false;
+	if (!TankPlayer)
+		return;
+	
+	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
+	{
+		TankPlayer->bAimingIn = true;
+	}
+	else if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
+	{
+		TankPlayer->bAimingIn = false;
+	}
 }
 
 void ATankController::OnPossess(APawn* InPawn)
@@ -90,7 +84,7 @@ void ATankController::SetupInputComponent()
 		Subsystem->AddMappingContext(DefaultMappingContext, 0);
 
 	EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
-	ensure(EnhancedInputComponent);
+	ensureMsgf(EnhancedInputComponent, TEXT("(ATankController::SetupInputComponent) EnhancedInputComponent is NULL!!!"));
 }
 
 void ATankController::BindControls()
@@ -98,9 +92,9 @@ void ATankController::BindControls()
 	// Set up action bindings
 	if (EnhancedInputComponent)
 	{
-
 		// Moving forward and backward
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATankController::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Ongoing, this, &ATankController::Move);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ATankController::Move);
 
 		// Turning left and right
@@ -126,7 +120,6 @@ void ATankController::BindControls()
 		// Handbrake
 		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Started, this, &ATankController::HandbrakeStarted);
 		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Completed, this, &ATankController::HandbrakeEnded);
-		
 	}
 }
 
@@ -135,23 +128,26 @@ void ATankController::Move(const FInputActionValue& Value)
 	if (!TankPlayer)
 		return;
 	
-	// input is a Vector2D
 	MoveValues.Y = Value.GetMagnitude();
 	bCanMove = !TankPlayer->IsInAir();
 	
 	// if (bCanMove == false)
 	// 	return;
 
-	if (MoveValues.Y >= 0)
-	{
-		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
-		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
-	}
-	else
-	{
-		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
-		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(FMath::Abs(MoveValues.Y));
-	}
+	// if (MoveValues.Y >= 0)
+	// {
+	// 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
+	// 	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
+	// }
+	// else
+	// {
+	// 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
+	// 	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(FMath::Abs(MoveValues.Y));
+	// }
+	
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Move) Move: %s"), *MoveValues.ToString()),
+			true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankController::Look(const FInputActionValue& Value)
@@ -191,6 +187,7 @@ void ATankController::TurnStarted(const FInputActionValue& InputActionValue)
 {
 	if (!TankPlayer)
 		return;
+	
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0.1);
 }
 
@@ -198,30 +195,9 @@ void ATankController::TurnCompleted(const FInputActionValue& InputActionValue)
 {
 	if (!TankPlayer)
 		return;
+	
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
 	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
-}
-
-void ATankController::SpawnShootEmitters() const
-{
-	for (auto ParticleSystem : TankPlayer->GetShootEmitterSystems())
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, TankPlayer->GetShootSocket()->GetComponentTransform());
-}
-
-void ATankController::SR_SpawnShootEmitters_Implementation()
-{
-	MC_SpawnShootEmitters();
-}
-
-void ATankController::MC_SpawnShootEmitters_Implementation()
-{
-	SpawnShootEmitters();
-}
-
-void ATankController::SpawnHitParticleSystem(const FVector& Location)
-{
-	UGameplayStatics::SpawnEmitterAtLocation( GetWorld(),
-		TankPlayer->GetShootHitParticleSystem(), Location);
 }
 
 void ATankController::StartShootTimer()
@@ -236,17 +212,6 @@ void ATankController::StartShootTimer()
 	);
 }
 
-AActor* ATankController::FindClosestHighlightedActor() const
-{
-	AActor* ClosestActor = nullptr;
-	for (const auto& Hit : TankPlayer->GetHighlightedEnemyTanks())
-		if (ClosestActor == nullptr)
-			ClosestActor = Hit.GetActor(); // just sets the first actor in the array as ClosestActor
-		else if (ClosestActor != Hit.GetActor() && TankPlayer->GetDistanceTo(Hit.GetActor()) < TankPlayer->GetDistanceTo(ClosestActor))
-			ClosestActor = Hit.GetActor(); // tries to find the closest actor to the player
-	return ClosestActor;
-}
-
 void ATankController::Shoot(const FInputActionValue& InputActionValue)
 {
 	if (!TankPlayer)
@@ -258,59 +223,11 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	if (bCanShoot == false || bShootingBlocked == true)
 		return;
 	
-	constexpr double ShootTraceDistance = 15000.0;
-
 	// disable shooting
 	SetCanShoot(false);
 	StartShootTimer();
 
-	// Spawning muzzle fire and dust around the tank 
-	SR_SpawnShootEmitters();
-	auto TurretStart = TankPlayer->GetMesh()->GetSocketLocation("GunShootSocket");
-	FVector End = TurretStart + TankPlayer->GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * ShootTraceDistance;
-
-	FHitResult OutHit;
-	bool bHit = UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		TurretStart,
-		End,
-		TraceTypeQuery1,
-		false,
-		{},
-		EDrawDebugTrace::ForDuration,
-		OutHit,
-		true,
-		FLinearColor::Black
-	);
-
-	// check if trace hit something
-	if (bHit)
-	{
-		for (const auto& Element : TankPlayer->GetHighlightedEnemyTanks()) // check if the hit actor is in the highlighted enemy tanks
-		{
-			if (Element.GetActor() == OutHit.GetActor())
-			{
-				// if it does exist in the array, spawn the hit particle system and return.
-				SpawnHitParticleSystem(OutHit.Location);
-				return;
-			}
-		}
-	}
-	else
-	{
-		// spawn projectile for the rest of the way.
-		auto GameMode = Cast<ATanksGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-		
-		if (GameMode != nullptr)
-		{
-			auto Rot = UKismetMathLibrary::FindLookAtRotation(OutHit.TraceStart, OutHit.TraceEnd);
-			if (GameMode->ProjectilePool)
-			{
-				Projectile = GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
-
-			}
-		}
-	}
+	OnShoot.Broadcast();
 }
 
 void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)
@@ -319,9 +236,6 @@ void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue
 		return;
 	
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(true);
-	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::HandbrakeStarted)")),
-		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
@@ -330,9 +244,6 @@ void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
     		return;
     		
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(false);
-	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::HandbrakeEnded)")),
-		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
@@ -340,12 +251,17 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 	if (!TankPlayer)
 		return;
 
-	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
+	if (!TankPlayer->GetBackSpringArmComp() || !TankPlayer->GetFrontCameraComp())
+		return;
+
+	auto BackSpringArmComp = TankPlayer->GetBackSpringArmComp();
+
+	if (BackSpringArmComp->TargetArmLength == TankPlayer->GetMaxZoomIn())
 		return;
 	
-	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Max(TankPlayer->GetBackSpringArmComp()->TargetArmLength - 200.0, TankPlayer->GetMaxZoomIn());
+	BackSpringArmComp->TargetArmLength = FMath::Max(BackSpringArmComp->TargetArmLength - 200.0, TankPlayer->GetMaxZoomIn());
 
-	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
+	if (BackSpringArmComp->TargetArmLength == TankPlayer->GetMaxZoomIn())
 	{
 		// Switch to aiming camera
 		if (TankPlayer->GetFrontCameraComp())
@@ -360,9 +276,6 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 			TankPlayer->SetMinGunElevation(TankPlayer->GetAbsoluteMinGunElevation()); // reset the value. will be overwritten in tick later
 		}
 	}
-	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::MouseWheelUp)")),
-		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
@@ -370,12 +283,17 @@ void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 	if (!TankPlayer)
 		return;
 
-	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomOut())
+	if (!TankPlayer->GetBackSpringArmComp() || !TankPlayer->GetFrontCameraComp())
+		return;
+
+	auto BackSpringArmComp = TankPlayer->GetBackSpringArmComp();
+
+	if (BackSpringArmComp->TargetArmLength == TankPlayer->GetMaxZoomOut())
 		return;
 	
-	TankPlayer->GetBackSpringArmComp()->TargetArmLength = FMath::Min(TankPlayer->GetBackSpringArmComp()->TargetArmLength + 200.0, TankPlayer->GetMaxZoomOut());
+	BackSpringArmComp->TargetArmLength = FMath::Min(BackSpringArmComp->TargetArmLength + 200.0, TankPlayer->GetMaxZoomOut());
 
-	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
+	if (BackSpringArmComp->TargetArmLength > TankPlayer->GetMaxZoomIn())
 	{
 		// Switch to 3rd person camera
 		if (TankPlayer->GetBackCameraComp())
@@ -389,9 +307,6 @@ void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 			TankPlayer->bAimingIn = false;
 		}
 	}
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::MouseWheelDown)")),
-		true, true, FLinearColor::Yellow, 0);
 }
 
 FVector2D ATankController::GetMoveValues() const

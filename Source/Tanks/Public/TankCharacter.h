@@ -40,6 +40,7 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual auto GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
+	void BindDelegates();
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
@@ -76,6 +77,10 @@ protected:
 	/** Updates how much up or down you can look based on the tank rotation */
 	UFUNCTION(BlueprintNativeEvent)
 	void UpdateCameraPitchLimitsTick() const;
+
+	/** This function is binded to the controller's input shoot function */
+	UFUNCTION(BlueprintNativeEvent)
+	void OnShoot();
 
 	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
@@ -230,12 +235,12 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool bAimingIn;
 
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly)
+	/** This hold the values where the gun sight is on screen */
+	UPROPERTY(BlueprintReadWrite)
 	FVector2D GunTraceScreenPosition;
 
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly)
+	/** This hold the value where the gun sight trace ends in world */
+	UPROPERTY(BlueprintReadWrite)
 	FVector GunTraceEndpoint;
 	
 	/** Please add a variable description */
@@ -250,6 +255,10 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetGunElevation(double NewGunElevation) const;
+
+	/** Simple function that spawns a new particle everytime. */
+	void SpawnHitParticleSystem(const FVector& Location);
+
 protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
@@ -303,6 +312,12 @@ protected:
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetHatchesAngles(double HatchAngle);
 
+	UFUNCTION(BlueprintCallable, Server, Unreliable)
+	void SR_SpawnShootEmitters();
+	
+	UFUNCTION(BlueprintCallable, NetMulticast, Unreliable)
+	void MC_SpawnShootEmitters();
+
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent, DisplayName="GetShootSocket")
 	USceneComponent* GetShootSocke() const;
@@ -332,7 +347,7 @@ protected:
 	void MC_SetWheelSmoke(float Intensity);
 
 	//////////////////////////////////////////////////////////////////
-	/// C++ Getters
+	/// Pure C++ Getters and Setters
 public:
 	double GetMaxZoomIn() const { return MaxZoomIn; }
 	double GetMaxZoomOut() const { return MaxZoomOut; }
@@ -354,6 +369,6 @@ public:
 	/// Blueprint-Only Functions
 
 	/* Returns the location of where the trace ends */
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category="Tick")
-	void GunSightTick(UPARAM(ref) FVector& EndPoint, UPARAM(ref) FVector2D& ScreenPosition);
+	// UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category="Tick")
+	// void GunSightTick(UPARAM(ref) FVector& EndPoint, UPARAM(ref) FVector2D& ScreenPosition);
 };

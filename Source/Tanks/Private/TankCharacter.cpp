@@ -6,11 +6,13 @@
 #include "ChaosVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "TankController.h"
+#include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
-#include "Components/TankHealthComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "Projectiles/ProjectilePool.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
 
@@ -120,11 +122,20 @@ void ATankCharacter::SetDefaults_Implementation()
 	SetLightsEmissivity(0);
 }
 
+void ATankCharacter::BindDelegates()
+{
+	if (PlayerController)
+	{
+		PlayerController->OnShoot.AddDynamic(this, &ATankCharacter::OnShoot);
+	}
+}
+
 void ATankCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
 	SetDefaults();
+	BindDelegates();
 }
 
 // Called every frame
@@ -149,7 +160,6 @@ void ATankCharacter::Tick(float DeltaTime)
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
 		CheckIfGunCanLowerElevationTick(DeltaTime);
-		GunSightTick(GunTraceEndpoint, GunTraceScreenPosition);
 
 		UpdateIsInAir();
 		HighlightEnemyTanksIfDetected();
@@ -157,6 +167,20 @@ void ATankCharacter::Tick(float DeltaTime)
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
 			true, true, FLinearColor::Yellow, 0);
 	}
+
+	if (GetVehicleMovementComponent()->GetForwardSpeedMPH() > 60.0f) 
+	{
+		GetVehicleMovementComponent()->SetThrottleInput(0.0f);
+
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) Blocked acceleration")),
+			true, true, FLinearColor::Red, 0);
+	}
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) Forward Speed MPH: %.5f"), GetVehicleMovementComponent()->GetForwardSpeedMPH()),
+			true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) Move: %s"), *MoveValues.ToString()),
+			true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
@@ -171,10 +195,10 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 
 		// Smoothly interpolate towards the desired angle
 		CurrentTurretAngle = FMath::FInterpTo(
-			CurrentTurretAngle, // Current value
-			DesiredTurretAngle, // Target value
-			GetWorld()->GetDeltaSeconds(), // Time delta
-			3.0f // Interpolation speed (adjust for more lag or responsiveness)
+			CurrentTurretAngle,
+			DesiredTurretAngle,
+			DeltaTime,
+			3.0f
 		);
 
 		// Apply the interpolated value to the turret rotation
@@ -220,7 +244,7 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);
 
 		// Clamp the angle difference based on MaxTurretRotationSpeed
-		const double MaxDeltaAngle = MaxTurretRotationSpeed * GetWorld()->GetDeltaSeconds();
+		const double MaxDeltaAngle = MaxTurretRotationSpeed * DeltaTime;
 		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
 
 		// Update the turret angle
@@ -245,7 +269,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		TopHit,
 		false
 	);
@@ -262,7 +286,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		BottomHit,
 		false
 	);
@@ -377,20 +401,22 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 
 void ATankCharacter::UpdateIsInAir_Implementation()
 {
-	FVector ActorOrigin = GetActorLocation();
+	// FVector ActorOrigin = GetActorLocation();
+	//
+	// FHitResult Hit;
+	// bIsInAir = UKismetSystemLibrary::LineTraceSingle(
+	// 	GetWorld(),
+	// 	ActorOrigin + FVector(0, 0, 150),
+	// 	ActorOrigin - FVector(0, 0, 40),
+	// 	TraceTypeQuery1,
+	// 	false, {this},
+	// 	EDrawDebugTrace::None,
+	// 	Hit,
+	// 	true,
+	// 	FLinearColor::Red
+	// );
 
-	FHitResult Hit;
-	bIsInAir = UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		ActorOrigin + FVector(0, 0, 150),
-		ActorOrigin - FVector(0, 0, 40),
-		TraceTypeQuery1,
-		false, {this},
-		EDrawDebugTrace::None,
-		Hit,
-		true,
-		FLinearColor::Red
-	);
+	bIsInAir = false;
 }
 
 void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
@@ -402,6 +428,59 @@ void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
 		GetMesh()->SetCustomDepthStencilValue(1);
 	else
 		GetMesh()->SetCustomDepthStencilValue(0);
+}
+
+void ATankCharacter::OnShoot_Implementation()
+{
+	constexpr double ShootTraceDistance = 15000.0;
+
+	// Spawning muzzle fire and dust around the tank 
+	SR_SpawnShootEmitters();
+	FVector TurretStart = GetMesh()->GetSocketLocation("GunShootSocket");
+	FVector End = TurretStart + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * ShootTraceDistance;
+
+	FHitResult OutHit;
+	bool bHit = UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TurretStart,
+		End,
+		TraceTypeQuery1,
+		false,
+		{},
+		EDrawDebugTrace::ForDuration,
+		OutHit,
+		true,
+		FLinearColor::Black
+	);
+
+	// check if trace hit something
+	if (bHit)
+	{
+		for (const auto& Element : HighlightedEnemyTanks) // check if the hit actor is in the highlighted enemy tanks
+		{
+			if (Element.GetActor() == OutHit.GetActor())
+			{
+				// if it does exist in the array, spawn the hit particle system and return.
+				SpawnHitParticleSystem(OutHit.Location);
+				return;
+			}
+		}
+	}
+	else
+	{
+		// spawn projectile for the rest of the way.
+		auto GameMode = Cast<ATanksGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+		
+		if (GameMode != nullptr)
+		{
+			auto Rot = UKismetMathLibrary::FindLookAtRotation(OutHit.TraceStart, OutHit.TraceEnd);
+			
+			if (GameMode->ProjectilePool != nullptr)
+			{
+				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
+			}
+		}
+	}
 }
 
 void ATankCharacter::HighlightEnemyTanksIfDetected_Implementation()
@@ -504,6 +583,15 @@ void ATankCharacter::SetGunElevation(const double NewGunElevation) const
 	else
 		// Clients should not update the GunElevation directly.
 		SR_SetGunElevation(NewGunElevation);
+}
+
+void ATankCharacter::SpawnHitParticleSystem(const FVector& Location)
+{
+	UGameplayStatics::SpawnEmitterAtLocation( GetWorld(),
+		ShootHitParticleSystem, Location,
+		FRotator( 0), FVector(1), true,
+		EPSCPoolMethod::AutoRelease
+	);
 }
 
 void ATankCharacter::SR_SetGunElevation_Implementation(double NewGunElevation) const
@@ -609,6 +697,14 @@ void ATankCharacter::SetHatchesAngles(double HatchAngle)
 {
 	if (AnimInstance)
 		AnimInstance->HatchAngle = HatchAngle;
+}
+
+void ATankCharacter::MC_SpawnShootEmitters_Implementation()
+{
+}
+
+void ATankCharacter::SR_SpawnShootEmitters_Implementation()
+{
 }
 
 void ATankCharacter::MC_SetWheelSmoke_Implementation(float Intensity)
