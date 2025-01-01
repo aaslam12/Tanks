@@ -24,6 +24,8 @@ class TANKS_API ATankController : public APlayerController
 {
 	GENERATED_BODY()
 
+	bool bIsAlive;
+
 	ATankController();
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -36,6 +38,9 @@ public:
 	/** Runs after the shoot input has been processed */
 	UPROPERTY(BlueprintAssignable, Category = "Delegate Functions")
 	FOnShootEvent OnShoot;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Delegate Functions")
+	void OnDie();
 	
 protected:
 	UFUNCTION(BlueprintCallable)

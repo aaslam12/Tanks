@@ -47,6 +47,10 @@ class TANKS_API ATankProjectile : public AActor
 	TObjectPtr<USphereComponent> SphereCollision;
 
 	/* Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UObject> CallbackObject;
+
+	/* Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UArrowComponent> ArrowComponent;
 
@@ -83,15 +87,15 @@ class TANKS_API ATankProjectile : public AActor
 	TObjectPtr<AProjectilePool> ProjectilePool;
 
 	/* Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
 	bool bUseSkeletalMesh;
 	
 	/* Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
 	TObjectPtr<UStaticMesh> StaticMesh;
 
 	/* Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
 	TObjectPtr<USkeletalMesh> SkeletalMesh;
 	
 	/* Please add a variable description */
@@ -103,7 +107,7 @@ class TANKS_API ATankProjectile : public AActor
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
 
 	/* Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Static/Skeletal Mesh")
 	FTransform MeshTransform;
 
 	/* Will be created in the constructor */
@@ -114,27 +118,22 @@ class TANKS_API ATankProjectile : public AActor
 	UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess="true"), Category="Setup|Particle/Niagara System")
 	TArray<FProjectileSettings> HitParticleSystems;
 
-	void CreateSystems();
+	void SpawnHitParticleSystem(const FVector& Location);
+	void SpawnTrails(const FVector& Location);
+
 	UFUNCTION()
 	void OnSphereComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
-	// Sets default values for this actor's properties
 	ATankProjectile();
 	virtual ~ATankProjectile() override;
 	void CreateMesh();
+	void SetMeshAssets();
+	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 public:
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void ActivateTrails();
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void DeactivateHitSystems();
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void DeactivateTrails();
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void ActivateHitSystems(const FVector& HitLocation);
+	UFUNCTION(BlueprintCallable)
+	void ResetTransform();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void Activate();
@@ -166,12 +165,14 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	const TArray<FProjectileSettings>& GetHitParticleSystems() const { return HitParticleSystems; }
 
-	USphereComponent* GetSphereCollision() const
-	{
-		return SphereCollision;
-	}
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	USphereComponent* GetSphereCollision() const { return SphereCollision; }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	AProjectilePool* GetProjectilePool() const { return ProjectilePool; }
 
+	UFUNCTION(BlueprintCallable)
 	void SetProjectilePool(AProjectilePool* NewProjectilePool) { this->ProjectilePool = NewProjectilePool; }
+
+	void SetCallbackObject(UObject* NewCallbackObject) { this->CallbackObject = NewCallbackObject; }
 };

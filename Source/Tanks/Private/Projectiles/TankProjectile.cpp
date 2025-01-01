@@ -3,19 +3,21 @@
 
 #include "Projectiles/TankProjectile.h"
 
-#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Components/ArrowComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Projectiles/ShootingInterface.h"
 
 
 // Sets default values
 ATankProjectile::ATankProjectile(): SphereCollision(CreateDefaultSubobject<USphereComponent>("SphereCollision")),
-									ArrowComponent(CreateDefaultSubobject<UArrowComponent>("Arrow")),
-									ProjectileMovementComponent(
-										CreateDefaultSubobject<UProjectileMovementComponent>(
-											"ProjectileMovementComponent")),
+                                    ArrowComponent(CreateDefaultSubobject<UArrowComponent>("Arrow")),
+                                    ProjectileMovementComponent(
+	                                    CreateDefaultSubobject<UProjectileMovementComponent>(
+		                                    "ProjectileMovementComponent")),
                                     bIsInUse(false), TimeToLive(5), bUseSkeletalMesh(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -24,7 +26,7 @@ ATankProjectile::ATankProjectile(): SphereCollision(CreateDefaultSubobject<USphe
 	SetRootComponent(SphereCollision);
 	SphereCollision->InitSphereRadius(200);
 	SphereCollision->SetMobility(EComponentMobility::Type::Movable);
-	
+
 	SphereCollision->OnComponentHit.AddDynamic(this, &ATankProjectile::OnSphereComponentHit);
 
 	SphereCollision->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -43,184 +45,117 @@ ATankProjectile::ATankProjectile(): SphereCollision(CreateDefaultSubobject<USphe
 
 	ArrowComponent->ArrowSize = 16.5;
 	ArrowComponent->ArrowLength = 128;
+
+	CreateMesh();
 }
 
 ATankProjectile::~ATankProjectile()
 {
-	// just here to stop the errors you get in debugger, but it doesn't seem to help
-	for (auto Component : TrailParticleComponents)
-		if (UKismetSystemLibrary::IsValid(Component))
-			Component->DestroyComponent();
-
-	for (auto Component : HitParticleComponents)
-		if (UKismetSystemLibrary::IsValid(Component))
-			Component->DestroyComponent();
-
-	for (auto Component : TrailNiagaraComponents)
-		if (UKismetSystemLibrary::IsValid(Component))
-			Component->DestroyComponent();
-
-	for (auto Component : HitNiagaraComponents)
-		if (UKismetSystemLibrary::IsValid(Component))
-			Component->DestroyComponent();
-
 	TimerHandle.Invalidate();
 }
 
-void ATankProjectile::OnSphereComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void ATankProjectile::OnSphereComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
+                                           UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	Deactivate();
-	ActivateHitSystems(Hit.Location);
+	SpawnHitParticleSystem(Hit.Location);
+
+	if (UKismetSystemLibrary::IsValid(CallbackObject))
+		IShootingInterface::Execute_ProjectileHit(CallbackObject, this, HitComponent, OtherActor, OtherComp, NormalImpulse, Hit);
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankProjectile::OnSphereComponentHit) Projectile Hit: %s"), *OtherActor->GetName()),
+			true, true, FLinearColor::Red, 15);
+
+	DrawDebugSphere(GetWorld(),
+		NormalImpulse,
+		150, 32, FColor::Blue, true);
 }
 
-void ATankProjectile::CreateSystems()
+void ATankProjectile::SpawnHitParticleSystem(const FVector& Location)
 {
-	// Register all trail particle/niagara systems
-	for (const auto& Element : TrailParticleSystems)
+	for (auto Element : HitParticleSystems)
 	{
-		if (Element.bUseNiagaraSystem)
-		{
-			auto Comp = NewObject<UNiagaraComponent>(this, UNiagaraComponent::StaticClass(), 
-				FName(FString::Printf(TEXT("Trail_NiagaraComponent_%s"), *Element.NiagaraSystem.GetName()))
-			);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),
+		                                         Element.ParticleSystem, Location,
+		                                         FRotator(0), FVector(1), true,
+		                                         EPSCPoolMethod::AutoRelease
+		);
 
-			Comp->RegisterComponent();
-			
-			if (bUseSkeletalMesh)
-				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			else
-				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			
-			Comp->SetRelativeTransform(Element.RelativeTransform);
-			Comp->SetAsset(Element.NiagaraSystem);
-			Comp->bAutoActivate = false;
-
-			Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			Comp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-			Comp->SetCollisionResponseToAllChannels(ECR_Ignore);
-			Comp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-			Comp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-			TrailNiagaraComponents.Add(Comp);
-		}
-		else
-		{
-			auto Comp = NewObject<UParticleSystemComponent>(this, UParticleSystemComponent::StaticClass(),
-				FName(FString::Printf(TEXT("Trail_ParticleSystemComponent_%s"), *Element.ParticleSystem.GetName()))
-			);
-
-			Comp->RegisterComponent();
-			
-			if (bUseSkeletalMesh)
-				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			else
-				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			
-			Comp->SetRelativeTransform(Element.RelativeTransform);
-			Comp->SetTemplate(Element.ParticleSystem);
-			Comp->bAutoActivate = false;
-
-			Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			Comp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-			Comp->SetCollisionResponseToAllChannels(ECR_Ignore);
-			Comp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-			Comp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-			TrailParticleComponents.Add(Comp);
-		}
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Element.NiagaraSystem, Location, FRotator(0),
+		                                               FVector(1), true, true, ENCPoolMethod::AutoRelease);
 	}
+}
 
-	// Register all hit particle/niagara systems
-	for (const auto& Element : HitParticleSystems)
+void ATankProjectile::SpawnTrails(const FVector& Location)
+{
+	for (auto Element : TrailParticleSystems)
 	{
-		if (Element.bUseNiagaraSystem)
-		{
-			auto Comp = NewObject<UNiagaraComponent>(this, UNiagaraComponent::StaticClass(),
-				FName(FString::Printf(TEXT("Hit_NiagaraComponent_%s"), *Element.NiagaraSystem.GetName()))
-			);
+		UGameplayStatics::SpawnEmitterAttached(Element.ParticleSystem, GetRootComponent(), "", Location,
+											   FRotator(0), FVector(1), EAttachLocation::Type::SnapToTarget, true,
+											   EPSCPoolMethod::AutoRelease
+		);
 
-			Comp->RegisterComponent();
-			
-			if (bUseSkeletalMesh)
-				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			else
-				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			
-			Comp->SetRelativeTransform(Element.RelativeTransform);
-			Comp->SetAsset(Element.NiagaraSystem);
-			Comp->bAutoActivate = false;
-
-			Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			Comp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-			Comp->SetCollisionResponseToAllChannels(ECR_Ignore);
-			Comp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-			Comp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-			HitNiagaraComponents.Add(Comp);
-		}
-		else
-		{
-			auto Comp = NewObject<UParticleSystemComponent>(this, UParticleSystemComponent::StaticClass(),
-				FName(FString::Printf(TEXT("Hit_ParticleSystemComponent_%s"), *Element.ParticleSystem.GetName()))
-			);
-
-			Comp->RegisterComponent();
-			
-			if (bUseSkeletalMesh)
-				Comp->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			else
-				Comp->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			
-			Comp->SetRelativeTransform(Element.RelativeTransform);
-			Comp->SetTemplate(Element.ParticleSystem);
-			Comp->bAutoActivate = false;
-
-			Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			Comp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-			Comp->SetCollisionResponseToAllChannels(ECR_Ignore);
-			Comp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-			Comp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-			HitParticleComponents.Add(Comp);
-		}
+		UNiagaraFunctionLibrary::SpawnSystemAttached(Element.NiagaraSystem, GetRootComponent(), "", Location,
+													 FRotator(0),
+													 EAttachLocation::Type::SnapToTarget, true, true,
+													 ENCPoolMethod::AutoRelease);
 	}
-
-	Deactivate();
 }
 
 void ATankProjectile::CreateMesh()
 {
 	if (bUseSkeletalMesh)
 	{
-		auto Comp = NewObject<USkeletalMeshComponent>(this, USkeletalMeshComponent::StaticClass(),
-		                                                               FName(FString::Printf(TEXT("SkeletalMesh"))));
+		SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>("SkeletalMesh");
+	
+		SkeletalMeshComponent->SetupAttachment(GetRootComponent());
+		SkeletalMeshComponent->SetRelativeTransform(MeshTransform);
+		SkeletalMeshComponent->SetMobility(EComponentMobility::Type::Movable);
 
-		Comp->RegisterComponent();
-		Comp->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-		Comp->SetRelativeTransform(MeshTransform);
-		Comp->SetSkinnedAssetAndUpdate(SkeletalMesh);
-		Comp->SetMobility(EComponentMobility::Type::Movable);
-
-		Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		Comp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-		Comp->SetCollisionResponseToAllChannels(ECR_Ignore);
-		Comp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-		Comp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+		SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		SkeletalMeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
+		SkeletalMeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+		SkeletalMeshComponent->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		SkeletalMeshComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	}
 	else
 	{
-		auto Comp = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(),
-		                                                           FName(FString::Printf(TEXT("StaticMesh"))));
+		StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("StaticMesh");
+	
+		StaticMeshComponent->SetupAttachment(GetRootComponent());
+		StaticMeshComponent->SetRelativeTransform(MeshTransform);
+		StaticMeshComponent->SetMobility(EComponentMobility::Type::Movable);
 
-		Comp->RegisterComponent();
-		Comp->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-		Comp->SetRelativeTransform(MeshTransform);
-		Comp->SetStaticMesh(StaticMesh);
-		Comp->SetMobility(EComponentMobility::Type::Movable);
-
-		Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		Comp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-		Comp->SetCollisionResponseToAllChannels(ECR_Ignore);
-		Comp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-		Comp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-
+		StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		StaticMeshComponent->SetCollisionObjectType(ECC_WorldDynamic);
+		StaticMeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+		StaticMeshComponent->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		StaticMeshComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	}
+}
+
+void ATankProjectile::SetMeshAssets()
+{
+	if (bUseSkeletalMesh)
+	{
+		if (SkeletalMeshComponent && SkeletalMesh)
+			SkeletalMeshComponent->SetSkinnedAssetAndUpdate(SkeletalMesh);
+	}
+	else
+	{
+		if (StaticMeshComponent && SkeletalMesh)
+			StaticMeshComponent->SetStaticMesh(StaticMesh);
+	}
+}
+
+void ATankProjectile::BeginPlay()
+{
+	Super::BeginPlay();
+
+	ProjectileMovementComponent->StopMovementImmediately();
+	ProjectileMovementComponent->Deactivate();
+
+	ResetTransform();
 }
 
 void ATankProjectile::OnConstruction(const FTransform& Transform)
@@ -229,50 +164,23 @@ void ATankProjectile::OnConstruction(const FTransform& Transform)
 
 	// add static/skeletal mesh and emitters to actor after construction
 	// we do this after construction because we need the data from BP here, which is not available in the C++ constructor
-	CreateMesh();
-	CreateSystems();
+	SetMeshAssets();
 }
 
-void ATankProjectile::ActivateTrails_Implementation()
+void ATankProjectile::Tick(float DeltaSeconds)
 {
-	for (auto Element : TrailNiagaraComponents)
-		if (Element)
-			Element->Activate(true);
+	Super::Tick(DeltaSeconds);
 
-	for (auto Element : TrailParticleComponents)
-		if (Element)
-			Element->Activate(true);
+	if (bIsInUse)
+		DrawDebugSphere(GetWorld(),
+			GetActorLocation(),
+			400, 32, FColor::White, false, 0.0f);
 }
 
-void ATankProjectile::DeactivateHitSystems_Implementation()
+void ATankProjectile::ResetTransform()
 {
-	for (auto Element : HitNiagaraComponents)
-		if (Element)
-			Element->Deactivate();
-
-	for (auto Element : HitParticleComponents)
-		if (Element)
-			Element->Deactivate();
-}
-
-void ATankProjectile::DeactivateTrails_Implementation()
-{
-	for (auto Element : TrailParticleComponents)
-		if (Element)
-			Element->Deactivate();
-	for (auto Element : TrailNiagaraComponents)
-		if (Element)
-			Element->Deactivate();
-}
-
-void ATankProjectile::ActivateHitSystems_Implementation(const FVector& HitLocation)
-{
-	for (auto Element : HitParticleComponents)
-		if (Element)
-			Element->Activate(true);
-	for (auto Element : HitNiagaraComponents)
-		if (Element)
-			Element->Activate(true);
+	SetActorTransform(FTransform(FRotator(0), FVector(0, 0, -100000)));
+	Deactivate();
 }
 
 void ATankProjectile::Activate_Implementation()
@@ -280,6 +188,7 @@ void ATankProjectile::Activate_Implementation()
 	SetActorEnableCollision(true);
 	SetActorHiddenInGame(false);
 	SetActorTickEnabled(true);
+	ProjectileMovementComponent->Activate(true);
 	bIsInUse = true;
 	
 	TimerHandle.Invalidate();
@@ -290,9 +199,6 @@ void ATankProjectile::Activate_Implementation()
 	FVector ForwardDirection = GetActorForwardVector();
 	ProjectileMovementComponent->Velocity = ForwardDirection * ProjectileMovementComponent->InitialSpeed;
 	ProjectileMovementComponent->UpdateComponentVelocity();
-
-	ActivateTrails();
-	DeactivateHitSystems();
 }
 
 void ATankProjectile::Deactivate_Implementation()
@@ -300,9 +206,8 @@ void ATankProjectile::Deactivate_Implementation()
 	SetActorEnableCollision(false);
 	SetActorHiddenInGame(true);
 	SetActorTickEnabled(false);
+	ProjectileMovementComponent->Deactivate();
 	bIsInUse = false;
-	
-	ProjectileMovementComponent->StopMovementImmediately();
 
-	DeactivateTrails();
+	ProjectileMovementComponent->StopMovementImmediately();
 }

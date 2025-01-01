@@ -22,7 +22,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDieUnreplicated);
  * The base main class for the Tank Health Component.
  * Made to be plug and play with any actor, not just tanks.
  */
-UCLASS(Abstract, ClassGroup=(TankGame))
+UCLASS(Blueprintable, ClassGroup=(TankGame))
 class TANKS_API UTankHealthComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -46,7 +46,8 @@ class TANKS_API UTankHealthComponent : public UActorComponent
 	// the current health of the player. will start with the max health possible
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = Values, meta=(AllowPrivateAccess="true"))
 	double CurrentHealth;
-
+	
+public:
 	UPROPERTY(BlueprintAssignable, Category = "Functions")
 	FOnTakeDamage OnTakeDamage;
 
@@ -58,7 +59,7 @@ class TANKS_API UTankHealthComponent : public UActorComponent
 
 	UPROPERTY(BlueprintAssignable, Category = "Functions")
 	FOnDieUnreplicated OnDieUnreplicated;
-	
+
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void Die();
 
@@ -69,7 +70,7 @@ class TANKS_API UTankHealthComponent : public UActorComponent
 	virtual void MC_Die();
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
-	virtual void OnDamaged(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
+	virtual void OnTakeDamaged(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void SetHealth(int NewHealth);

@@ -3,6 +3,8 @@
 
 #include "Components/TankHealthComponent.h"
 
+#include "Kismet/KismetSystemLibrary.h"
+
 
 // Sets default values for this component's properties
 UTankHealthComponent::UTankHealthComponent(): MinHealth(0), MaxHealth(1000), CurrentHealth(MaxHealth)
@@ -50,12 +52,15 @@ void UTankHealthComponent::MC_Die_Implementation()
 	OnDie.Broadcast();
 }
 
-void UTankHealthComponent::OnDamaged(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
+void UTankHealthComponent::OnTakeDamaged(AActor* DamagedActor, float Damage, const UDamageType*,
                                      AController* InstigatedBy, AActor* DamageCauser)
 {
 	const int OldHealth = CurrentHealth;
 	SetHealth(GetHealth() - Damage);
 	OnTakeDamage.Broadcast(OldHealth, CurrentHealth);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s Take damage: %.5f"), *GetName(), Damage),
+			true, true, FLinearColor::Yellow, 20);
 }
 
 void UTankHealthComponent::SetHealth(int NewHealth)

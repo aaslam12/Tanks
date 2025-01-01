@@ -3,16 +3,19 @@
 
 #include "Tanks/Public/TankCharacter.h"
 
-#include "ChaosVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "TankController.h"
 #include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
+#include "Components/TankHealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "PhysicsEngine/RadialForceComponent.h"
 #include "Projectiles/ProjectilePool.h"
+#include "Projectiles/TankDamageType.h"
+#include "Projectiles/TankProjectile.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
 
@@ -33,9 +36,11 @@ void ATankCharacter::InitializeHealthComponent()
 }
 
 // Sets default values
-ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
+ATankCharacter::ATankCharacter(): RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
+								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
+								  MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
                                   AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
-                                  GunElevationInterpSpeed(10),
+                                  GunElevationInterpSpeed(10), BaseDamage(500),
                                   MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
                                   bIsInAir(false), 
                                   DesiredGunElevation(0), BoxTraceZOffset(0),
@@ -46,6 +51,10 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
+	RadialForceComponent->SetupAttachment(RootComponent);
+	DamagedStaticMesh->SetHiddenInGame(false);
+	DamagedStaticMesh->SetVisibility(true);
+
 	InitializeHealthComponent();
 
 	if (GetMesh())
@@ -54,9 +63,21 @@ ATankCharacter::ATankCharacter(): MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin
 		GetMesh()->SetRenderCustomDepth(true);
 		// Set the custom depth stencil value to differentiate between different types of objects
 		GetMesh()->SetCustomDepthStencilValue(0);
+		
+		GetMesh()->SetHiddenInGame(false);
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
 
 		if (TankAnimInstanceClass)
 			GetMesh()->SetAnimInstanceClass(TankAnimInstanceClass);
+	}
+
+	if (DamagedStaticMesh)
+	{
+		DamagedStaticMesh->SetupAttachment(GetRootComponent());
+		DamagedStaticMesh->SetHiddenInGame(true);
+		DamagedStaticMesh->SetSimulatePhysics(false);
+		DamagedStaticMesh->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 	}
 
 	for (auto Element : GetComponents())
@@ -86,6 +107,7 @@ void ATankCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, CurrentTurretAngle);
+	DOREPLIFETIME(ThisClass, CurrentTeam);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -119,6 +141,11 @@ void ATankCharacter::SetDefaults_Implementation()
 	if (BackCameraComp)
 		BackCameraComp->SetActive(true);
 
+	if (DamagedStaticMesh)
+	{
+		DamagedStaticMesh->SetWorldTransform(FTransform(FRotator(0), FVector(0, 0, -100000)));
+	}
+
 	SetLightsEmissivity(0);
 }
 
@@ -128,6 +155,11 @@ void ATankCharacter::BindDelegates()
 	{
 		PlayerController->OnShoot.AddDynamic(this, &ATankCharacter::OnShoot);
 	}
+
+	if (HealthComponent)
+	{
+		HealthComponent->OnDie.AddDynamic(this, &ATankCharacter::OnDie);
+	}
 }
 
 void ATankCharacter::BeginPlay()
@@ -136,6 +168,9 @@ void ATankCharacter::BeginPlay()
 
 	SetDefaults();
 	BindDelegates();
+
+	DamagedStaticMesh->SetHiddenInGame(true);
+	DamagedStaticMesh->SetVisibility(false);
 }
 
 // Called every frame
@@ -167,20 +202,29 @@ void ATankCharacter::Tick(float DeltaTime)
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
 			true, true, FLinearColor::Yellow, 0);
 	}
+}
 
-	if (GetVehicleMovementComponent()->GetForwardSpeedMPH() > 60.0f) 
+bool ATankCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser) const
+{
+	if (DamageCauser->IsA(StaticClass()))
 	{
-		GetVehicleMovementComponent()->SetThrottleInput(0.0f);
+		auto OtherPlayer = Cast<ATankCharacter>(DamageCauser);
 
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) Blocked acceleration")),
-			true, true, FLinearColor::Red, 0);
+		if (OtherPlayer)
+		{
+			return OtherPlayer->GetCurrentTeam() != GetCurrentTeam();
+		}
 	}
+	
+	return false;
+}
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) Forward Speed MPH: %.5f"), GetVehicleMovementComponent()->GetForwardSpeedMPH()),
-			true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) Move: %s"), *MoveValues.ToString()),
-			true, true, FLinearColor::Yellow, 0);
+float ATankCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+	class AController* EventInstigator, AActor* DamageCauser)
+{
+	HealthComponent->OnTakeDamaged(this, DamageAmount, nullptr, EventInstigator, DamageCauser);
+	return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 }
 
 void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
@@ -430,9 +474,60 @@ void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
 		GetMesh()->SetCustomDepthStencilValue(0);
 }
 
+void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	IShootingInterface::ProjectileHit_Implementation(TankProjectile, HitComponent, OtherActor, OtherComp, NormalImpulse, Hit);
+
+	SR_ApplyRadialDamage(Hit);
+	TankProjectile->ResetTransform();
+}
+
+void ATankCharacter::ApplyRadialDamage(const FHitResult& Hit)
+{
+	UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(),
+		BaseDamage, BaseDamage * 0.1, Hit.Location,
+		DamageInnerRadius, DamageOuterRadius, DamageFalloff, UTankDamageType::StaticClass(),
+		{}, this, GetController());
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s Applying damage to: %s %.5f"), *GetName(), *Hit.GetActor()->GetName(), BaseDamage),
+			true, true, FLinearColor::Red, 15);
+}
+
+void ATankCharacter::SR_ApplyRadialDamage_Implementation(const FHitResult& Hit)
+{
+	MC_ApplyRadialDamage(Hit);
+}
+
+void ATankCharacter::MC_ApplyRadialDamage_Implementation(const FHitResult& Hit)
+{
+	ApplyRadialDamage(Hit);
+}
+
+void ATankCharacter::OnDie_Implementation()
+{
+	if (OnDieStaticMesh)
+	{
+		GetMesh()->SetHiddenInGame(true);
+		GetMesh()->SetSimulatePhysics(false);
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+		
+		DamagedStaticMesh->SetWorldTransform(GetActorTransform()); // TODO. add a small impulse to the tank and bounce it up
+		DamagedStaticMesh->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
+		DamagedStaticMesh->SetHiddenInGame(false);
+		DamagedStaticMesh->SetVisibility(true);
+
+		if (PlayerController)
+			PlayerController->OnDie();
+	}
+}
+
 void ATankCharacter::OnShoot_Implementation()
 {
-	constexpr double ShootTraceDistance = 15000.0;
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation)")),
+			true, true, FLinearColor::Yellow, 0);
+
+	constexpr double ShootTraceDistance = 5000.0;
 
 	// Spawning muzzle fire and dust around the tank 
 	SR_SpawnShootEmitters();
@@ -456,15 +551,8 @@ void ATankCharacter::OnShoot_Implementation()
 	// check if trace hit something
 	if (bHit)
 	{
-		for (const auto& Element : HighlightedEnemyTanks) // check if the hit actor is in the highlighted enemy tanks
-		{
-			if (Element.GetActor() == OutHit.GetActor())
-			{
-				// if it does exist in the array, spawn the hit particle system and return.
-				SpawnHitParticleSystem(OutHit.Location);
-				return;
-			}
-		}
+		SpawnHitParticleSystem(OutHit.Location);
+		SR_ApplyRadialDamage(OutHit);
 	}
 	else
 	{
@@ -481,6 +569,11 @@ void ATankCharacter::OnShoot_Implementation()
 			}
 		}
 	}
+}
+
+void ATankCharacter::SR_Shoot_Implementation()
+{
+	
 }
 
 void ATankCharacter::HighlightEnemyTanksIfDetected_Implementation()
@@ -699,12 +792,22 @@ void ATankCharacter::SetHatchesAngles(double HatchAngle)
 		AnimInstance->HatchAngle = HatchAngle;
 }
 
+void ATankCharacter::SpawnShootEmitters()
+{
+	for (auto ParticleSystem : GetShootEmitterSystems())
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, GetShootSocket()->GetComponentTransform());
+
+	RadialForceComponent->FireImpulse();
+}
+
 void ATankCharacter::MC_SpawnShootEmitters_Implementation()
 {
+	SpawnShootEmitters();
 }
 
 void ATankCharacter::SR_SpawnShootEmitters_Implementation()
 {
+	MC_SpawnShootEmitters();
 }
 
 void ATankCharacter::MC_SetWheelSmoke_Implementation(float Intensity)

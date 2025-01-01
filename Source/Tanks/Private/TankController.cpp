@@ -14,7 +14,8 @@
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): LookValues(), MoveValues(), bCanMove(true), ShootTimerDuration(3), MouseSensitivity(FVector(0.4)),
+ATankController::ATankController(): bIsAlive(true), LookValues(), MoveValues(), bCanMove(true), ShootTimerDuration(3),
+                                    MouseSensitivity(FVector(0.4)),
                                     bStopTurn(false),
                                     VehicleYaw(0),
                                     bCanShoot(true), bShootingBlocked(false)
@@ -34,7 +35,7 @@ void ATankController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (TankPlayer)
+	if (TankPlayer && bIsAlive)
 	{
 		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
 		TankPlayer->SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
@@ -44,7 +45,6 @@ void ATankController::Tick(float DeltaSeconds)
 void ATankController::SetDefaults()
 {
 	TankPlayer = Cast<ATankCharacter>(GetPawn());
-	ensureMsgf(TankPlayer, TEXT("(ATankController::SetDefaults) TankPlayer is NULL!!!"));
 	
 	if (!TankPlayer)
 		return;
@@ -84,7 +84,14 @@ void ATankController::SetupInputComponent()
 		Subsystem->AddMappingContext(DefaultMappingContext, 0);
 
 	EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
-	ensureMsgf(EnhancedInputComponent, TEXT("(ATankController::SetupInputComponent) EnhancedInputComponent is NULL!!!"));
+	checkf(EnhancedInputComponent, TEXT("(ATankController::SetupInputComponent) EnhancedInputComponent is NULL!!!"));
+}
+
+void ATankController::OnDie_Implementation()
+{
+	SetCanShoot(false);
+	bIsAlive = true;
+	ShootTimerHandle.Invalidate();
 }
 
 void ATankController::BindControls()
@@ -125,9 +132,9 @@ void ATankController::BindControls()
 
 void ATankController::Move(const FInputActionValue& Value)
 {
-	if (!TankPlayer)
+	if (!TankPlayer || !bIsAlive)
 		return;
-	
+
 	MoveValues.Y = Value.GetMagnitude();
 	bCanMove = !TankPlayer->IsInAir();
 	
@@ -152,7 +159,7 @@ void ATankController::Move(const FInputActionValue& Value)
 
 void ATankController::Look(const FInputActionValue& Value)
 {
-	if (!TankPlayer)
+	if (!TankPlayer || !bIsAlive)
 		return;
 	
 	// input is a Vector2D
@@ -165,8 +172,8 @@ void ATankController::Look(const FInputActionValue& Value)
 
 void ATankController::Turn(const FInputActionValue& Value)
 {
-	if (!TankPlayer)
-    		return;
+	if (!TankPlayer || !bIsAlive)
+		return;
     		
 	MoveValues.X = Value.GetMagnitude();
 	bCanMove = !TankPlayer->IsInAir();
@@ -185,7 +192,7 @@ void ATankController::Turn(const FInputActionValue& Value)
 
 void ATankController::TurnStarted(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer)
+	if (!TankPlayer || !bIsAlive)
 		return;
 	
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0.1);
@@ -193,7 +200,7 @@ void ATankController::TurnStarted(const FInputActionValue& InputActionValue)
 
 void ATankController::TurnCompleted(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer)
+	if (!TankPlayer || !bIsAlive)
 		return;
 	
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
@@ -214,7 +221,7 @@ void ATankController::StartShootTimer()
 
 void ATankController::Shoot(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer)
+	if (!TankPlayer || !bIsAlive)
 		return;
 	
 	if (!TankPlayer->GetShootSocket())
@@ -232,7 +239,7 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 
 void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer)
+	if (!TankPlayer || !bIsAlive)
 		return;
 	
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(true);
@@ -240,8 +247,8 @@ void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue
 
 void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer)
-    		return;
+	if (!TankPlayer || !bIsAlive)
+		return;
     		
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(false);
 }
@@ -264,7 +271,7 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 	if (BackSpringArmComp->TargetArmLength == TankPlayer->GetMaxZoomIn())
 	{
 		// Switch to aiming camera
-		if (TankPlayer->GetFrontCameraComp())
+		if (TankPlayer->GetFrontCameraComp() && bIsAlive)
 		{
 			TankPlayer->GetFrontCameraComp()->SetActive(true);
 			TankPlayer->GetBackCameraComp()->SetActive(false);

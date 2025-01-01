@@ -5,8 +5,11 @@
 #include "CoreMinimal.h"
 #include "TankInterface.h"
 #include "WheeledVehiclePawn.h"
+#include "Projectiles/ShootingInterface.h"
 #include "TankCharacter.generated.h"
 
+class ATankProjectile;
+class URadialForceComponent;
 class UTankHealthComponent;
 class ATankController;
 class UTankAnimInstance;
@@ -26,13 +29,25 @@ FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
 	return A.GetActor() == B.GetActor();
 }
 
+UENUM(BlueprintType)
+enum class ETeam : uint8
+{
+	Team_1 UMETA(DisplayName = "Team 1"),
+	Team_2 UMETA(DisplayName = "Team 2"),
+};
+
 UCLASS(Abstract)
-class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterface
+class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterface, public IShootingInterface
 {
 	GENERATED_BODY()
 
-	// UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
-	// TObjectPtr<UTankHealthComponent> HealthComponent;
+	TObjectPtr<UTankHealthComponent> HealthComponent;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<URadialForceComponent> RadialForceComponent;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UStaticMeshComponent> DamagedStaticMesh;
 
 	void InitializeHealthComponent();
 	ATankCharacter();
@@ -45,7 +60,13 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
 
+	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 protected:
+	UFUNCTION(BlueprintCallable, Category="Setup") 
+	void SetComponentReferences(UTankHealthComponent* Health) { HealthComponent = Health; }
+	
 	/** Sets all the needed references to other classes */
 	UFUNCTION(BlueprintNativeEvent)
 	void SetDefaults();
@@ -69,6 +90,18 @@ protected:
 	// ITankInterface functions start
 	virtual void OutlineTank_Implementation(const bool bActivate) override;
 	// ITankInterface functions end
+
+	// IShootingInterface functions start
+	virtual void ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit) override;
+	// IShootingInterface functions end
+
+	void ApplyRadialDamage(const FHitResult& Hit);
+
+	UFUNCTION(Server, Reliable)
+	void SR_ApplyRadialDamage(const FHitResult& Hit);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_ApplyRadialDamage(const FHitResult& Hit);
 	
 	/** Creates two box traces that combine to create a "+" sign attached to the gun turret. */
 	UFUNCTION(BlueprintNativeEvent)
@@ -82,9 +115,16 @@ protected:
 	UFUNCTION(BlueprintNativeEvent)
 	void OnShoot();
 
+	UFUNCTION(BlueprintNativeEvent)
+	void OnDie();
+	
+	/**  */
+	UFUNCTION(BlueprintNativeEvent)
+	void SR_Shoot();
+
 	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
-	TArray<TObjectPtr<UParticleSystem>> ShootEmitterSystems;
+	TArray<UParticleSystem*> ShootEmitterSystems;
 
 	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
@@ -99,69 +139,88 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
 	TSubclassOf<UTankHealthComponent> TankHealthComponentClass;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
+	TObjectPtr<UStaticMesh> OnDieStaticMesh;
+
 	// Should be greater than MaxZoomIn
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Camera", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomIn;
 
 	// This is the maximum spring arm length when zooming out.
 	// Should be greater than MaxZoomIn
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=5000))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Camera", meta=(UIMin=0, UIMax=5000))
 	double MaxZoomOut;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-40, UIMax=0))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Camera", meta=(UIMin=-40, UIMax=0))
 	double BasePitchMin;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=0, UIMax=30))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Camera", meta=(UIMin=0, UIMax=30))
 	double BasePitchMax;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Gun Elevation", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double AbsoluteMinGunElevation;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Gun Elevation", meta=(UIMin=-10, UIMax=10, MakeStructureDefaultValue=0))
 	double AbsoluteMaxGunElevation;
 
 	// Should be greater than MaxZoomIn
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup", meta=(UIMin=0, UIMax=180, MakeStructureDefaultValue=90))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0, UIMax=180, MakeStructureDefaultValue=90))
 	double MaxTurretRotationSpeed;
 
 	// Should be greater than MaxZoomIn
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Gun Elevation", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double GunElevationInterpSpeed;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=100, UIMax=2000, MakeStructureDefaultValue=10))
+	double BaseDamage; // 1000
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
+	double DamageInnerRadius;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
+	double DamageOuterRadius;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
+	double DamageFalloff;
+
 	// This is the minimum spring arm length when zooming in.
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Setup|Gameplay|Gun Elevation")
 	double MinGunElevation;
 
 	// flat max gun elevation value
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double MaxGunElevation;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default", Replicated)
+	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
 	double CurrentTurretAngle;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
+	ETeam CurrentTeam;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
 	
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent;
 
 	/** The Player controller of this pawn */
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<ATankController> PlayerController;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double GunElevation;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Default")
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	bool bIsInAir;
 	
 	/** Please add a variable description */
@@ -312,6 +371,9 @@ protected:
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetHatchesAngles(double HatchAngle);
 
+	UFUNCTION(BlueprintCallable)
+	void SpawnShootEmitters();
+
 	UFUNCTION(BlueprintCallable, Server, Unreliable)
 	void SR_SpawnShootEmitters();
 	
@@ -356,14 +418,15 @@ public:
 	UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
 	USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
 	USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
-	TArray<TObjectPtr<UParticleSystem>> GetShootEmitterSystems() const { return ShootEmitterSystems; }
-	TObjectPtr<UParticleSystem> GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
+	TArray<UParticleSystem*> GetShootEmitterSystems() const { return ShootEmitterSystems; }
+	UParticleSystem* GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
 	bool IsInAir() const { return bIsInAir; }
 	const TArray<FHitResult>& GetHighlightedEnemyTanks() const { return HighlightedEnemyTanks; }
 	double GetAbsoluteMinGunElevation() const { return AbsoluteMinGunElevation; }
 	double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
 	void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
 	void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
+	ETeam GetCurrentTeam() const { return CurrentTeam; }
 
 	//////////////////////////////////////////////////////////////////
 	/// Blueprint-Only Functions

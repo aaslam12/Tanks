@@ -41,6 +41,13 @@ public:
 	UFUNCTION()
 	ATankProjectile* FindFirstAvailableProjectile();
 	
+	/**
+	 * @param SpawnTransform Where the object should "spawn"
+	 * @param Object To provide a callback function when the projectile hits something
+	 * @param InitialSpeed The initial speed of the projectile. currently does not do anything.
+	 * @return Returns the projectile actor that was just spawned.
+	 */
 	UFUNCTION()
-	ATankProjectile* SpawnFromPool(const FTransform& SpawnTransform);
+	ATankProjectile* SpawnFromPool(const FTransform& SpawnTransform, UObject* Object = nullptr,
+	                               const double InitialSpeed = 50000.0);
 };
