@@ -153,8 +153,8 @@ void ATankController::Move(const FInputActionValue& Value)
 	}
 	
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Move) Move: %s"), *MoveValues.ToString()),
-			true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Move) Move: %s"), *MoveValues.ToString()),
+	// 		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankController::Look(const FInputActionValue& Value)

@@ -59,12 +59,12 @@ void AProjectilePool::InitPool()
 void AProjectilePool::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	for (auto Element : PooledActors)
-	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(AProjectilePool::Tick) %s Projectile Location: %s"), *Element->GetName(), *Element->GetActorLocation().ToString()),
-		                                  true, true, FLinearColor::Yellow, 0);
-	}
+	//
+	// for (auto Element : PooledActors)
+	// {
+	// 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(AProjectilePool::Tick) %s Projectile Location: %s"), *Element->GetName(), *Element->GetActorLocation().ToString()),
+	// 	                                  true, true, FLinearColor::Yellow, 0);
+	// }
 }
 
 ATankProjectile* AProjectilePool::FindFirstAvailableProjectile()
@@ -81,8 +81,8 @@ ATankProjectile* AProjectilePool::SpawnFromPool(const FTransform& SpawnTransform
 	
 	if (FirstAvailableProjectile)
 	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(AProjectilePool::SpawnFromPool) FindFirstAvailableProjectile: %s"), *FirstAvailableProjectile->GetName()),
-			true, true, FLinearColor::Red, 15);
+		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(AProjectilePool::SpawnFromPool) FindFirstAvailableProjectile: %s"), *FirstAvailableProjectile->GetName()),
+		// 	true, true, FLinearColor::Red, 15);
 		
 		FirstAvailableProjectile->SetActorTransform(SpawnTransform);
 

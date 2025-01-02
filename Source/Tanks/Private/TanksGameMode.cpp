@@ -43,27 +43,10 @@ void ATanksGameMode::PostInitializeComponents()
 void ATanksGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
-	AssignTeam(NewPlayer);
 }
 
-void ATanksGameMode::OnPostLogin(AController* NewPlayer)
+void ATanksGameMode::SpawnPawn(AController* NewPlayer)
 {
-	Super::OnPostLogin(NewPlayer);
-
-	if (!NewPlayer)
-		return;
-
-	if (!Cast<APlayerController>(NewPlayer))
-		return;
-
-	auto NewPlayerController = Cast<APlayerController>(NewPlayer);
-
-	PlayerControllers.Add(NewPlayerController);
-
-	// do not spawn another pawn if a pawn already exists for it
-	if (NewPlayer->GetPawn())
-		return;
-
 	auto SpawnLocation = FVector(PlayerControllers.Num() * -1200.0, 0, 70);
 	auto SpawnRotation = FRotator(0, 0, 0);
 	FActorSpawnParameters SpawnParams;
@@ -79,21 +62,26 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	NewPlayer->Possess(Cast<APawn>(SpawnedActor));
 }
 
-void ATanksGameMode::AssignTeam(const APlayerController* NewPlayer) const
+void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 {
-	if (!NewPlayer) return;
+	Super::OnPostLogin(NewPlayer);
 
-	APlayerState* PlayerState = NewPlayer->PlayerState;
-	if (!PlayerState) return;
+	if (!NewPlayer)
+		return;
+	
+	APlayerController* NewPlayerController = Cast<APlayerController>(NewPlayer);
+	if (!NewPlayerController)
+		return;
 
 	UTankGameInstance* GameInstance = Cast<UTankGameInstance>(GetGameInstance());
-	if (!GameInstance) return;
+	if (!GameInstance)
+		return;
 
-	// Example: Auto-assign to teams alternately
-	FString TeamToAssign = GameInstance->TeamNames.Num() > 0
-							 ? GameInstance->TeamNames[PlayerState->GetPlayerId() % GameInstance->TeamNames.Num()]
-							 : "DefaultTeam";
+	PlayerControllers.Add(NewPlayerController);
 
-	GameInstance->AssignPlayerToTeam(PlayerState, TeamToAssign);
-	PlayerState->SetPlayerName(FString::Printf(TEXT("Player %d (%s)"), PlayerState->GetPlayerId(), *TeamToAssign));
+	GameInstance->OnPostLogin(NewPlayerController);
+
+	// do not spawn another pawn if a pawn already exists for it
+	if (!NewPlayer->GetPawn())
+		SpawnPawn(NewPlayer);
 }

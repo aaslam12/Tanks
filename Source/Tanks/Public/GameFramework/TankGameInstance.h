@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Libraries/TankStructLibrary.h"
 #include "TankGameInstance.generated.h"
 
-struct FTeamData;
 /**
  * 
  */
@@ -27,4 +27,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Teams")
 	TArray<APlayerState*> GetPlayersInTeam(const FString& TeamName) const;
+
+	/**
+	 * Called from the Game mode only.
+	 * @param NewPlayer The newly logged on player
+	 */
+	virtual void OnPostLogin(AController* NewPlayer);
 };

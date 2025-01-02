@@ -21,4 +21,12 @@ class TANKS_API ATankGameState : public AGameState
 public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="Teams")
 	TArray<FTeamData> Teams;
+	
+	// Assign a player to a team
+	UFUNCTION(BlueprintCallable, Category="Teams")
+	void AssignPlayerToTeam(APlayerState* Player, const FString& TeamName);
+
+	// Get players in a specific team
+	UFUNCTION(BlueprintCallable, Category="Teams")
+	TArray<APlayerState*> GetPlayersInTeam(const FString& TeamName) const;
 };

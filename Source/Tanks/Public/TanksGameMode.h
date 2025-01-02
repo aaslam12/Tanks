@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameModeBase.h"
+#include "GameFramework/GameMode.h"
 #include "TanksGameMode.generated.h"
 
 class AProjectilePool;
@@ -11,14 +11,14 @@ class AProjectilePool;
  * The base tanks game mode class
  */
 UCLASS(Abstract)
-class TANKS_API ATanksGameMode : public AGameModeBase
+class TANKS_API ATanksGameMode : public AGameMode
 {
 	GENERATED_BODY()
 
 	virtual void PostInitializeComponents() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	void SpawnPawn(AController* NewPlayer);
 	virtual void OnPostLogin(AController* NewPlayer) override;
-	void AssignTeam(const APlayerController* NewPlayer) const;
 
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	TSet<APlayerController*> PlayerControllers;

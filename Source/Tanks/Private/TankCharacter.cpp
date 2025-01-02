@@ -199,8 +199,8 @@ void ATankCharacter::Tick(float DeltaTime)
 		UpdateIsInAir();
 		HighlightEnemyTanksIfDetected();
 
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
-			true, true, FLinearColor::Yellow, 0);
+		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
+		// 	true, true, FLinearColor::Yellow, 0);
 	}
 }
 
@@ -490,8 +490,8 @@ void ATankCharacter::ApplyRadialDamage(const FHitResult& Hit)
 		DamageInnerRadius, DamageOuterRadius, DamageFalloff, UTankDamageType::StaticClass(),
 		{}, this, GetController());
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s Applying damage to: %s %.5f"), *GetName(), *Hit.GetActor()->GetName(), BaseDamage),
-			true, true, FLinearColor::Red, 15);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s Applying damage to: %s %.5f"), *GetName(), *Hit.GetActor()->GetName(), BaseDamage),
+	// 		true, true, FLinearColor::Red, 15);
 }
 
 void ATankCharacter::SR_ApplyRadialDamage_Implementation(const FHitResult& Hit)
@@ -524,8 +524,8 @@ void ATankCharacter::OnDie_Implementation()
 
 void ATankCharacter::OnShoot_Implementation()
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation)")),
-			true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation)")),
+	// 		true, true, FLinearColor::Yellow, 0);
 
 	constexpr double ShootTraceDistance = 5000.0;
 

@@ -59,8 +59,8 @@ void UTankHealthComponent::OnTakeDamaged(AActor* DamagedActor, float Damage, con
 	SetHealth(GetHealth() - Damage);
 	OnTakeDamage.Broadcast(OldHealth, CurrentHealth);
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s Take damage: %.5f"), *GetName(), Damage),
-			true, true, FLinearColor::Yellow, 20);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s Take damage: %.5f"), *GetName(), Damage),
+	// 		true, true, FLinearColor::Yellow, 20);
 }
 
 void UTankHealthComponent::SetHealth(int NewHealth)

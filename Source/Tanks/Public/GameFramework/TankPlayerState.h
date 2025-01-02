@@ -14,6 +14,8 @@ class TANKS_API ATankPlayerState : public APlayerState
 {
 	GENERATED_BODY()
 
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
 public:
 	UPROPERTY(Replicated, BlueprintReadWrite, Category="Teams")
 	FString TeamName;

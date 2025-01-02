@@ -63,8 +63,8 @@ void ATankProjectile::OnSphereComponentHit(UPrimitiveComponent* HitComponent, AA
 	if (UKismetSystemLibrary::IsValid(CallbackObject))
 		IShootingInterface::Execute_ProjectileHit(CallbackObject, this, HitComponent, OtherActor, OtherComp, NormalImpulse, Hit);
 	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankProjectile::OnSphereComponentHit) Projectile Hit: %s"), *OtherActor->GetName()),
-			true, true, FLinearColor::Red, 15);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankProjectile::OnSphereComponentHit) Projectile Hit: %s"), *OtherActor->GetName()),
+	// 		true, true, FLinearColor::Red, 15);
 
 	DrawDebugSphere(GetWorld(),
 		NormalImpulse,
