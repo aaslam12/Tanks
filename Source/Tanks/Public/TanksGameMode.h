@@ -16,7 +16,9 @@ class TANKS_API ATanksGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 	virtual void PostInitializeComponents() override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void OnPostLogin(AController* NewPlayer) override;
+	void AssignTeam(const APlayerController* NewPlayer) const;
 
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	TSet<APlayerController*> PlayerControllers;

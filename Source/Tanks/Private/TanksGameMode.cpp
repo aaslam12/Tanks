@@ -3,6 +3,8 @@
 
 #include "TanksGameMode.h"
 
+#include "GameFramework/PlayerState.h"
+#include "GameFramework/TankGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Projectiles/ProjectilePool.h"
 
@@ -38,6 +40,12 @@ void ATanksGameMode::PostInitializeComponents()
 			ProjectilePool = Cast<AProjectilePool>(SpawnedActor);
 }
 
+void ATanksGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+	AssignTeam(NewPlayer);
+}
+
 void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 {
 	Super::OnPostLogin(NewPlayer);
@@ -48,7 +56,9 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	if (!Cast<APlayerController>(NewPlayer))
 		return;
 
-	PlayerControllers.Add(Cast<APlayerController>(NewPlayer));
+	auto NewPlayerController = Cast<APlayerController>(NewPlayer);
+
+	PlayerControllers.Add(NewPlayerController);
 
 	// do not spawn another pawn if a pawn already exists for it
 	if (NewPlayer->GetPawn())
@@ -67,4 +77,23 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	);
 
 	NewPlayer->Possess(Cast<APawn>(SpawnedActor));
+}
+
+void ATanksGameMode::AssignTeam(const APlayerController* NewPlayer) const
+{
+	if (!NewPlayer) return;
+
+	APlayerState* PlayerState = NewPlayer->PlayerState;
+	if (!PlayerState) return;
+
+	UTankGameInstance* GameInstance = Cast<UTankGameInstance>(GetGameInstance());
+	if (!GameInstance) return;
+
+	// Example: Auto-assign to teams alternately
+	FString TeamToAssign = GameInstance->TeamNames.Num() > 0
+							 ? GameInstance->TeamNames[PlayerState->GetPlayerId() % GameInstance->TeamNames.Num()]
+							 : "DefaultTeam";
+
+	GameInstance->AssignPlayerToTeam(PlayerState, TeamToAssign);
+	PlayerState->SetPlayerName(FString::Printf(TEXT("Player %d (%s)"), PlayerState->GetPlayerId(), *TeamToAssign));
 }
