@@ -3,6 +3,7 @@
 
 #include "GameFramework/TankGameInstance.h"
 
+#include "TankCharacter.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Libraries/TankStructLibrary.h"
@@ -16,12 +17,19 @@ void UTankGameInstance::AssignPlayerToTeam(APlayerState* Player, const FString& 
 	{
 		Teams[TeamName].Players.Add(Player);
 		Teams[TeamName].TeamName = TeamName;
+		
+		if (auto e = Cast<ATankPlayerState>(Player))
+			e->SetTeamName(TeamName);
 	}
 	else
 	{
 		FTeamData NewTeam;
 		NewTeam.Players.Add(Player);
+		NewTeam.TeamName = TeamName;
 		Teams.Add(TeamName, NewTeam);
+
+		if (auto e = Cast<ATankPlayerState>(Player))
+			e->SetTeamName(TeamName);
 	}
 }
 

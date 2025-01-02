@@ -3,7 +3,6 @@
 
 #include "TanksGameMode.h"
 
-#include "GameFramework/PlayerState.h"
 #include "GameFramework/TankGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Projectiles/ProjectilePool.h"
@@ -47,8 +46,8 @@ void ATanksGameMode::PostLogin(APlayerController* NewPlayer)
 
 void ATanksGameMode::SpawnPawn(AController* NewPlayer)
 {
-	auto SpawnLocation = FVector(PlayerControllers.Num() * -1200.0, 0, 70);
-	auto SpawnRotation = FRotator(0, 0, 0);
+	auto SpawnLocation = FVector(PlayerControllers.Num() * -1500.0, 0, 70);
+	auto SpawnRotation = FRotator(0, 0, 90);
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = NewPlayer;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;

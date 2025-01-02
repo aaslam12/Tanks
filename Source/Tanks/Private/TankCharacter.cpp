@@ -8,6 +8,7 @@
 #include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
 #include "Components/TankHealthComponent.h"
+#include "Components/TankHighlightingComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -36,15 +37,15 @@ void ATankCharacter::InitializeHealthComponent()
 }
 
 // Sets default values
-ATankCharacter::ATankCharacter(): RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
+ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobject<UTankHighlightingComponent>("TankHighlightingComponent")),
+								  RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
 								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
 								  MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
                                   AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
                                   GunElevationInterpSpeed(10), BaseDamage(500),
                                   MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
                                   bIsInAir(false), 
-                                  DesiredGunElevation(0), BoxTraceZOffset(0),
-                                  BoxTraceLength(8000), VerticalLineTraceHalfSize(FVector(10, 10, 300)), HorizontalLineTraceHalfSize(FVector(10, 300, 10)),
+                                  DesiredGunElevation(0), 
                                   LookValues(), MoveValues(), bAimingIn(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -197,7 +198,6 @@ void ATankCharacter::Tick(float DeltaTime)
 		CheckIfGunCanLowerElevationTick(DeltaTime);
 
 		UpdateIsInAir();
-		HighlightEnemyTanksIfDetected();
 
 		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
 		// 	true, true, FLinearColor::Yellow, 0);
@@ -475,7 +475,7 @@ void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
 }
 
 void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+                                                  UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	IShootingInterface::ProjectileHit_Implementation(TankProjectile, HitComponent, OtherActor, OtherComp, NormalImpulse, Hit);
 
@@ -574,80 +574,6 @@ void ATankCharacter::OnShoot_Implementation()
 void ATankCharacter::SR_Shoot_Implementation()
 {
 	
-}
-
-void ATankCharacter::HighlightEnemyTanksIfDetected_Implementation()
-{
-	CurrentHitResults.Empty();
-	
-	FVector Start = GetMesh()->GetSocketTransform("GunShootSocket").GetLocation();
-	Start.Z += BoxTraceZOffset;
-	FVector End = Start + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * BoxTraceLength;
-
-	// horizontal box trace
-	UKismetSystemLibrary::BoxTraceMultiForObjects(
-		GetWorld(),
-		Start,
-		End,
-		HorizontalLineTraceHalfSize,
-		GetMesh()->GetSocketRotation("GunShootSocket"),
-		{ObjectTypeQuery5},
-		false,
-		{this},
-		EDrawDebugTrace::None,
-		HorizontalHits,
-		true,
-		FLinearColor::Yellow
-	);
-
-	// vertical box trace
-	UKismetSystemLibrary::BoxTraceMultiForObjects(
-		GetWorld(),
-		Start,
-		End,
-		VerticalLineTraceHalfSize,
-		GetMesh()->GetSocketRotation("GunShootSocket"),
-		{ObjectTypeQuery5},
-		false,
-		{this},
-		EDrawDebugTrace::None,
-		VerticalHits,
-		true,
-		FLinearColor::Yellow
-	);
-
-    // remove duplicates
-    for (auto& Hit : VerticalHits)
-        if (!CurrentHitResults.Contains(Hit))
-            CurrentHitResults.Add(Hit);
-    for (auto& Hit : HorizontalHits)
-        if (!CurrentHitResults.Contains(Hit))
-            CurrentHitResults.Add(Hit);
-
-    // Removes hit results with actors that are no longer detected by the trace.
-    for (auto It = HighlightedEnemyTanks.CreateIterator(); It; ++It)
-    {
-        if (!CurrentHitResults.Contains(*It))
-        {
-            // Actor no longer detected, remove it and remove outline
-            Execute_OutlineTank(It->GetActor(), false);
-            It.RemoveCurrent();
-        }
-    }
-
-    // add any hit results that were previously not present
-    for (const FHitResult& Element : CurrentHitResults)
-        if (!HighlightedEnemyTanks.Contains(Element))
-            HighlightedEnemyTanks.Add(Element);
-
-    // highlight any and all actors that implement the interface
-    for (const FHitResult& Hit : HighlightedEnemyTanks)
-    {
-        if (!Hit.IsValidBlockingHit())
-            continue;
-
-        Execute_OutlineTank(Hit.GetActor(), true); // need to change this when trying to get replication working.
-    }
 }
 
 void ATankCharacter::UpdateCameraPitchLimitsTick_Implementation() const
@@ -798,6 +724,14 @@ void ATankCharacter::SpawnShootEmitters()
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, GetShootSocket()->GetComponentTransform());
 
 	RadialForceComponent->FireImpulse();
+}
+
+FString ATankCharacter::GetCurrentTeam() const
+{
+	if (auto e = GetPlayerState())
+		if (auto r = Cast<ATankPlayerState>(e))
+			return r->TeamName;
+	return "";
 }
 
 void ATankCharacter::MC_SpawnShootEmitters_Implementation()

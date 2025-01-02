@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "TankInterface.h"
 #include "WheeledVehiclePawn.h"
+#include "GameFramework/TankPlayerState.h"
 #include "Projectiles/ShootingInterface.h"
 #include "TankCharacter.generated.h"
 
+class UTankHighlightingComponent;
 class ATankProjectile;
 class URadialForceComponent;
 class UTankHealthComponent;
@@ -41,7 +43,11 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 {
 	GENERATED_BODY()
 
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UTankHealthComponent> HealthComponent;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UTankHighlightingComponent> TankHighlightingComponent;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<URadialForceComponent> RadialForceComponent;
@@ -103,10 +109,6 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MC_ApplyRadialDamage(const FHitResult& Hit);
 	
-	/** Creates two box traces that combine to create a "+" sign attached to the gun turret. */
-	UFUNCTION(BlueprintNativeEvent)
-	void HighlightEnemyTanksIfDetected();
-
 	/** Updates how much up or down you can look based on the tank rotation */
 	UFUNCTION(BlueprintNativeEvent)
 	void UpdateCameraPitchLimitsTick() const;
@@ -200,10 +202,6 @@ protected:
 	double CurrentTurretAngle;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
-	ETeam CurrentTeam;
-
-	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
 	
@@ -227,40 +225,11 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double DesiredGunElevation;
 
-private:
-	// should only be used in the ATankCharacter::FindEnemyTanks function.
-	UPROPERTY(meta=(AllowPrivateAccess="true"))
-	TArray<FHitResult> HighlightedEnemyTanks;
-	
-	// should only be used in the ATankCharacter::FindEnemyTanks function.
-	UPROPERTY(meta=(AllowPrivateAccess="true"))
-	TArray<FHitResult> CurrentHitResults;
-
-	// should only be used in the ATankCharacter::FindEnemyTanks function.
-	UPROPERTY(meta=(AllowPrivateAccess="true"))
-	TArray<FHitResult> VerticalHits;
-
-	// should only be used in the ATankCharacter::FindEnemyTanks function.
-	UPROPERTY(meta=(AllowPrivateAccess="true"))
-	TArray<FHitResult> HorizontalHits;
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
+	FString CurrentTeam;
 
 protected:
-	/** The Z offset of the "+" trace */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces", DisplayName="Box Trace Z Offset")
-	double BoxTraceZOffset;
-
-	/** How far to check and highlight enemy tanks */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	double BoxTraceLength;
-	
-	/** The vertical component of the "+" trace */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	FVector VerticalLineTraceHalfSize; // FVector(10,10,300)
-
-	/** The horizontal component of the "+" trace */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
-	FVector HorizontalLineTraceHalfSize; // FVector(10,300,10)
-	
 	/** Please add a variable description */
 	UPROPERTY()
 	TObjectPtr<USceneComponent> ShootSocket;
@@ -421,12 +390,13 @@ public:
 	TArray<UParticleSystem*> GetShootEmitterSystems() const { return ShootEmitterSystems; }
 	UParticleSystem* GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
 	bool IsInAir() const { return bIsInAir; }
-	const TArray<FHitResult>& GetHighlightedEnemyTanks() const { return HighlightedEnemyTanks; }
 	double GetAbsoluteMinGunElevation() const { return AbsoluteMinGunElevation; }
 	double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
 	void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
 	void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
-	ETeam GetCurrentTeam() const { return CurrentTeam; }
+	FString GetCurrentTeam() const;
+	void SetCurrentTeam(const FString& NewTeam) { CurrentTeam = NewTeam; }
+
 
 	//////////////////////////////////////////////////////////////////
 	/// Blueprint-Only Functions
