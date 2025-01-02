@@ -3,6 +3,8 @@
 
 #include "GameFramework/TankGameInstance.h"
 
+#include "Libraries/TankStructLibrary.h"
+
 void UTankGameInstance::AssignPlayerToTeam(APlayerState* Player, const FString& TeamName)
 {
 	if (!Player) return;
