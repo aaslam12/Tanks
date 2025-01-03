@@ -55,6 +55,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bCanMove;
 
+private:
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Input variables
 	
@@ -96,7 +97,7 @@ protected:
 
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Setup
-	
+protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ATankCameraManager> TankCameraManagerClass;

@@ -16,7 +16,6 @@ class TANKS_API ATanksGameMode : public AGameMode
 	GENERATED_BODY()
 
 	virtual void PostInitializeComponents() override;
-	virtual void PostLogin(APlayerController* NewPlayer) override;
 	void SpawnPawn(AController* NewPlayer);
 	virtual void OnPostLogin(AController* NewPlayer) override;
 

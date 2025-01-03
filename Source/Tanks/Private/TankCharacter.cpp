@@ -9,6 +9,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
+#include "GameFramework/TankGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -207,14 +208,10 @@ void ATankCharacter::Tick(float DeltaTime)
 bool ATankCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	AActor* DamageCauser) const
 {
-	if (DamageCauser->IsA(StaticClass()))
+	if (auto e = Cast<ATankController>(EventInstigator))
 	{
-		auto OtherPlayer = Cast<ATankCharacter>(DamageCauser);
-
-		if (OtherPlayer)
-		{
-			return OtherPlayer->GetCurrentTeam() != GetCurrentTeam();
-		}
+		auto OtherTankPlayerState = Cast<ATankPlayerState>(e->PlayerState); // TODO: Instead of casting, use actor tags.
+		return OtherTankPlayerState->GetCurrentTeam().Equals(Cast<ATankPlayerState>(GetPlayerState())->GetCurrentTeam());
 	}
 	
 	return false;
@@ -724,14 +721,6 @@ void ATankCharacter::SpawnShootEmitters()
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, GetShootSocket()->GetComponentTransform());
 
 	RadialForceComponent->FireImpulse();
-}
-
-FString ATankCharacter::GetCurrentTeam() const
-{
-	if (auto e = GetPlayerState())
-		if (auto r = Cast<ATankPlayerState>(e))
-			return r->TeamName;
-	return "";
 }
 
 void ATankCharacter::MC_SpawnShootEmitters_Implementation()

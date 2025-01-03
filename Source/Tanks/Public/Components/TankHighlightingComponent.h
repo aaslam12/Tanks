@@ -3,11 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TankInterface.h"
 #include "Components/ActorComponent.h"
 
 #include "TankHighlightingComponent.generated.h"
 
+
+class ATankCharacter;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TANKS_API UTankHighlightingComponent : public UActorComponent
@@ -40,7 +41,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces")
 	FVector HorizontalLineTraceHalfSize;
 
-	/** How far to check and highlight enemy tanks */
+	/** How far to check and highlight enemy tanks.
+	 * If friend tank is farther than this distance, remove highlights on it to save performance. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup")
 	double FriendHighlightingThreshold;
 

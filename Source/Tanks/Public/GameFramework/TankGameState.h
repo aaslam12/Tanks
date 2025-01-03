@@ -18,8 +18,16 @@ class TANKS_API ATankGameState : public AGameState
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+protected:
+	UFUNCTION()
+	void OnRep_Teams();
+	
 public:
-	UPROPERTY(Replicated, BlueprintReadOnly, Category="Teams")
+	virtual void OnPostLogin(APlayerState* NewPlayer);
+	
+	FTeamData* FindTeamByName(const FString& TeamName);
+
+	UPROPERTY(ReplicatedUsing=OnRep_Teams, BlueprintReadOnly, Category="Teams")
 	TArray<FTeamData> Teams;
 	
 	// Assign a player to a team
@@ -28,5 +36,5 @@ public:
 
 	// Get players in a specific team
 	UFUNCTION(BlueprintCallable, Category="Teams")
-	TArray<APlayerState*> GetPlayersInTeam(const FString& TeamName) const;
+	const FTeamData& GetPlayersInTeam(const FString& TeamName);
 };

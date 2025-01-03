@@ -3,7 +3,7 @@
 
 #include "TanksGameMode.h"
 
-#include "GameFramework/TankGameInstance.h"
+#include "GameFramework/TankGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Projectiles/ProjectilePool.h"
 
@@ -39,11 +39,6 @@ void ATanksGameMode::PostInitializeComponents()
 			ProjectilePool = Cast<AProjectilePool>(SpawnedActor);
 }
 
-void ATanksGameMode::PostLogin(APlayerController* NewPlayer)
-{
-	Super::PostLogin(NewPlayer);
-}
-
 void ATanksGameMode::SpawnPawn(AController* NewPlayer)
 {
 	auto SpawnLocation = FVector(PlayerControllers.Num() * -1500.0, 0, 70);
@@ -72,13 +67,13 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	if (!NewPlayerController)
 		return;
 
-	UTankGameInstance* GameInstance = Cast<UTankGameInstance>(GetGameInstance());
-	if (!GameInstance)
+	ATankGameState* TankGameState = GetGameState<ATankGameState>();
+	if (!TankGameState)
 		return;
 
 	PlayerControllers.Add(NewPlayerController);
 
-	GameInstance->OnPostLogin(NewPlayerController);
+	TankGameState->OnPostLogin(NewPlayer->PlayerState);
 
 	// do not spawn another pawn if a pawn already exists for it
 	if (!NewPlayer->GetPawn())

@@ -16,13 +16,24 @@ class TANKS_API ATankPlayerState : public APlayerState
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION()
+	void OnRep_CurrentTeam();
+
+	virtual void Tick(float DeltaSeconds) override;
+
 public:
-	UPROPERTY(Replicated, BlueprintReadWrite, Category="Teams")
-	FString TeamName;
+	UPROPERTY(ReplicatedUsing=OnRep_CurrentTeam, BlueprintReadWrite, Category="Teams")
+	FString CurrentTeam;
 
-	UFUNCTION(BlueprintCallable, Category="Teams")
-	FString GetTeamName() const { return TeamName; }
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
+	FString GetCurrentTeam() const { return CurrentTeam; }
 
-	UFUNCTION(BlueprintCallable, Category="Teams")
-	void SetTeamName(const FString& NewTeamName) { TeamName = NewTeamName; }
+	UFUNCTION(BlueprintCallable, Category="Data")
+	void SetCurrentTeam(const FString& NewTeam);
+	
+	UFUNCTION(Server, Reliable)
+	void SR_SetCurrentTeam(const FString& NewTeam);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_SetCurrentTeam(const FString& NewTeam);
 };

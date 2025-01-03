@@ -394,8 +394,6 @@ public:
 	double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
 	void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
 	void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
-	FString GetCurrentTeam() const;
-	void SetCurrentTeam(const FString& NewTeam) { CurrentTeam = NewTeam; }
 
 
 	//////////////////////////////////////////////////////////////////

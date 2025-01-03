@@ -4,8 +4,7 @@
 #include "Components/TankHighlightingComponent.h"
 
 #include "TankCharacter.h"
-#include "GameFramework/PlayerState.h"
-#include "GameFramework/TankGameInstance.h"
+#include "GameFramework/TankGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -43,19 +42,27 @@ void UTankHighlightingComponent::HighlightFriendlyTanks()
 {
 	if (!TankCharacter)
 		return;
+
+	if (!UGameplayStatics::GetGameState(GetWorld()))
+		return;
 	
-	UTankGameInstance* TankGameInstance = Cast<UTankGameInstance>(GetWorld()->GetGameInstance());
-	if (!TankGameInstance)
+	ATankGameState* TankGameState = Cast<ATankGameState>(UGameplayStatics::GetGameState(GetWorld()));
+	if (!TankGameState)
 		return;
 
-	if (TankGameInstance->Teams.IsEmpty())
+	if (TankGameState->Teams.IsEmpty())
 		return;
 
-	auto CurrentTeam = TankCharacter->GetCurrentTeam();
-	
-	auto Array = TankGameInstance->Teams[CurrentTeam].Players;
+	FString CurrentTeam;
 
-	for (auto Element : Array)
+	if (auto e = Cast<ATankCharacter>(GetOwner()))
+		CurrentTeam = e->GetPlayerState<ATankPlayerState>()->GetCurrentTeam();
+	else
+		CurrentTeam = "";
+
+	auto Array = TankGameState->GetPlayersInTeam(CurrentTeam);
+
+	for (auto Element : Array.Players)
 	{
 		if (!Element)
 			continue;
@@ -69,19 +76,9 @@ void UTankHighlightingComponent::HighlightFriendlyTanks()
 			auto DistanceToOtherTank = FVector::Distance(OtherTank->GetActorLocation(), TankCharacter->GetActorLocation());
 
 			if (DistanceToOtherTank > FriendHighlightingThreshold)
-			{
 				ITankInterface::Execute_OutlineTank(OtherTank, false);
-				
-				UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(UTankHighlightingComponent::HighlightFriendlyTanks) ITankInterface::Execute_OutlineTank: %d"), false),
-					true, true, FLinearColor::Yellow, 15);
-			}
 			else
-			{
 				ITankInterface::Execute_OutlineTank(OtherTank, true);
-				
-				UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(UTankHighlightingComponent::HighlightFriendlyTanks) ITankInterface::Execute_OutlineTank: %d"), true),
-					true, true, FLinearColor::Yellow, 15);
-			}
 		}
 	}
 }
@@ -138,7 +135,7 @@ void UTankHighlightingComponent::HighlightEnemyTanksIfDetected_Implementation()
 	// Removes hit results with actors that are no longer detected by the trace.
 	for (auto It = HighlightedEnemyTanks.CreateIterator(); It; ++It)
 	{
-		if (!CurrentHitResults.Contains(*It))
+		if (!CurrentHitResults.Contains(*It) && It->GetActor())
 		{
 			// Actor no longer detected, remove it and remove outline
 			ITankInterface::Execute_OutlineTank(It->GetActor(), false);

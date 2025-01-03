@@ -10,7 +10,6 @@
 #include "TankCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
