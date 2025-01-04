@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 #include "TankInterface.h"
 #include "WheeledVehiclePawn.h"
-#include "GameFramework/TankPlayerState.h"
 #include "Projectiles/ShootingInterface.h"
 #include "TankCharacter.generated.h"
 
+class UPostProcessComponent;
 class UTankHighlightingComponent;
 class ATankProjectile;
 class URadialForceComponent;
@@ -54,6 +54,9 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UStaticMeshComponent> DamagedStaticMesh;
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UPostProcessComponent> TankPostProcessVolume;
 
 	void InitializeHealthComponent();
 	ATankCharacter();
@@ -94,7 +97,7 @@ protected:
 	void UpdateIsInAir();
 
 	// ITankInterface functions start
-	virtual void OutlineTank_Implementation(const bool bActivate) override;
+	virtual void OutlineTank_Implementation(const bool bActivate, const bool bIsFriend) override;
 	// ITankInterface functions end
 
 	// IShootingInterface functions start
@@ -123,6 +126,10 @@ protected:
 	/**  */
 	UFUNCTION(BlueprintNativeEvent)
 	void SR_Shoot();
+
+	/** All of these particle systems will be activated when the tank shoots */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
+	TObjectPtr<UMaterialInstanceDynamic> OutlineMaterial;
 
 	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
@@ -394,6 +401,7 @@ public:
 	double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
 	void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
 	void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
+	UPostProcessComponent* GetTankPostProcessVolume() const { return TankPostProcessVolume; }
 
 
 	//////////////////////////////////////////////////////////////////

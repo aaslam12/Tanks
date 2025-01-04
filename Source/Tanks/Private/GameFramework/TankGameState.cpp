@@ -17,29 +17,6 @@ void ATankGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 void ATankGameState::OnRep_Teams()
 {
-	// for (FTeamData& Team : Teams)
-	// {
-	// 	Team.Players.Remove(nullptr);  // Clean up any null pointers
-	// }
-	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankGameState::OnRep_Teams) Teams updated")),
-			true, true, FLinearColor::Yellow, 15);
-
-	for (const FTeamData& Team : Teams)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Team: %s"), *Team.TeamName);
-		for (auto Player : Team.Players)
-		{
-			if (Player)
-			{
-				UE_LOG(LogTemp, Log, TEXT("  Player: %s"), *Player->GetName());
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("  Player: nullptr"));
-			}
-		}
-	}
 }
 
 void ATankGameState::OnPostLogin(APlayerState* NewPlayer)

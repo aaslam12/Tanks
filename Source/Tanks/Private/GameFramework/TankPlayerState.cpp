@@ -15,16 +15,11 @@ void ATankPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 
 void ATankPlayerState::OnRep_CurrentTeam()
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::OnRep_CurrentTeam) CurrentTeam: %s"), *CurrentTeam),
-			true, true, FLinearColor::Yellow, 15);
 }
 
 void ATankPlayerState::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankPlayerState::Tick) Name: %s CurrentTeam: %s"), *GetName(), *CurrentTeam),
-		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankPlayerState::SetCurrentTeam(const FString& NewTeam)

@@ -5,9 +5,24 @@
 
 #include "TankCharacter.h"
 #include "GameFramework/TankGameState.h"
+#include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+
+void UTankHighlightingComponent::SetDefaults()
+{
+	TankCharacter = Cast<ATankCharacter>(GetOwner());
+
+	if (TankCharacter->IsLocallyControlled())
+	{
+		TimerHandle.Invalidate();
+		
+		FTimerDelegate TimerDel;
+		TimerDel.BindUFunction(this, TEXT("HighlightFriendlyTanks"));
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDel, 5.0f, true);
+	}
+}
 
 // Sets default values for this component's properties
 UTankHighlightingComponent::UTankHighlightingComponent(): BoxTraceZOffset(0),
@@ -26,16 +41,7 @@ UTankHighlightingComponent::UTankHighlightingComponent(): BoxTraceZOffset(0),
 void UTankHighlightingComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	TankCharacter = Cast<ATankCharacter>(GetOwner());
-
-	if (TankCharacter->IsLocallyControlled())
-	{
-		FTimerDelegate TimerDel;
-		TimerDel.BindUFunction(this, TEXT("HighlightFriendlyTanks")); // Bind a function
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDel, 5.0f, true);
-	}
-
+	SetDefaults();
 }
 
 void UTankHighlightingComponent::HighlightFriendlyTanks()
@@ -71,14 +77,19 @@ void UTankHighlightingComponent::HighlightFriendlyTanks()
 			continue;
 
 		auto OtherTank = Cast<ATankCharacter>(Element->GetPawn());
+		
 		if (OtherTank)
 		{
 			auto DistanceToOtherTank = FVector::Distance(OtherTank->GetActorLocation(), TankCharacter->GetActorLocation());
 
 			if (DistanceToOtherTank > FriendHighlightingThreshold)
-				ITankInterface::Execute_OutlineTank(OtherTank, false);
+			{
+				ITankInterface::Execute_OutlineTank(OtherTank, false, true);
+			}
 			else
-				ITankInterface::Execute_OutlineTank(OtherTank, true);
+			{
+				ITankInterface::Execute_OutlineTank(OtherTank, true, true);
+			}
 		}
 	}
 }
@@ -138,7 +149,7 @@ void UTankHighlightingComponent::HighlightEnemyTanksIfDetected_Implementation()
 		if (!CurrentHitResults.Contains(*It) && It->GetActor())
 		{
 			// Actor no longer detected, remove it and remove outline
-			ITankInterface::Execute_OutlineTank(It->GetActor(), false);
+			ITankInterface::Execute_OutlineTank(It->GetActor(), false, false);
 			It.RemoveCurrent();
 		}
 	}
@@ -151,7 +162,7 @@ void UTankHighlightingComponent::HighlightEnemyTanksIfDetected_Implementation()
 	// highlight any and all actors that implement the interface
 	for (const FHitResult& Hit : HighlightedEnemyTanks)
 		if (Hit.IsValidBlockingHit())
-			ITankInterface::Execute_OutlineTank(Hit.GetActor(), true);
+			ITankInterface::Execute_OutlineTank(Hit.GetActor(), true, false);
 }
 
 void UTankHighlightingComponent::TickComponent(float DeltaTime, ELevelTick TickType,

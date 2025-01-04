@@ -7,9 +7,11 @@
 #include "TankController.h"
 #include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
 #include "GameFramework/TankGameState.h"
+#include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -20,6 +22,8 @@
 #include "Projectiles/TankProjectile.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 
+static int FriendStencilValue = 2;
+static int EnemyStencilValue = 1;
 
 void ATankCharacter::InitializeHealthComponent()
 {
@@ -37,7 +41,6 @@ void ATankCharacter::InitializeHealthComponent()
 	// }
 }
 
-// Sets default values
 ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobject<UTankHighlightingComponent>("TankHighlightingComponent")),
 								  RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
 								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
@@ -83,10 +86,7 @@ ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobje
 	}
 
 	for (auto Element : GetComponents())
-	{
-		// if (Element->StaticClass() == UStaticMeshComponent::StaticClass() || Element->StaticClass() == USkeletalMeshComponent::StaticClass())
 		Element->SetIsReplicated(true);
-	}
 }
 
 ATankCharacter::~ATankCharacter() {}
@@ -129,6 +129,7 @@ void ATankCharacter::SetDefaults_Implementation()
 
 	PlayerController = Cast<ATankController>(GetController());
 	// PlayerController->Possess(this);
+	TankHighlightingComponent->SetDefaults();
 
 	// stops the player from looking under the tank and above too much.
 	if (PlayerController)
@@ -144,9 +145,7 @@ void ATankCharacter::SetDefaults_Implementation()
 		BackCameraComp->SetActive(true);
 
 	if (DamagedStaticMesh)
-	{
 		DamagedStaticMesh->SetWorldTransform(FTransform(FRotator(0), FVector(0, 0, -100000)));
-	}
 
 	SetLightsEmissivity(0);
 }
@@ -167,7 +166,17 @@ void ATankCharacter::BindDelegates()
 void ATankCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
+	if (!IsLocallyControlled())
+	{
+		// Destroy post-process component if not locally owned
+		if (TankPostProcessVolume)
+		{
+			TankPostProcessVolume->DestroyComponent();
+			TankPostProcessVolume = nullptr;
+		}
+	}
+	
 	SetDefaults();
 	BindDelegates();
 
@@ -310,7 +319,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		TopHit,
 		false
 	);
@@ -327,7 +336,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		BottomHit,
 		false
 	);
@@ -460,15 +469,44 @@ void ATankCharacter::UpdateIsInAir_Implementation()
 	bIsInAir = false;
 }
 
-void ATankCharacter::OutlineTank_Implementation(const bool bActivate)
+void ATankCharacter::OutlineTank_Implementation(const bool bActivate, const bool bIsFriend)
 {
 	if (!GetMesh())
 		return;
 	
 	if (bActivate)
-		GetMesh()->SetCustomDepthStencilValue(1);
+	{
+		if (bIsFriend)
+		{
+			if (GetMesh()->CustomDepthStencilValue == 0)
+			{
+				if (GetMesh()->CustomDepthStencilValue != FriendStencilValue)
+				{
+					GetMesh()->SetCustomDepthStencilValue(FriendStencilValue);
+				}
+			}
+		}
+		else
+		{
+			if (GetMesh()->CustomDepthStencilValue != FriendStencilValue)
+			{
+				if (GetMesh()->CustomDepthStencilValue != EnemyStencilValue)
+				{
+					GetMesh()->SetCustomDepthStencilValue(EnemyStencilValue);
+				}
+			}
+		}
+	}
 	else
-		GetMesh()->SetCustomDepthStencilValue(0);
+	{
+		if (GetMesh()->CustomDepthStencilValue == EnemyStencilValue)
+		{
+			if (GetMesh()->CustomDepthStencilValue != 0)
+			{
+				GetMesh()->SetCustomDepthStencilValue(0);
+			}
+		}
+	}
 }
 
 void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor,

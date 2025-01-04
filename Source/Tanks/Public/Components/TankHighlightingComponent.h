@@ -20,11 +20,11 @@ class TANKS_API UTankHighlightingComponent : public UActorComponent
 
 	UPROPERTY()
 	FTimerHandle TimerHandle;
+	
+	UTankHighlightingComponent();
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
-	// Sets default values for this component's properties
-	UTankHighlightingComponent();
-
 	/** The Z offset of the "+" trace */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Traces", DisplayName="Box Trace Z Offset")
 	double BoxTraceZOffset;
@@ -75,8 +75,7 @@ protected:
 	void HighlightEnemyTanksIfDetected();
 
 public:
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-	                           FActorComponentTickFunction* ThisTickFunction) override;
+	void SetDefaults();
 
 	const TArray<FHitResult>& GetHighlightedEnemyTanks() const { return HighlightedEnemyTanks; }
 };

@@ -41,8 +41,8 @@ void ATanksGameMode::PostInitializeComponents()
 
 void ATanksGameMode::SpawnPawn(AController* NewPlayer)
 {
-	auto SpawnLocation = FVector(PlayerControllers.Num() * -1500.0, 0, 70);
-	auto SpawnRotation = FRotator(0, 0, 90);
+	auto SpawnLocation = FVector(PlayerControllers.Num() * -1500.0, 0, 150);
+	auto SpawnRotation = FRotator(0, 0, 0);
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = NewPlayer;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
