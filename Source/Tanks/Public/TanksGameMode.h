@@ -25,7 +25,7 @@ class TANKS_API ATanksGameMode : public AGameMode
 
 	ATanksGameMode();
 	void SpawnProjectilePool();
-	void RemoveAnyProjectilePoolsPresent() const;
+	void RemoveAllProjectilePools() const;
 	virtual void PostInitializeComponents() override;
 	void SpawnPlayerPawn(AController* NewPlayer) const;
 	virtual void OnPostLogin(AController* NewPlayer) override;

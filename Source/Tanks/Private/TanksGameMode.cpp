@@ -19,7 +19,7 @@ void ATanksGameMode::PostInitializeComponents()
 
 void ATanksGameMode::SpawnProjectilePool()
 {
-	RemoveAnyProjectilePoolsPresent();
+	RemoveAllProjectilePools();
 
 	auto SpawnLocation = FVector::ZeroVector;
 	auto SpawnRotation = FRotator::ZeroRotator;
@@ -38,7 +38,7 @@ void ATanksGameMode::SpawnProjectilePool()
 			ProjectilePool = Cast<AProjectilePool>(SpawnedActor);
 }
 
-void ATanksGameMode::RemoveAnyProjectilePoolsPresent() const
+void ATanksGameMode::RemoveAllProjectilePools() const
 {
 	TArray<AActor*> OutActors;
 	UGameplayStatics::GetAllActorsOfClass(
