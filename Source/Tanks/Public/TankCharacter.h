@@ -8,6 +8,7 @@
 #include "Projectiles/ShootingInterface.h"
 #include "TankCharacter.generated.h"
 
+class UWB_PlayerInfo;
 class ATankPlayerState;
 class UPostProcessComponent;
 class UTankHighlightingComponent;
@@ -58,6 +59,12 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UPostProcessComponent> TankPostProcessVolume;
+
+	/**
+	 *  Set in BP.
+	 */
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UWB_PlayerInfo> PlayerNameWidget;
 
 	ATankCharacter();
 	virtual ~ATankCharacter() override;
