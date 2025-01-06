@@ -149,6 +149,9 @@ void ATankCharacter::SetDefaults_Implementation()
 		DamagedStaticMesh->SetWorldTransform(FTransform(FRotator(0), FVector(0, 0, -100000)));
 
 	SetLightsEmissivity(0);
+
+	if (UWorld* World = GetWorld())
+		World->Exec(World, TEXT("p.Vehicle.SetMaxMPH 20"));
 }
 
 void ATankCharacter::BindDelegates()
@@ -639,8 +642,8 @@ void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
 	AdjustedPitchMax = FMath::Fmod(AdjustedPitchMax + 180.0, 360.0) - 180.0;
 
 	// Apply the adjusted limits
-	PlayerController->PlayerCameraManager->ViewPitchMin = AdjustedPitchMin;
-	PlayerController->PlayerCameraManager->ViewPitchMax = AdjustedPitchMax;
+	PlayerController->PlayerCameraManager->ViewPitchMin = BasePitchMin;
+	PlayerController->PlayerCameraManager->ViewPitchMax = BasePitchMax;
 
 	
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMin: %.5f"), AdjustedPitchMin),
