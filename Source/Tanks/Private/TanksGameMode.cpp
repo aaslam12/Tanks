@@ -7,20 +7,19 @@
 #include "Kismet/GameplayStatics.h"
 #include "Projectiles/ProjectilePool.h"
 
+ATanksGameMode::ATanksGameMode(): CurrentGameMode(EGameMode::FFA), StartingGameMode(EGameMode::FFA)
+{
+}
+
 void ATanksGameMode::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+	SpawnProjectilePool();
+}
 
-	TArray<AActor*> OutActors;
-	UGameplayStatics::GetAllActorsOfClass(
-		GetWorld(),
-		AProjectilePool::StaticClass(),
-		OutActors
-	);
-
-	for (auto OutActor : OutActors)
-		if (UKismetSystemLibrary::IsValid(OutActor))
-			OutActor->Destroy();
+void ATanksGameMode::SpawnProjectilePool()
+{
+	RemoveAnyProjectilePoolsPresent();
 
 	auto SpawnLocation = FVector::ZeroVector;
 	auto SpawnRotation = FRotator::ZeroRotator;
@@ -39,7 +38,21 @@ void ATanksGameMode::PostInitializeComponents()
 			ProjectilePool = Cast<AProjectilePool>(SpawnedActor);
 }
 
-void ATanksGameMode::SpawnPawn(AController* NewPlayer)
+void ATanksGameMode::RemoveAnyProjectilePoolsPresent() const
+{
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(),
+		AProjectilePool::StaticClass(),
+		OutActors
+	);
+
+	for (auto OutActor : OutActors)
+		if (UKismetSystemLibrary::IsValid(OutActor))
+			OutActor->Destroy();
+}
+
+void ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const
 {
 	auto SpawnLocation = FVector(PlayerControllers.Num() * -1500.0, 0, 150);
 	auto SpawnRotation = FRotator(0, 0, 0);
@@ -60,6 +73,8 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 {
 	Super::OnPostLogin(NewPlayer);
 
+	UGameplayStatics::SetViewportMouseCaptureMode(GetWorld(), EMouseCaptureMode::CapturePermanently);
+
 	if (!NewPlayer)
 		return;
 	
@@ -77,5 +92,5 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 
 	// do not spawn another pawn if a pawn already exists for it
 	if (!NewPlayer->GetPawn())
-		SpawnPawn(NewPlayer);
+		SpawnPlayerPawn(NewPlayer);
 }

@@ -14,4 +14,11 @@ UCLASS(Blueprintable)
 class TANKS_API UTankGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	FString CustomPlayerName;
+
+public:
+	FORCEINLINE FString GetPlayerName() const { return CustomPlayerName; }
+	FORCEINLINE void SetPlayerName(const FString& PlayerName) { this->CustomPlayerName = PlayerName; }
 };

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "TankInterface.h"
 #include "WheeledVehiclePawn.h"
+#include "GameFramework/TankGameInstance.h"
 #include "Projectiles/ShootingInterface.h"
 #include "TankCharacter.generated.h"
 
@@ -250,6 +251,14 @@ protected:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
 	FString CurrentTeam;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	TObjectPtr<UTankGameInstance> GameInstance;
+	
+public:
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Default", Replicated)
+	FString PlayerName;
 
 protected:
 	/** Please add a variable description */

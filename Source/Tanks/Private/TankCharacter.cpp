@@ -11,6 +11,7 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
+#include "GameFramework/TankGameInstance.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -137,7 +138,10 @@ void ATankCharacter::SetDefaults_Implementation()
 	SetLightsEmissivity(0);
 
 	if (UWorld* World = GetWorld())
-		World->Exec(World, TEXT("p.Vehicle.SetMaxMPH 20"));
+		World->Exec(World, TEXT("p.Vehicle.SetMaxMPH 30"));
+
+	GameInstance = Cast<UTankGameInstance>(GetGameInstance());
+	PlayerName = GameInstance->GetPlayerName();
 }
 
 void ATankCharacter::BindDelegates()
@@ -567,7 +571,7 @@ void ATankCharacter::OnShoot_Implementation()
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation)")),
 	// 		true, true, FLinearColor::Yellow, 0);
 
-	constexpr double ShootTraceDistance = 5000.0;
+	constexpr double ShootTraceDistance = 15000.0;
 
 	// Spawning muzzle fire and dust around the tank 
 	SR_SpawnShootEmitters();
