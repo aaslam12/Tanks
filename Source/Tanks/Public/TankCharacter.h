@@ -58,7 +58,6 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UPostProcessComponent> TankPostProcessVolume;
 
-	void InitializeHealthComponent();
 	ATankCharacter();
 	virtual ~ATankCharacter() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -296,7 +295,7 @@ public:
 	void SetGunElevation(double NewGunElevation) const;
 
 	/** Simple function that spawns a new particle everytime. */
-	void SpawnHitParticleSystem(const FVector& Location);
+	void SpawnHitParticleSystem(const FVector& Location) const;
 
 protected:
 	/** Please add a function description */

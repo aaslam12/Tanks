@@ -26,22 +26,6 @@
 static int FriendStencilValue = 2;
 static int EnemyStencilValue = 1;
 
-void ATankCharacter::InitializeHealthComponent()
-{
-	// if (!TankHealthComponentClass)
-	// {
-	// 	// create the pure c++ version if bp version is not specified
-	// 	HealthComponent = CreateDefaultSubobject<UTankHealthComponent>("HealthComponent");
-	// }
-	// else
-	// {
-	// 	// create the bp version of the component
-	// 	HealthComponent = Cast<UTankHealthComponent>(CreateDefaultSubobject("HealthComponent",
-	// 	                                                                    TankHealthComponentClass, TankHealthComponentClass,
-	// 	                                                                    true, false));
-	// }
-}
-
 ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobject<UTankHighlightingComponent>("TankHighlightingComponent")),
 								  RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
 								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
@@ -60,8 +44,6 @@ ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobje
 	RadialForceComponent->SetupAttachment(RootComponent);
 	DamagedStaticMesh->SetHiddenInGame(false);
 	DamagedStaticMesh->SetVisibility(true);
-
-	InitializeHealthComponent();
 
 	if (GetMesh())
 	{
@@ -664,7 +646,7 @@ void ATankCharacter::SetGunElevation(const double NewGunElevation) const
 		SR_SetGunElevation(NewGunElevation);
 }
 
-void ATankCharacter::SpawnHitParticleSystem(const FVector& Location)
+void ATankCharacter::SpawnHitParticleSystem(const FVector& Location) const
 {
 	UGameplayStatics::SpawnEmitterAtLocation( GetWorld(),
 		ShootHitParticleSystem, Location,
