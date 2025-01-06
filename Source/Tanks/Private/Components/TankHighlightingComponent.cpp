@@ -162,7 +162,8 @@ void UTankHighlightingComponent::HighlightEnemyTanksIfDetected_Implementation()
 	// highlight any and all actors that implement the interface
 	for (const FHitResult& Hit : HighlightedEnemyTanks)
 		if (Hit.IsValidBlockingHit())
-			ITankInterface::Execute_OutlineTank(Hit.GetActor(), true, false);
+			if (Hit.GetActor())
+				ITankInterface::Execute_OutlineTank(Hit.GetActor(), true, false);
 }
 
 void UTankHighlightingComponent::TickComponent(float DeltaTime, ELevelTick TickType,

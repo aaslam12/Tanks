@@ -9,3 +9,5 @@
 /.vsconfig/
 /Plugins/
 /$movedMarker
+/Cooked/
+/Build/

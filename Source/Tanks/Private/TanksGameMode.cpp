@@ -7,7 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Projectiles/ProjectilePool.h"
 
-ATanksGameMode::ATanksGameMode(): CurrentGameMode(EGameMode::FFA), StartingGameMode(EGameMode::FFA)
+ATanksGameMode::ATanksGameMode()
 {
 }
 

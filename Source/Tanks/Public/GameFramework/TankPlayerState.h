@@ -36,4 +36,7 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MC_SetCurrentTeam(const FString& NewTeam);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	FString CustomPlayerName;
 };

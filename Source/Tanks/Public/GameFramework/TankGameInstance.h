@@ -7,6 +7,13 @@
 #include "Libraries/TankStructLibrary.h"
 #include "TankGameInstance.generated.h"
 
+UENUM(BlueprintType)
+enum class EGameMode : uint8
+{
+	FFA UMETA(DisplayName = "Free For All"),
+	TDM UMETA(DisplayName = "Team Deathmatch"),
+};
+
 /**
  * 
  */
@@ -15,10 +22,24 @@ class TANKS_API UTankGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
-	FString CustomPlayerName;
+	UTankGameInstance();
+	virtual void Init() override;
+	void ConnectToServer(const FString& HostAddress);
 
 public:
-	FORCEINLINE FString GetPlayerName() const { return CustomPlayerName; }
-	FORCEINLINE void SetPlayerName(const FString& PlayerName) { this->CustomPlayerName = PlayerName; }
+	UPROPERTY(BlueprintReadOnly)
+	FTimerHandle TimerHandle;
+	
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
+	EGameMode CurrentGameMode;
+
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, meta=(AllowPrivateAccess="true"))
+	EGameMode StartingGameMode;
+
+	UFUNCTION(BlueprintCallable)
+	void TryConnectToServer();
+
+	UFUNCTION(BlueprintCallable)
+	bool IsInEditor();
+
 };

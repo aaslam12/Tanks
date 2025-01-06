@@ -10,7 +10,7 @@ public class Tanks : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "Niagara", "UMG" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "ChaosVehiclesCore", "ChaosVehicles", "ChaosVehiclesEditor", "ChaosVehiclesEngine", "ProceduralMeshComponent" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "ChaosVehiclesCore", "ChaosVehicles", /*"ChaosVehiclesEditor",*/ "ChaosVehiclesEngine", "ProceduralMeshComponent" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

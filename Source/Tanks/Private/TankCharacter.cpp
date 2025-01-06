@@ -94,6 +94,7 @@ void ATankCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 
 	DOREPLIFETIME(ThisClass, CurrentTurretAngle);
 	DOREPLIFETIME(ThisClass, CurrentTeam);
+	DOREPLIFETIME(ThisClass, PlayerName);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -140,8 +141,9 @@ void ATankCharacter::SetDefaults_Implementation()
 	if (UWorld* World = GetWorld())
 		World->Exec(World, TEXT("p.Vehicle.SetMaxMPH 30"));
 
-	GameInstance = Cast<UTankGameInstance>(GetGameInstance());
-	PlayerName = GameInstance->GetPlayerName();
+	if (GetPlayerState())
+		if (Cast<ATankPlayerState>(GetPlayerState()))
+			PlayerName = Cast<ATankPlayerState>(GetPlayerState())->CustomPlayerName;
 }
 
 void ATankCharacter::BindDelegates()

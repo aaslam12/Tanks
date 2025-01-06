@@ -256,7 +256,7 @@ protected:
 	TObjectPtr<UTankGameInstance> GameInstance;
 	
 public:
-	/** Please add a variable description */
+	/** Set by Player State when the game starts */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Default", Replicated)
 	FString PlayerName;
 
