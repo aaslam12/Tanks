@@ -114,6 +114,10 @@ void ATankCharacter::SetDefaults_Implementation()
 	// PlayerController->Possess(this);
 	TankHighlightingComponent->SetDefaults();
 
+	if (GetPlayerState())
+		if (Cast<ATankPlayerState>(GetPlayerState()))
+			TankPlayerState = Cast<ATankPlayerState>(GetPlayerState());
+
 	// stops the player from looking under the tank and above too much.
 	if (PlayerController)
 	{
@@ -196,6 +200,10 @@ void ATankCharacter::Tick(float DeltaTime)
 
 		UpdateIsInAir();
 
+		if (GetPlayerState())
+			if (Cast<ATankPlayerState>(GetPlayerState()))
+				TankPlayerState = Cast<ATankPlayerState>(GetPlayerState());
+
 		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
 		// 	true, true, FLinearColor::Yellow, 0);
 	}
@@ -211,22 +219,11 @@ void ATankCharacter::Tick(float DeltaTime)
 	
 }
 
-bool ATankCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
-	AActor* DamageCauser) const
-{
-	if (auto e = Cast<ATankController>(EventInstigator))
-	{
-		auto OtherTankPlayerState = Cast<ATankPlayerState>(e->PlayerState); // TODO: Instead of casting, use actor tags.
-		return OtherTankPlayerState->GetCurrentTeam().Equals(Cast<ATankPlayerState>(GetPlayerState())->GetCurrentTeam());
-	}
-	
-	return false;
-}
-
 float ATankCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 	class AController* EventInstigator, AActor* DamageCauser)
 {
-	HealthComponent->OnTakeDamaged(this, DamageAmount, nullptr, EventInstigator, DamageCauser);
+	if (Execute_GetCurrentTeam(this).Equals(Execute_GetCurrentTeam(DamageCauser)) == false)
+		HealthComponent->OnTakeDamaged(this, DamageAmount, nullptr, EventInstigator, DamageCauser);
 	return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 }
 
@@ -508,6 +505,13 @@ void ATankCharacter::OutlineTank_Implementation(const bool bActivate, const bool
 			}
 		}
 	}
+}
+
+FString ATankCharacter::GetCurrentTeam_Implementation()
+{
+	if (TankPlayerState)
+		return TankPlayerState->GetCurrentTeam();
+	return TEXT(""); // empty string
 }
 
 void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor,

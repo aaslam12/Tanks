@@ -24,4 +24,7 @@ class TANKS_API ITankInterface
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void OutlineTank(const bool bActivate, const bool bIsFriend);
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	FString GetCurrentTeam();
 };

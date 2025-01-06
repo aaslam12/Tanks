@@ -8,6 +8,7 @@
 #include "Projectiles/ShootingInterface.h"
 #include "TankCharacter.generated.h"
 
+class ATankPlayerState;
 class UPostProcessComponent;
 class UTankHighlightingComponent;
 class ATankProjectile;
@@ -68,7 +69,6 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
 
-	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 protected:
@@ -97,8 +97,9 @@ protected:
 
 	// ITankInterface functions start
 	virtual void OutlineTank_Implementation(const bool bActivate, const bool bIsFriend) override;
+	virtual FString GetCurrentTeam_Implementation() override;
 	// ITankInterface functions end
-
+	
 	// IShootingInterface functions start
 	virtual void ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit) override;
 	// IShootingInterface functions end
@@ -210,6 +211,10 @@ protected:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	TObjectPtr<ATankPlayerState> TankPlayerState;
 	
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
