@@ -114,7 +114,7 @@ protected:
 	
 	/** Updates how much up or down you can look based on the tank rotation */
 	UFUNCTION(BlueprintNativeEvent)
-	void UpdateCameraPitchLimitsTick() const;
+	void UpdateCameraPitchLimits() const;
 
 	/** This function is binded to the controller's input shoot function */
 	UFUNCTION(BlueprintNativeEvent)
@@ -231,6 +231,10 @@ protected:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double DesiredGunElevation;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FRotator GunRotation;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)

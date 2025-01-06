@@ -3,6 +3,7 @@
 
 #include "Tanks/Public/TankCharacter.h"
 
+#include "ChaosVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "TankController.h"
 #include "TanksGameMode.h"
@@ -206,12 +207,23 @@ void ATankCharacter::Tick(float DeltaTime)
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
 		CheckIfGunCanLowerElevationTick(DeltaTime);
+		UpdateCameraPitchLimits();
 
 		UpdateIsInAir();
 
 		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
 		// 	true, true, FLinearColor::Yellow, 0);
 	}
+	
+	auto e = UKismetMathLibrary::FindLookAtRotation(
+		GetMesh()->GetSocketLocation("gun_jnt"),
+		GetActorLocation() + FVector(0, 0, 200)
+	).Vector() * RadialForceComponent->ImpulseStrength;
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) FindLookAtRotation: %s"), *e.ToString()),
+			true, true, FLinearColor::Yellow, 0);
+
+	
 }
 
 bool ATankCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
@@ -433,20 +445,24 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 		bHit ? OutHit.Location : GunLocation
 	);
 
-	DesiredGunElevation = LookAtRot.Pitch;
+	GunRotation = LookAtRot;
+	DesiredGunElevation = GunRotation.Pitch;
 	
-	// Interpolate and clamp to the maximum allowed change rate
 	GunElevation = FMath::Clamp(
 		FMath::FInterpTo(GunElevation, DesiredGunElevation, DeltaTime, GunElevationInterpSpeed),
 		MinGunElevation,
 		MaxGunElevation
 	);
 
-	// Clamp the final value within valid elevation bounds
 	GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
 
-	// Apply the final gun elevation
 	SetGunElevation(GunElevation);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunElevation: %.5f"), GunElevation),
+			true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunRotation: %s"), *GunRotation.ToString()),
+			true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::UpdateIsInAir_Implementation()
@@ -596,10 +612,9 @@ void ATankCharacter::OnShoot_Implementation()
 		
 		if (GameMode != nullptr)
 		{
-			auto Rot = UKismetMathLibrary::FindLookAtRotation(OutHit.TraceStart, OutHit.TraceEnd);
-			
 			if (GameMode->ProjectilePool != nullptr)
 			{
+				auto Rot = UKismetMathLibrary::FindLookAtRotation(OutHit.TraceStart, OutHit.TraceEnd);
 				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
 			}
 		}
@@ -611,20 +626,28 @@ void ATankCharacter::SR_Shoot_Implementation()
 	
 }
 
-void ATankCharacter::UpdateCameraPitchLimitsTick_Implementation() const
+void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
 {
 	if (!PlayerController)
 		return;
 
-	float TankPitch = GetActorRotation().Pitch;
-
 	// Adjust the pitch limits based on the tank's current pitch
-	float AdjustedPitchMin = BasePitchMin + TankPitch;
-	float AdjustedPitchMax = BasePitchMax + TankPitch;
+	double AdjustedPitchMin = BasePitchMin + GetActorRotation().Pitch;
+	double AdjustedPitchMax = BasePitchMax + GetActorRotation().Pitch;
+
+	AdjustedPitchMin = FMath::Fmod(AdjustedPitchMin + 180.0, 360.0) - 180.0;
+	AdjustedPitchMax = FMath::Fmod(AdjustedPitchMax + 180.0, 360.0) - 180.0;
 
 	// Apply the adjusted limits
-	PlayerController->PlayerCameraManager->ViewPitchMin = FMath::Clamp(AdjustedPitchMin, -90.0f, 90.0f);
-	PlayerController->PlayerCameraManager->ViewPitchMax = FMath::Clamp(AdjustedPitchMax, -90.0f, 90.0f);
+	PlayerController->PlayerCameraManager->ViewPitchMin = AdjustedPitchMin;
+	PlayerController->PlayerCameraManager->ViewPitchMax = AdjustedPitchMax;
+
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMin: %.5f"), AdjustedPitchMin),
+			true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMax: %.5f"), AdjustedPitchMax),
+			true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::SetGunElevation(const double NewGunElevation) const
@@ -635,7 +658,6 @@ void ATankCharacter::SetGunElevation(const double NewGunElevation) const
 	if (HasAuthority())
 		AnimInstance->GunElevation = NewGunElevation;
 	else
-		// Clients should not update the GunElevation directly.
 		SR_SetGunElevation(NewGunElevation);
 }
 
@@ -759,6 +781,14 @@ void ATankCharacter::SpawnShootEmitters()
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, GetShootSocket()->GetComponentTransform());
 
 	RadialForceComponent->FireImpulse();
+	
+	GetMesh()->AddImpulseAtLocation(
+		UKismetMathLibrary::FindLookAtRotation(
+			GetMesh()->GetSocketLocation("gun_jnt"),
+			GetActorLocation() + FVector(0, 0, 200)
+		).Vector() * RadialForceComponent->ImpulseStrength * 10 + GetVehicleMovementComponent()->GetForwardSpeedMPH() * 1000,
+		GetMesh()->GetSocketLocation("gun_jnt") 
+	);
 }
 
 void ATankCharacter::MC_SpawnShootEmitters_Implementation()
