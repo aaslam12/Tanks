@@ -11,7 +11,6 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
-#include "GameFramework/TankGameInstance.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -550,7 +549,7 @@ void ATankCharacter::MC_ApplyRadialDamage_Implementation(const FHitResult& Hit)
 	ApplyRadialDamage(Hit);
 }
 
-void ATankCharacter::OnDie_Implementation()
+void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState)
 {
 	if (OnDieStaticMesh)
 	{

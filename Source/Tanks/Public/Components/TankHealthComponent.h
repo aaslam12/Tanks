@@ -13,13 +13,13 @@ UDELEGATE()
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTakeDamage, int, OldHealth, int, NewHealth);
 
 UDELEGATE()
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDie);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDie, APlayerState*, PlayerState);
 
 UDELEGATE()
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDieUnreplicated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDieUnreplicated, APlayerState*, AffectedPlayerState);
 
 /**
- * The base main class for the Tank Health Component.
+ * The base class for the Tank Health Component.
  * Made to be plug and play with any actor, not just tanks.
  */
 UCLASS(Blueprintable, ClassGroup=(TankGame))

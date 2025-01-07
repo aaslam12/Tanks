@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Libraries/TankEnumLibrary.h"
 #include "TankFunctionLibrary.generated.h"
 
 class ATankCharacter;
@@ -16,4 +17,6 @@ class TANKS_API UTankFunctionLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintCallable)
+	static FString EnumToString(UEnum* EnumValue, const TCHAR* EnumClassName);
 };

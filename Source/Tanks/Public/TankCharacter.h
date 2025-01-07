@@ -34,13 +34,6 @@ FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
 	return A.GetActor() == B.GetActor();
 }
 
-UENUM(BlueprintType)
-enum class ETeam : uint8
-{
-	Team_1 UMETA(DisplayName = "Team 1"),
-	Team_2 UMETA(DisplayName = "Team 2"),
-};
-
 UCLASS(Abstract)
 class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterface, public IShootingInterface
 {
@@ -129,7 +122,7 @@ protected:
 	void OnShoot();
 
 	UFUNCTION(BlueprintNativeEvent)
-	void OnDie();
+	void OnDie(APlayerState* AffectedPlayerState);
 	
 	/**  */
 	UFUNCTION(BlueprintNativeEvent)
@@ -411,21 +404,24 @@ protected:
 	//////////////////////////////////////////////////////////////////
 	/// Pure C++ Getters and Setters
 public:
-	double GetMaxZoomIn() const { return MaxZoomIn; }
-	double GetMaxZoomOut() const { return MaxZoomOut; }
-	USceneComponent* GetShootSocket() const { return ShootSocket; }
-	UCameraComponent* GetFrontCameraComp() const { return FrontCameraComp; }
-	UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
-	USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
-	USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
-	TArray<UParticleSystem*> GetShootEmitterSystems() const { return ShootEmitterSystems; }
-	UParticleSystem* GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
-	bool IsInAir() const { return bIsInAir; }
-	double GetAbsoluteMinGunElevation() const { return AbsoluteMinGunElevation; }
-	double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
-	void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
-	void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
-	UPostProcessComponent* GetTankPostProcessVolume() const { return TankPostProcessVolume; }
+	FORCEINLINE double GetMaxZoomIn() const { return MaxZoomIn; }
+	FORCEINLINE double GetMaxZoomOut() const { return MaxZoomOut; }
+	FORCEINLINE USceneComponent* GetShootSocket() const { return ShootSocket; }
+	FORCEINLINE UCameraComponent* GetFrontCameraComp() const { return FrontCameraComp; }
+	FORCEINLINE UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
+	FORCEINLINE USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
+	FORCEINLINE USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
+	FORCEINLINE TArray<UParticleSystem*> GetShootEmitterSystems() const { return ShootEmitterSystems; }
+	FORCEINLINE UParticleSystem* GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
+	FORCEINLINE bool IsInAir() const { return bIsInAir; }
+	FORCEINLINE double GetAbsoluteMinGunElevation() const { return AbsoluteMinGunElevation; }
+	FORCEINLINE double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
+	FORCEINLINE void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
+	FORCEINLINE void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
+	FORCEINLINE UPostProcessComponent* GetTankPostProcessVolume() const { return TankPostProcessVolume; }
+	FORCEINLINE UTankHealthComponent* GetHealthComponent() const { return HealthComponent; }
+	FORCEINLINE UTankHighlightingComponent* GetTankHighlightingComponent() const { return TankHighlightingComponent; }
+	FORCEINLINE URadialForceComponent* GetRadialForceComponent() const { return RadialForceComponent; }
 
 
 	//////////////////////////////////////////////////////////////////

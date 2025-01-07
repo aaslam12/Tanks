@@ -38,7 +38,9 @@ void UTankHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UTankHealthComponent::Die()
 {
-	OnDieUnreplicated.Broadcast();
+	if (GetOwner())
+		if (Cast<APawn>(GetOwner()))
+			OnDieUnreplicated.Broadcast(Cast<APawn>(GetOwner())->GetPlayerState());
 	SR_Die();
 }
 
@@ -49,7 +51,9 @@ void UTankHealthComponent::SR_Die_Implementation()
 
 void UTankHealthComponent::MC_Die_Implementation()
 {
-	OnDie.Broadcast();
+	if (GetOwner())
+		if (Cast<APawn>(GetOwner()))
+			OnDie.Broadcast(Cast<APawn>(GetOwner())->GetPlayerState());
 }
 
 void UTankHealthComponent::OnTakeDamaged(AActor* DamagedActor, float Damage, const UDamageType*,
@@ -58,9 +62,6 @@ void UTankHealthComponent::OnTakeDamaged(AActor* DamagedActor, float Damage, con
 	const int OldHealth = CurrentHealth;
 	SetHealth(GetHealth() - Damage);
 	OnTakeDamage.Broadcast(OldHealth, CurrentHealth);
-
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s Take damage: %.5f"), *GetName(), Damage),
-	// 		true, true, FLinearColor::Yellow, 20);
 }
 
 void UTankHealthComponent::SetHealth(int NewHealth)

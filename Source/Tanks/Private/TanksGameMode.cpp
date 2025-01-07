@@ -3,6 +3,8 @@
 
 #include "TanksGameMode.h"
 
+#include "Components/TankHealthComponent.h"
+#include "GameFramework/PlayerState.h"
 #include "GameFramework/TankGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Projectiles/ProjectilePool.h"
@@ -68,6 +70,11 @@ void ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const
 	);
 
 	NewPlayer->Possess(Cast<APawn>(SpawnedActor));
+
+	if (auto Component = SpawnedActor->FindComponentByClass(UTankHealthComponent::StaticClass()))
+	{
+		Cast<UTankHealthComponent>(Component)->OnDie.AddDynamic(this, &ATanksGameMode::OnPlayerDie);
+	}
 }
 
 void ATanksGameMode::OnPostLogin(AController* NewPlayer)
@@ -94,4 +101,17 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	// do not spawn another pawn if a pawn already exists for it
 	if (!NewPlayer->GetPawn())
 		SpawnPlayerPawn(NewPlayer);
+}
+
+void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState)
+{
+	FTimerHandle RespawnTimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, [this, AffectedPlayerState]()
+	{
+		AActor* SpawnPoint = SpawnManager->GetRandomSpawnPoint();
+		if (SpawnPoint)
+		{
+			RestartPlayerAtPlayerStart(AffectedPlayerState->GetOwningController(), SpawnPoint);
+		}
+	}, MinRespawnDelay, false);
 }

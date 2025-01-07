@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "Libraries/TankStructLibrary.h"
 #include "TankGameInstance.generated.h"
 
 UENUM(BlueprintType)
