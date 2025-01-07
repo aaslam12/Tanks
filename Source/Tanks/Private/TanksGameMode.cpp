@@ -14,6 +14,7 @@ ATanksGameMode::ATanksGameMode()
 void ATanksGameMode::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+	bUseSeamlessTravel = true;
 	SpawnProjectilePool();
 }
 

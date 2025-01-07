@@ -219,8 +219,8 @@ void ATankCharacter::Tick(float DeltaTime)
 		GetActorLocation() + FVector(0, 0, 200)
 	).Vector() * RadialForceComponent->ImpulseStrength;
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) FindLookAtRotation: %s"), *e.ToString()),
-			true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) FindLookAtRotation: %s"), *e.ToString()),
+	// 		true, true, FLinearColor::Yellow, 0);
 
 	
 }
@@ -446,11 +446,11 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 
 	SetGunElevation(GunElevation);
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunElevation: %.5f"), GunElevation),
-			true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunRotation: %s"), *GunRotation.ToString()),
-			true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunElevation: %.5f"), GunElevation),
+	// 		true, true, FLinearColor::Yellow, 0);
+	//
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunRotation: %s"), *GunRotation.ToString()),
+	// 		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::UpdateIsInAir_Implementation()
@@ -638,11 +638,11 @@ void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
 	PlayerController->PlayerCameraManager->ViewPitchMax = BasePitchMax;
 
 	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMin: %.5f"), AdjustedPitchMin),
-			true, true, FLinearColor::Yellow, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMax: %.5f"), AdjustedPitchMax),
-			true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMin: %.5f"), AdjustedPitchMin),
+	// 		true, true, FLinearColor::Yellow, 0);
+	//
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMax: %.5f"), AdjustedPitchMax),
+	// 		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::SetGunElevation(const double NewGunElevation) const
