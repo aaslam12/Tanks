@@ -161,8 +161,21 @@ APlayerStart* UTankSpawnManagerComponent::GetSpawnLocation(const ETeam Team)
 
 	// means no spawn point is available so choose a random one anyway.
 	UE_LOG(LogTemp, Error, TEXT("Spawning at a random location..."));
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Spawning at a random location...")),
-		true, true, FLinearColor::Yellow, 15);
-	
 	return SpawnPoints[Spawns].TeamSpawnPoints[FMath::RandRange(0, SpawnPoints[Spawns].TeamSpawnPoints.Num() - 1)]; 
+}
+
+AActor* UTankSpawnManagerComponent::GetRandomSpawnPointFromTeam(ETeam Team)
+{
+	for (auto Point : AvailableSpawnPoints)
+	{
+		if (Point.TeamName == Team)
+		{
+			if (!Point.TeamSpawnPoints.IsEmpty())
+				return Point.TeamSpawnPoints[FMath::RandRange(0, Point.TeamSpawnPoints.Num() - 1)];
+			else
+				break; // break because there will only be one TeamSpawn of a team at a time.
+		}
+	}
+
+	return nullptr;
 }

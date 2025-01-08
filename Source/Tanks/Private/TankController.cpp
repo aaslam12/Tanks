@@ -96,7 +96,7 @@ void ATankController::OnDie_Implementation()
 void ATankController::BindControls()
 {
 	// Set up action bindings
-	if (EnhancedInputComponent)
+	if (EnhancedInputComponent && TankPlayer)
 	{
 		// Moving forward and backward
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATankController::Move);

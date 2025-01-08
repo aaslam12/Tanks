@@ -67,18 +67,6 @@ void ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const
 	FVector SpawnLocation = FVector(PlayerControllers.Num() * -1500.0, 0, 150);
 	FRotator SpawnRotation = FRotator::ZeroRotator;
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = NewPlayer;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-	auto SpawnedActor = GetWorld()->SpawnActor(
-		DefaultPawnClass,
-		&SpawnLocation,
-		&SpawnRotation
-	);
-
-	NewPlayer->Possess(Cast<APawn>(SpawnedActor));
-
 	ETeam TeamToSpawnIn = ETeam::Unassigned;
 	if (NewPlayer->PlayerState)
 		if (Cast<ATankPlayerState>(NewPlayer->PlayerState))
@@ -92,17 +80,23 @@ void ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const
 
 		SpawnLocation = PlayerStart->GetActorLocation();
 		SpawnRotation = PlayerStart->GetActorRotation();
-		SpawnedActor->TeleportTo(SpawnLocation, SpawnRotation);
-		
-		UE_LOG(LogTemp, Log, TEXT("PlayerStart: %s"), *PlayerStart->GetName());
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("PlayerStart is null"));
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("SpawnPlayerPawn Location: %s Rotation: %s"), *SpawnLocation.ToString(), *SpawnRotation.ToString());
-	UE_LOG(LogTemp, Log, TEXT("TeamToSpawnIn: %ls"), *UEnum::GetValueAsString(TeamToSpawnIn));
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = NewPlayer;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	auto SpawnedActor = GetWorld()->SpawnActor(
+		DefaultPawnClass,
+		&SpawnLocation,
+		&SpawnRotation
+	);
+
+	NewPlayer->Possess(Cast<APawn>(SpawnedActor));
 
 	if (auto Component = SpawnedActor->FindComponentByClass(UTankHealthComponent::StaticClass()))
 		Cast<UTankHealthComponent>(Component)->OnDie.AddDynamic(this, &ATanksGameMode::OnPlayerDie);
@@ -128,6 +122,26 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	PlayerControllers.Add(NewPlayerController);
 
 	TankGameState->OnPostLogin(NewPlayer->PlayerState);
+
+	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) Setting timer for %.5f"), MinRespawnDelay + 5);
+
+	if (!GameStartingTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().SetTimer(GameStartingTimerHandle, [this]()
+		{
+
+			for (auto Element : PlayerControllers)
+			{
+				UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) GameStartingTimerHandle Timer ran in %s"), *Element->GetName());
+
+				// do not spawn another pawn if a pawn already exists for it
+				if (!Element->GetPawn())
+					SpawnPlayerPawn(Element);
+			}
+		}, MinRespawnDelay + 5, false);
+
+		UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) Timer set."));
+	}
 }
 
 void ATanksGameMode::BeginPlay()
@@ -136,29 +150,27 @@ void ATanksGameMode::BeginPlay()
 	SpawnManager->SetDefaults();
 }
 
-bool ATanksGameMode::ReadyToStartMatch_Implementation()
-{
-	if (!GameStartingTimerHandle.IsValid())
-		GetWorld()->GetTimerManager().SetTimer(GameStartingTimerHandle, [this]()
-		{
-			for (auto Element : PlayerControllers)
-				// do not spawn another pawn if a pawn already exists for it
-					if (!Element->GetPawn())
-						SpawnPlayerPawn(Element);
-		}, 5, false);
-	
-	return Super::ReadyToStartMatch_Implementation();
-}
-
 void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState)
 {
+	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPlayerDie) AffectedPlayerState: %s Setting timer for %.5f"), *AffectedPlayerState->GetName(), MinRespawnDelay);
+	
 	FTimerHandle RespawnTimerHandle;
 	GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, [this, AffectedPlayerState]()
 	{
-		// AActor* SpawnPoint = SpawnManager->GetRandomSpawnPoint();
-		// if (SpawnPoint)
-		// {
-		// 	RestartPlayerAtPlayerStart(AffectedPlayerState->GetOwningController(), SpawnPoint);
-		// }
+		UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPlayerDie) Timer ran..."));
+
+		if (AffectedPlayerState)
+			if (Cast<ATankPlayerState>(AffectedPlayerState))
+			{
+				AActor* SpawnPoint = SpawnManager->GetRandomSpawnPointFromTeam(Cast<ATankPlayerState>(AffectedPlayerState)->GetCurrentTeam());
+				if (SpawnPoint)
+				{
+					AffectedPlayerState->GetPawn()->Destroy();
+					RestartPlayerAtPlayerStart(AffectedPlayerState->GetOwningController(), SpawnPoint);
+				}
+			}
 	}, MinRespawnDelay, false);
+	
+	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPlayerDie) Timer set."));
+
 }

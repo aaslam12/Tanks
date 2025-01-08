@@ -62,4 +62,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	APlayerStart* GetSpawnLocation(const ETeam Team);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	AActor* GetRandomSpawnPointFromTeam(ETeam Team);
 };
