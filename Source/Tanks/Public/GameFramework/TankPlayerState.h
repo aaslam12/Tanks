@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Libraries/TankEnumLibrary.h"
 #include "GameFramework/PlayerState.h"
 #include "TankPlayerState.generated.h"
 
@@ -23,19 +24,19 @@ class TANKS_API ATankPlayerState : public APlayerState
 
 public:
 	UPROPERTY(ReplicatedUsing=OnRep_CurrentTeam, BlueprintReadWrite, Category="Teams")
-	FString CurrentTeam;
+	ETeam CurrentTeam;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
-	FString GetCurrentTeam() const { return CurrentTeam; }
+	ETeam GetCurrentTeam() const { return CurrentTeam; }
 
 	UFUNCTION(BlueprintCallable, Category="Data")
-	void SetCurrentTeam(const FString& NewTeam);
+	void SetCurrentTeam(const ETeam NewTeam);
 	
 	UFUNCTION(Server, Reliable)
-	void SR_SetCurrentTeam(const FString& NewTeam);
+	void SR_SetCurrentTeam(const ETeam NewTeam);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MC_SetCurrentTeam(const FString& NewTeam);
+	void MC_SetCurrentTeam(const ETeam NewTeam);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
 	FString CustomPlayerName;

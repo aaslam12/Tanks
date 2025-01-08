@@ -25,16 +25,16 @@ protected:
 public:
 	virtual void OnPostLogin(APlayerState* NewPlayer);
 	
-	FTeamData* FindTeamByName(const FString& TeamName);
+	FTeamData* FindTeam(const ETeam TeamName);
 
 	UPROPERTY(ReplicatedUsing=OnRep_Teams, BlueprintReadOnly, Category="Teams")
 	TArray<FTeamData> Teams;
 	
 	// Assign a player to a team
 	UFUNCTION(BlueprintCallable, Category="Teams")
-	void AssignPlayerToTeam(APlayerState* Player, const FString& TeamName);
+	void AssignPlayerToTeam(APlayerState* Player, const ETeam TeamName);
 
 	// Get players in a specific team
 	UFUNCTION(BlueprintCallable, Category="Teams")
-	const FTeamData& GetPlayersInTeam(const FString& TeamName);
+	const FTeamData& GetPlayersInTeam(const ETeam TeamName);
 };

@@ -17,6 +17,4 @@ class TANKS_API UTankFunctionLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable)
-	static FString EnumToString(UEnum* EnumValue, const TCHAR* EnumClassName);
 };

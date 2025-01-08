@@ -35,6 +35,16 @@
 			"Name": "RenameTool",
 			"Enabled": true,
 			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/c6e227383f754209ab1eeb294aa0f6d6"
+		},
+		{
+			"Name": "EnhancedCodeFlow",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/0e9dd2a8f807456da0fe6af280ab795c"
+		},
+		{
+			"Name": "EditorCameraPosition",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/9864b623739f4fbab30f4d877b137fc9"
 		}
 	],
 	"TargetPlatforms": [

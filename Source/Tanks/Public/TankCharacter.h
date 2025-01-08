@@ -98,7 +98,7 @@ protected:
 
 	// ITankInterface functions start
 	virtual void OutlineTank_Implementation(const bool bActivate, const bool bIsFriend) override;
-	virtual FString GetCurrentTeam_Implementation() override;
+	virtual ETeam GetCurrentTeam_Implementation() override;
 	// ITankInterface functions end
 	
 	// IShootingInterface functions start
@@ -243,7 +243,7 @@ protected:
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
-	FString CurrentTeam;
+	ETeam CurrentTeam;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<UTankGameInstance> GameInstance;

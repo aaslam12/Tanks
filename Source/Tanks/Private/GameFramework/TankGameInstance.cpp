@@ -13,7 +13,7 @@ void UTankGameInstance::Init()
 {
 	Super::Init();
 
-	bool bIsClient = true;
+	bool bIsClient = false;
 
 	if (bIsClient)
 	{

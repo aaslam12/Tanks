@@ -3,20 +3,21 @@
 UENUM(BlueprintType)
 enum class ETeam : uint8
 {
-	Team_1 UMETA(DisplayName = "Team 1"),
-	Team_2 UMETA(DisplayName = "Team 2"),
+	Unassigned UMETA(Hidden),
+	Team1 UMETA(DisplayName = "Team1"),
+	Team2 UMETA(DisplayName = "Team2"),
+
+	NoTeam UMETA(DisplayName = "NoTeam"),
 };
 
-USTRUCT(BlueprintType)
-struct FTeam
+/**
+ * Creates an array with every single possible value of its corresponding enum.
+ */
+FORCEINLINE TArray<ETeam> CreateTeamArray()
 {
-	GENERATED_BODY()
-
 	TArray<ETeam> Teams;
-
-	FTeam()
-	{
-		Teams.Add(ETeam::Team_1);
-		Teams.Add(ETeam::Team_2);
-	}
-};
+	Teams.Add(ETeam::Team1);
+	Teams.Add(ETeam::Team2);
+	Teams.Add(ETeam::NoTeam);
+	return Teams;
+}

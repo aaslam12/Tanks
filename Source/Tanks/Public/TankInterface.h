@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "TankInterface.generated.h"
 
+enum class ETeam : uint8;
 // This class does not need to be modified.
 UINTERFACE()
 class UTankInterface : public UInterface
@@ -26,5 +27,5 @@ public:
 	void OutlineTank(const bool bActivate, const bool bIsFriend);
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	FString GetCurrentTeam();
+	ETeam GetCurrentTeam();
 };

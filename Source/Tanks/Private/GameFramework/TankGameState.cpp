@@ -32,29 +32,29 @@ void ATankGameState::OnPostLogin(APlayerState* NewPlayer)
 	{
 		// Suggestion: Each player can have a "score" that is based on how strong their tank is.
 		// This can then be used to place a player in an appropriate team. 
-		if (Team.TeamName.Equals("Team 1"))
+		if (Team.TeamName == ETeam::Team1)
 			Team1Count += Team.Players.Num();
-		else if (Team.TeamName.Equals("Team 2"))
+		else if (Team.TeamName == ETeam::Team2)
 			Team2Count += Team.Players.Num();
 	}
 
 	// Assign to the team with fewer players
-	FString TeamToAssign = Team1Count <= Team2Count ? "Team 1" : "Team 2";
-
+	ETeam TeamToAssign = Team1Count <= Team2Count ? ETeam::Team1 : ETeam::Team2;
+	
 	// Assign the player to the chosen team
 	AssignPlayerToTeam(NewPlayer, TeamToAssign);
 
 	// Update the player's name to reflect their team assignment
-	auto PlayerName = FString::Printf(TEXT("Player %d (%s) [%s]"), NewPlayer->GetPlayerId(), *TeamToAssign, *NewPlayer->GetName());
+	auto PlayerName = FString::Printf(TEXT("Player %d (%d) [%s]"), NewPlayer->GetPlayerId(), (int)TeamToAssign, *NewPlayer->GetName());
 	NewPlayer->SetPlayerName(PlayerName);
 }
 
-void ATankGameState::AssignPlayerToTeam(APlayerState* Player, const FString& TeamName)
+void ATankGameState::AssignPlayerToTeam(APlayerState* Player, const ETeam TeamName)
 {
 	if (!Player) return;
 
 	// Search for the team by name
-	auto Team = FindTeamByName(TeamName);
+	auto Team = FindTeam(TeamName);
 
 	if (Team)
 	{
@@ -74,20 +74,20 @@ void ATankGameState::AssignPlayerToTeam(APlayerState* Player, const FString& Tea
 		e->SetCurrentTeam(TeamName);
 }
 
-FTeamData* ATankGameState::FindTeamByName(const FString& TeamName)
+FTeamData* ATankGameState::FindTeam(const ETeam TeamName)
 {
 	FTeamData* Team = Teams.FindByPredicate([&](const FTeamData& Data)
 	{
-		return Data.TeamName.Equals(TeamName);
+		return Data.TeamName == TeamName;
 	});
 
 	return Team ? Team : nullptr;
 }
 
-const FTeamData& ATankGameState::GetPlayersInTeam(const FString& TeamName)
+const FTeamData& ATankGameState::GetPlayersInTeam(const ETeam TeamName)
 {
 	FTeamData* Team = Teams.FindByPredicate([&](const FTeamData& Data) {
-		return Data.TeamName.Equals(TeamName, ESearchCase::IgnoreCase);
+		return Data.TeamName == TeamName;
 	});
 
 	auto e = FTeamData();

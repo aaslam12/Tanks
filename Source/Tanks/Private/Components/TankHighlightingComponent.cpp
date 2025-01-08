@@ -59,12 +59,12 @@ void UTankHighlightingComponent::HighlightFriendlyTanks()
 	if (TankGameState->Teams.IsEmpty())
 		return;
 
-	FString CurrentTeam;
+	ETeam CurrentTeam;
 
 	if (auto e = Cast<ATankCharacter>(GetOwner()))
 		CurrentTeam = e->GetPlayerState<ATankPlayerState>()->GetCurrentTeam();
 	else
-		CurrentTeam = "";
+		CurrentTeam = ETeam::Unassigned;
 
 	auto Array = TankGameState->GetPlayersInTeam(CurrentTeam);
 

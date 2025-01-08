@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Libraries/TankEnumLibrary.h"
 #include "TankStructLibrary.generated.h"
 
 /**
@@ -15,10 +16,12 @@ struct FTeamData
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite, Category="Team Data")
-	FString TeamName;
+	ETeam TeamName;
 	
 	UPROPERTY(BlueprintReadWrite, Category="Team Data")
 	TArray<APlayerState*> Players;
 
-	FTeamData() {}
+	FTeamData(): TeamName(ETeam::Unassigned)
+	{
+	}
 };

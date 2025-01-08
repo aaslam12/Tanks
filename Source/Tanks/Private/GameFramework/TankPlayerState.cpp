@@ -3,7 +3,7 @@
 
 #include "GameFramework/TankPlayerState.h"
 
-#include "Kismet/KismetSystemLibrary.h"
+#include "Libraries/TankEnumLibrary.h"
 #include "Net/UnrealNetwork.h"
 
 void ATankPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -22,17 +22,17 @@ void ATankPlayerState::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 }
 
-void ATankPlayerState::SetCurrentTeam(const FString& NewTeam)
+void ATankPlayerState::SetCurrentTeam(const ETeam NewTeam)
 {
 	SR_SetCurrentTeam(NewTeam);
 }
 
-void ATankPlayerState::SR_SetCurrentTeam_Implementation(const FString& NewTeam)
+void ATankPlayerState::SR_SetCurrentTeam_Implementation(const ETeam NewTeam)
 {
 	MC_SetCurrentTeam(NewTeam);
 }
 
-void ATankPlayerState::MC_SetCurrentTeam_Implementation(const FString& NewTeam)
+void ATankPlayerState::MC_SetCurrentTeam_Implementation(const ETeam NewTeam)
 {
 	CurrentTeam = NewTeam;
 }

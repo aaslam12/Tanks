@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Libraries/TankEnumLibrary.h"
 #include "TankSpawnManagerComponent.generated.h"
 
 enum class ETeam : uint8;
@@ -17,22 +18,48 @@ struct FTeamSpawn
 	ETeam TeamName;
 
 	UPROPERTY(BlueprintReadOnly)
-	TArray<AActor*> TeamSpawnPoints;
+	TArray<APlayerStart*> TeamSpawnPoints;
+
+	FTeamSpawn(): TeamName(ETeam::Team1)
+	{
+	}
+
+	FTeamSpawn(const ETeam TeamName, const TArray<APlayerStart*>& TeamSpawnPoints)
+		: TeamName(TeamName),
+		  TeamSpawnPoints(TeamSpawnPoints)
+	{
+	}
 };
 
 /**
  * Handles player spawns. Only exists on the SERVER.
  */
-UCLASS(Abstract, ClassGroup=(Custom))
+UCLASS(Blueprintable)
 class TANKS_API UTankSpawnManagerComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 	UTankSpawnManagerComponent();
-	virtual void BeginPlay() override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-	                           FActorComponentTickFunction* ThisTickFunction) override;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
 	TArray<FTeamSpawn> SpawnPoints;
+
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	TArray<FTeamSpawn> AvailableSpawnPoints;
+
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	TArray<FTeamSpawn> UnavailableSpawnPoints;
+	
+	bool bDefaultsSet;
+	
+public:
+	void MakePlayerStartUnavailable(APlayerStart* PlayerStart, ETeam Team);
+	void SetDefaults();
+	bool IsPlayerStartAvailable(APlayerStart* PlayerStart);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	int32 GetTeamSpawnIndex(const ETeam Team);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	APlayerStart* GetSpawnLocation(const ETeam Team);
 };

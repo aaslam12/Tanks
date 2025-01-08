@@ -11,6 +11,7 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
+#include "Components/TankSpawnManagerComponent.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -227,7 +228,7 @@ void ATankCharacter::Tick(float DeltaTime)
 float ATankCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 	class AController* EventInstigator, AActor* DamageCauser)
 {
-	if (Execute_GetCurrentTeam(this).Equals(Execute_GetCurrentTeam(DamageCauser)) == false)
+	if (Execute_GetCurrentTeam(this) != Execute_GetCurrentTeam(DamageCauser)) // add a IsFriendlyFireOn toggle here
 		HealthComponent->OnTakeDamaged(this, DamageAmount, nullptr, EventInstigator, DamageCauser);
 	return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 }
@@ -512,11 +513,11 @@ void ATankCharacter::OutlineTank_Implementation(const bool bActivate, const bool
 	}
 }
 
-FString ATankCharacter::GetCurrentTeam_Implementation()
+ETeam ATankCharacter::GetCurrentTeam_Implementation()
 {
 	if (TankPlayerState)
 		return TankPlayerState->GetCurrentTeam();
-	return TEXT(""); // empty string
+	return ETeam::Unassigned; // empty string
 }
 
 void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor,
