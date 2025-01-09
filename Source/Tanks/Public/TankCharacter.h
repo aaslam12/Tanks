@@ -66,6 +66,8 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	virtual auto GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 	void BindDelegates();
+	UFUNCTION(BlueprintCallable)
+	void ResetCameraRotation();
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;

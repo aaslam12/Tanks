@@ -12,7 +12,8 @@
 #include "Libraries/TankEnumLibrary.h"
 #include "Projectiles/ProjectilePool.h"
 
-ATanksGameMode::ATanksGameMode() : SpawnManager(CreateDefaultSubobject<UTankSpawnManagerComponent>("SpawnManager"))
+ATanksGameMode::ATanksGameMode() : GameStartDelay(3),
+                                   SpawnManager(CreateDefaultSubobject<UTankSpawnManagerComponent>("SpawnManager"))
 {
 }
 
@@ -184,7 +185,7 @@ void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState)
 {
 	FTimerHandle TimerHandle = GetPlayerTimerHandle(AffectedPlayerState);
 	
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, AffectedPlayerState]()
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, AffectedPlayerState]
 	{
 		MC_OnPlayerDie(AffectedPlayerState);
 	},
@@ -204,6 +205,11 @@ void ATanksGameMode::MC_OnPlayerDie_Implementation(APlayerState* AffectedPlayerS
 	{
 		AffectedPlayerState->GetPawn()->Restart();
 		RestartPlayerAtPlayerStart(AffectedPlayerState->GetPlayerController(), SpawnPoint);
+
+		AffectedPlayerState->GetPawn()->TeleportTo(
+			SpawnPoint->GetActorLocation(),
+			SpawnPoint->GetActorRotation()
+		);
 
 		DrawDebugSphere(GetWorld(), SpawnPoint->GetActorLocation(), 50, 16, FColor::Emerald, true);
 	}

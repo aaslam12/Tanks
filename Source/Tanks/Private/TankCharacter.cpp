@@ -11,13 +11,12 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
-#include "Components/TankSpawnManagerComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Libraries/TFL.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/RadialForceComponent.h"
 #include "Projectiles/ProjectilePool.h"
@@ -162,6 +161,16 @@ void ATankCharacter::BindDelegates()
 	}
 }
 
+void ATankCharacter::ResetCameraRotation()
+{
+	if (BackCameraComp)
+	{
+		FRotator Rot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), GetActorForwardVector() * 1000);
+		BackCameraComp->SetWorldRotation(Rot);
+		
+	}
+}
+
 void ATankCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -176,6 +185,7 @@ void ATankCharacter::BeginPlay()
 		}
 	}
 	
+	ResetCameraRotation();
 	SetDefaults();
 	BindDelegates();
 
@@ -554,6 +564,7 @@ void ATankCharacter::Restart()
 	if (!GetWorld()->HasBegunPlay())
 		return;
 
+	ResetCameraRotation();
 	SR_Restart();
 }
 
