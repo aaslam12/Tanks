@@ -23,12 +23,14 @@ class TANKS_API ATanksGameMode : public AGameMode
 	void RemoveAllProjectilePools() const;
 	virtual void PostInitializeComponents() override;
 	UFUNCTION()
-	void SpawnPlayerPawn(AController* NewPlayer) const;
+	AActor* SpawnPlayerPawn(AController* NewPlayer) const;
 	virtual void OnPostLogin(AController* NewPlayer) override;
 	virtual void BeginPlay() override;
 
 	UFUNCTION()
 	void OnPlayerDie(APlayerState* PlayerState);
+	void BindDelegates(AActor* SpawnedActor);
+	void SetupPawn(APlayerController* PlayerController);
 
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	TSet<APlayerController*> PlayerControllers;

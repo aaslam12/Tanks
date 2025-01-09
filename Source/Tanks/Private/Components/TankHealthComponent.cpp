@@ -36,6 +36,11 @@ void UTankHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	// ...
 }
 
+void UTankHealthComponent::OnPlayerRespawn_Implementation()
+{
+	CurrentHealth = MaxHealth;
+}
+
 void UTankHealthComponent::Die()
 {
 	if (GetOwner())
@@ -51,17 +56,31 @@ void UTankHealthComponent::SR_Die_Implementation()
 
 void UTankHealthComponent::MC_Die_Implementation()
 {
-	if (GetOwner())
-		if (Cast<APawn>(GetOwner()))
-			OnDie.Broadcast(Cast<APawn>(GetOwner())->GetPlayerState());
+	if (!GetOwner())
+		return;
+	
+	if (!Cast<APawn>(GetOwner()))
+		return;
+	
+	OnDie.Broadcast(Cast<APawn>(GetOwner())->GetPlayerState());
 }
 
 void UTankHealthComponent::OnTakeDamaged(AActor* DamagedActor, float Damage, const UDamageType*,
                                      AController* InstigatedBy, AActor* DamageCauser)
 {
-	const int OldHealth = CurrentHealth;
+	const double OldHealth = CurrentHealth;
 	SetHealth(GetHealth() - Damage);
 	OnTakeDamage.Broadcast(OldHealth, CurrentHealth);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), 
+		  FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s damaged: %.2f"), *GetOwner()->GetName(), Damage), 
+		  true, true, FLinearColor::Red, 1000000
+	);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), 
+		  FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s CurrentHealth: %.2f"), *GetOwner()->GetName(), CurrentHealth), 
+		  true, true, FLinearColor::Red, 1000000
+	);
 }
 
 void UTankHealthComponent::SetHealth(int NewHealth)
@@ -87,7 +106,7 @@ int UTankHealthComponent::GetHealth()
 	return CurrentHealth;
 }
 
-bool UTankHealthComponent::GetIsDead()
+bool UTankHealthComponent::IsDead()
 {
 	return CurrentHealth <= MinHealth;
 }

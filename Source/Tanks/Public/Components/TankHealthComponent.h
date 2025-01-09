@@ -60,6 +60,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Functions")
 	FOnDieUnreplicated OnDieUnreplicated;
 
+	UFUNCTION(BlueprintNativeEvent, Category = "Functions")
+	void OnPlayerRespawn();
+
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void Die();
 
@@ -79,5 +82,5 @@ public:
 	virtual int GetHealth();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Functions")
-	virtual bool GetIsDead();
+	virtual bool IsDead();
 };

@@ -41,7 +41,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Delegate Functions")
 	void OnDie();
-	
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Delegate Functions")
+	void OnRespawn();
+
 protected:
 	UFUNCTION(BlueprintCallable)
 	void BindControls();

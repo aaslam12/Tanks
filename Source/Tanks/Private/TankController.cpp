@@ -93,6 +93,10 @@ void ATankController::OnDie_Implementation()
 	ShootTimerHandle.Invalidate();
 }
 
+void ATankController::OnRespawn_Implementation()
+{
+}
+
 void ATankController::BindControls()
 {
 	// Set up action bindings

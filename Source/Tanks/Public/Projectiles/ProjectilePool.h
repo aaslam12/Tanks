@@ -38,7 +38,7 @@ class TANKS_API AProjectilePool : public AActor
 	virtual void Tick(float DeltaTime) override;
 	
 public:
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	ATankProjectile* FindFirstAvailableProjectile();
 	
 	/**
@@ -47,7 +47,7 @@ public:
 	 * @param InitialSpeed The initial speed of the projectile. currently does not do anything.
 	 * @return Returns the projectile actor that was just spawned.
 	 */
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	ATankProjectile* SpawnFromPool(const FTransform& SpawnTransform, UObject* Object = nullptr,
 	                               const double InitialSpeed = 50000.0);
 };

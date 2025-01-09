@@ -150,12 +150,14 @@ void ATankCharacter::BindDelegates()
 {
 	if (PlayerController)
 	{
-		PlayerController->OnShoot.AddDynamic(this, &ATankCharacter::OnShoot);
+		if (!PlayerController->OnShoot.IsAlreadyBound(this, &ATankCharacter::OnShoot))
+			PlayerController->OnShoot.AddDynamic(this, &ATankCharacter::OnShoot);
 	}
 
 	if (HealthComponent)
 	{
-		HealthComponent->OnDie.AddDynamic(this, &ATankCharacter::OnDie);
+		if (!HealthComponent->OnDie.IsAlreadyBound(this, &ATankCharacter::OnDie))
+			HealthComponent->OnDie.AddDynamic(this, &ATankCharacter::OnDie);
 	}
 }
 
@@ -198,7 +200,14 @@ void ATankCharacter::Tick(float DeltaTime)
 			LookValues = PlayerController->GetLookValues();
 		}
 
-		// Execute other logic
+		if (HealthComponent->IsDead())
+		{
+			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Actor is dead %s"), *GetName()),
+					true, true, FLinearColor::Yellow, 15);
+			
+			return;
+		}
+
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
 		CheckIfGunCanLowerElevationTick(DeltaTime);
@@ -210,19 +219,9 @@ void ATankCharacter::Tick(float DeltaTime)
 			if (Cast<ATankPlayerState>(GetPlayerState()))
 				TankPlayerState = Cast<ATankPlayerState>(GetPlayerState());
 
-		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running")),
-		// 	true, true, FLinearColor::Yellow, 0);
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running in %s"), *GetName()),
+			true, true, FLinearColor::Yellow, 0);
 	}
-	
-	auto e = UKismetMathLibrary::FindLookAtRotation(
-		GetMesh()->GetSocketLocation("gun_jnt"),
-		GetActorLocation() + FVector(0, 0, 200)
-	).Vector() * RadialForceComponent->ImpulseStrength;
-
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::Tick) FindLookAtRotation: %s"), *e.ToString()),
-	// 		true, true, FLinearColor::Yellow, 0);
-
-	
 }
 
 float ATankCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -529,15 +528,75 @@ void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectil
 	TankProjectile->ResetTransform();
 }
 
-void ATankCharacter::ApplyRadialDamage(const FHitResult& Hit)
+void ATankCharacter::ApplyRadialDamage_Implementation(const FHitResult& Hit)
 {
+	DrawDebugSphere(GetWorld(), Hit.Location, 50, 16, FColor::Red, true);
+	DrawDebugSphere(GetWorld(), Hit.Location, DamageInnerRadius, 16, FColor::White, true);
+	DrawDebugSphere(GetWorld(), Hit.Location, DamageOuterRadius, 16, FColor::Yellow, true);
+	
 	UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(),
 		BaseDamage, BaseDamage * 0.1, Hit.Location,
 		DamageInnerRadius, DamageOuterRadius, DamageFalloff, UTankDamageType::StaticClass(),
 		{}, this, GetController());
 
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s Applying damage to: %s %.5f"), *GetName(), *Hit.GetActor()->GetName(), BaseDamage),
-	// 		true, true, FLinearColor::Red, 15);
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s Applying damage to: %s %.5f"), *GetName(), *Hit.GetActor()->GetName(), BaseDamage),
+			true, true, FLinearColor::Red, 15);
+}
+
+void ATankCharacter::Restart()
+{
+	Super::Restart();
+
+	if (!GetWorld()->HasBegunPlay())
+		return;
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s restarted"), *GetName()),
+			true, true, FLinearColor::Red, 20);
+
+	SR_Restart();
+}
+
+void ATankCharacter::SR_Restart_Implementation()
+{
+	MC_Restart();
+}
+
+void ATankCharacter::MC_Restart_Implementation()
+{
+	Restart__Internal();
+}
+
+void ATankCharacter::Restart__Internal()
+{
+	if (OnDieStaticMesh)
+	{
+		GetMesh()->SetHiddenInGame(false);
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
+		
+		DamagedStaticMesh->SetWorldTransform(FTransform(FRotator::ZeroRotator, FVector(0, 0, -100000))); // TODO. add a small impulse to the tank and bounce it up
+		DamagedStaticMesh->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+		DamagedStaticMesh->SetHiddenInGame(true);
+		DamagedStaticMesh->SetVisibility(false);
+	}
+
+	if (PlayerController)
+		PlayerController->OnRespawn();
+
+	SetDefaults();
+	BindDelegates();
+
+	if (HealthComponent)
+		HealthComponent->OnPlayerRespawn();
+
+	UKismetSystemLibrary::PrintString(
+		  GetWorld(), 
+		  FString::Printf(TEXT("(ATankCharacter::Restart) %s restarted"), *GetName()), 
+		  true, 
+		  true, 
+		  FLinearColor::Red, 
+		  1000000
+	);
 }
 
 void ATankCharacter::SR_ApplyRadialDamage_Implementation(const FHitResult& Hit)
@@ -562,10 +621,10 @@ void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState)
 		DamagedStaticMesh->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
 		DamagedStaticMesh->SetHiddenInGame(false);
 		DamagedStaticMesh->SetVisibility(true);
-
-		if (PlayerController)
-			PlayerController->OnDie();
 	}
+
+	if (PlayerController)
+		PlayerController->OnDie();
 }
 
 void ATankCharacter::OnShoot_Implementation()
@@ -614,11 +673,6 @@ void ATankCharacter::OnShoot_Implementation()
 			}
 		}
 	}
-}
-
-void ATankCharacter::SR_Shoot_Implementation()
-{
-	
 }
 
 void ATankCharacter::UpdateCameraPitchLimits_Implementation() const

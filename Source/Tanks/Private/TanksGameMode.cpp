@@ -59,10 +59,10 @@ void ATanksGameMode::RemoveAllProjectilePools() const
 			OutActor->Destroy();
 }
 
-void ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const
+AActor* ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const
 {
 	if (!NewPlayer)
-		return;
+		return nullptr;
 
 	FVector SpawnLocation = FVector(PlayerControllers.Num() * -1500.0, 0, 150);
 	FRotator SpawnRotation = FRotator::ZeroRotator;
@@ -96,10 +96,7 @@ void ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const
 		&SpawnRotation
 	);
 
-	NewPlayer->Possess(Cast<APawn>(SpawnedActor));
-
-	if (auto Component = SpawnedActor->FindComponentByClass(UTankHealthComponent::StaticClass()))
-		Cast<UTankHealthComponent>(Component)->OnDie.AddDynamic(this, &ATanksGameMode::OnPlayerDie);
+	return SpawnedActor;
 }
 
 void ATanksGameMode::OnPostLogin(AController* NewPlayer)
@@ -130,15 +127,12 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 		GetWorld()->GetTimerManager().SetTimer(GameStartingTimerHandle, [this]()
 		{
 
-			for (auto Element : PlayerControllers)
+			for (auto PlayerController : PlayerControllers)
 			{
-				UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) GameStartingTimerHandle Timer ran in %s"), *Element->GetName());
-
-				// do not spawn another pawn if a pawn already exists for it
-				if (!Element->GetPawn())
-					SpawnPlayerPawn(Element);
+				UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) GameStartingTimerHandle Timer ran in %s"), *PlayerController->GetName());
+				SetupPawn(PlayerController);
 			}
-		}, MinRespawnDelay + 5, false);
+		}, MinRespawnDelay + 3, false);
 
 		UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) Timer set."));
 	}
@@ -165,12 +159,41 @@ void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState)
 				AActor* SpawnPoint = SpawnManager->GetRandomSpawnPointFromTeam(Cast<ATankPlayerState>(AffectedPlayerState)->GetCurrentTeam());
 				if (SpawnPoint)
 				{
-					AffectedPlayerState->GetPawn()->Destroy();
-					RestartPlayerAtPlayerStart(AffectedPlayerState->GetOwningController(), SpawnPoint);
+					AffectedPlayerState->GetPawn()->Restart();
+					RestartPlayerAtPlayerStart(AffectedPlayerState->GetPlayerController(), SpawnPoint);
 				}
 			}
 	}, MinRespawnDelay, false);
 	
 	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPlayerDie) Timer set."));
 
+}
+
+void ATanksGameMode::BindDelegates(AActor* SpawnedActor)
+{
+	if (auto Component = SpawnedActor->FindComponentByClass(UTankHealthComponent::StaticClass()))
+		Cast<UTankHealthComponent>(Component)->OnDie.AddDynamic(this, &ATanksGameMode::OnPlayerDie);
+}
+
+void ATanksGameMode::SetupPawn(APlayerController* PlayerController)
+{
+	AActor* SpawnedActor = nullptr;
+				
+	// do not spawn another pawn if a pawn already exists for it
+	if (!PlayerController->GetPawn())
+	{
+		SpawnedActor = SpawnPlayerPawn(PlayerController);
+	}
+	else
+	{
+		// already exists so no need to spawn a pawn. just bind the delegates.
+		BindDelegates(PlayerController->GetPawn());
+	}
+
+	if (!SpawnedActor)
+		return;
+					
+	PlayerController->Possess(Cast<APawn>(SpawnedActor));
+
+	BindDelegates(SpawnedActor);
 }

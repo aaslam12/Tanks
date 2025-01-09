@@ -105,9 +105,10 @@ protected:
 	virtual void ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit) override;
 	// IShootingInterface functions end
 
+	UFUNCTION(BlueprintNativeEvent)
 	void ApplyRadialDamage(const FHitResult& Hit);
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SR_ApplyRadialDamage(const FHitResult& Hit);
 
 	UFUNCTION(NetMulticast, Reliable)
@@ -123,10 +124,18 @@ protected:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void OnDie(APlayerState* AffectedPlayerState);
+
+	// called when player respawns
+	virtual void Restart() override;
+	void Restart__Internal();
 	
 	/**  */
-	UFUNCTION(BlueprintNativeEvent)
-	void SR_Shoot();
+	UFUNCTION(Server, Reliable)
+	void SR_Restart();
+
+	/**  */
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_Restart();
 
 	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
@@ -185,15 +194,27 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Gun Elevation", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double GunElevationInterpSpeed;
 
+	/**
+	 * The base damage to apply, i.e. the damage at the origin.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=100, UIMax=2000, MakeStructureDefaultValue=10))
 	double BaseDamage; // 1000
 
+	/**
+	 * Radius of the full damage area, from Origin
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double DamageInnerRadius;
 
+	/**
+	 * Radius of the minimum damage area, from Origin
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double DamageOuterRadius;
 
+	/**
+	 * Falloff exponent of damage from DamageInnerRadius to DamageOuterRadius
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double DamageFalloff;
 
@@ -309,6 +330,7 @@ public:
 	void SetGunElevation(double NewGunElevation) const;
 
 	/** Simple function that spawns a new particle everytime. */
+	UFUNCTION(BlueprintCallable)
 	void SpawnHitParticleSystem(const FVector& Location) const;
 
 protected:

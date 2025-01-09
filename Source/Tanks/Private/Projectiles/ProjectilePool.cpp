@@ -67,7 +67,7 @@ void AProjectilePool::Tick(float DeltaTime)
 	// }
 }
 
-ATankProjectile* AProjectilePool::FindFirstAvailableProjectile()
+ATankProjectile* AProjectilePool::FindFirstAvailableProjectile_Implementation()
 {
 	for (auto Element : PooledActors)
 		if (!Element->IsInUse())
@@ -75,7 +75,7 @@ ATankProjectile* AProjectilePool::FindFirstAvailableProjectile()
 	return nullptr;
 }
 
-ATankProjectile* AProjectilePool::SpawnFromPool(const FTransform& SpawnTransform, UObject* Object/* = nullptr*/, const double InitialSpeed/* = 50000.0*/)
+ATankProjectile* AProjectilePool::SpawnFromPool_Implementation(const FTransform& SpawnTransform, UObject* Object/* = nullptr*/, const double InitialSpeed/* = 50000.0*/)
 {
 	auto FirstAvailableProjectile = FindFirstAvailableProjectile();
 	
