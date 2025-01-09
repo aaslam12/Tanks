@@ -73,7 +73,7 @@ public:
 	virtual void MC_Die();
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
-	virtual void OnTakeDamaged(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
+	virtual void OnDamaged(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void SetHealth(int NewHealth);

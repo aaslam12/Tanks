@@ -26,17 +26,36 @@ class TANKS_API ATanksGameMode : public AGameMode
 	AActor* SpawnPlayerPawn(AController* NewPlayer) const;
 	virtual void OnPostLogin(AController* NewPlayer) override;
 	virtual void BeginPlay() override;
+	virtual void StartMatch() override;
+	virtual void HandleMatchHasStarted() override;
 
+	FTimerHandle GetPlayerTimerHandle(APlayerState* PlayerState);
+	
 	UFUNCTION()
 	void OnPlayerDie(APlayerState* PlayerState);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_OnPlayerDie(APlayerState* PlayerState);
+
 	void BindDelegates(AActor* SpawnedActor);
 	void SetupPawn(APlayerController* PlayerController);
 
-	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
-	TSet<APlayerController*> PlayerControllers;
+	/**
+	 *  Needed because we need TimerHandles for every player.
+	 *  We also need to keep this timer in the server to prevent cheating
+	 *  (game modes only exist in the server).
+	 */
+	TArray<TTuple<APlayerController*, FTimerHandle>> PlayerControllers;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	FTimerHandle GameStartingTimerHandle;
+
+protected:
+	/**
+	 * How long the delay should be to wait for players to connect before the game starts.
+	 */
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	float GameStartDelay;
 
 public:
 	// reference to the singular projectile pool in each level

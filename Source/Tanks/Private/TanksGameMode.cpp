@@ -3,7 +3,6 @@
 
 #include "TanksGameMode.h"
 
-#include "TankInterface.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankSpawnManagerComponent.h"
 #include "GameFramework/PlayerStart.h"
@@ -116,26 +115,9 @@ void ATanksGameMode::OnPostLogin(AController* NewPlayer)
 	if (!TankGameState)
 		return;
 
-	PlayerControllers.Add(NewPlayerController);
+	PlayerControllers.Add({ NewPlayerController, FTimerHandle() });
 
-	TankGameState->OnPostLogin(NewPlayer->PlayerState);
-
-	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) Setting timer for %.5f"), MinRespawnDelay + 5);
-
-	if (!GameStartingTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().SetTimer(GameStartingTimerHandle, [this]()
-		{
-
-			for (auto PlayerController : PlayerControllers)
-			{
-				UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) GameStartingTimerHandle Timer ran in %s"), *PlayerController->GetName());
-				SetupPawn(PlayerController);
-			}
-		}, MinRespawnDelay + 3, false);
-
-		UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPostLogin) Timer set."));
-	}
+	TankGameState->AssignPlayerToTeam(NewPlayer->PlayerState);
 }
 
 void ATanksGameMode::BeginPlay()
@@ -144,29 +126,87 @@ void ATanksGameMode::BeginPlay()
 	SpawnManager->SetDefaults();
 }
 
+void ATanksGameMode::StartMatch()
+{
+	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::StartMatch) Setting timer for %.5f"), MinRespawnDelay + 5);
+
+	if (!GameStartingTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().SetTimer(GameStartingTimerHandle, [this]()
+		{
+
+		   for (auto PlayerController : PlayerControllers)
+		   {
+		       if (!PlayerController.Key)
+		           continue;
+
+		       UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::StartMatch) GameStartingTimerHandle Timer ran in %s"), *PlayerController.Key->GetName());
+		       SetupPawn(PlayerController.Key);
+
+		       PlayerController.Key->SetInputMode(FInputModeGameOnly());
+		       PlayerController.Key->bShowMouseCursor = false;
+		       PlayerController.Key->EnableInput(PlayerController.Key);
+		   }
+
+		   Super::StartMatch();
+		},
+		GameStartDelay, false);
+
+		UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::StartMatch) Timer set."));
+	}
+}
+
+void ATanksGameMode::HandleMatchHasStarted()
+{
+	Super::HandleMatchHasStarted();
+}
+
+FTimerHandle ATanksGameMode::GetPlayerTimerHandle(APlayerState* PlayerState)
+{
+	if (!PlayerState)
+		return FTimerHandle();
+
+	if (!PlayerState->GetPlayerController())
+		return FTimerHandle();
+		
+	auto TimerRef = PlayerControllers.FindByPredicate([PlayerState](const TTuple<APlayerController*, FTimerHandle>& Key)
+	{
+		return PlayerState->GetPlayerController() == Key.Key;
+	});
+
+	if (TimerRef)
+		TimerRef->Value.Invalidate();
+
+	return TimerRef ? TimerRef->Value : FTimerHandle(); // should never actually be null
+}
+
 void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState)
 {
-	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPlayerDie) AffectedPlayerState: %s Setting timer for %.5f"), *AffectedPlayerState->GetName(), MinRespawnDelay);
+	FTimerHandle TimerHandle = GetPlayerTimerHandle(AffectedPlayerState);
 	
-	FTimerHandle RespawnTimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, [this, AffectedPlayerState]()
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, AffectedPlayerState]()
 	{
-		UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPlayerDie) Timer ran..."));
+		MC_OnPlayerDie(AffectedPlayerState);
+	},
+	MinRespawnDelay, false);
+}
 
-		if (AffectedPlayerState)
-			if (Cast<ATankPlayerState>(AffectedPlayerState))
-			{
-				AActor* SpawnPoint = SpawnManager->GetRandomSpawnPointFromTeam(Cast<ATankPlayerState>(AffectedPlayerState)->GetCurrentTeam());
-				if (SpawnPoint)
-				{
-					AffectedPlayerState->GetPawn()->Restart();
-					RestartPlayerAtPlayerStart(AffectedPlayerState->GetPlayerController(), SpawnPoint);
-				}
-			}
-	}, MinRespawnDelay, false);
+void ATanksGameMode::MC_OnPlayerDie_Implementation(APlayerState* AffectedPlayerState)
+{
+	if (!AffectedPlayerState)
+		return;
 	
-	UE_LOG(LogTemp, Log, TEXT("(ATanksGameMode::OnPlayerDie) Timer set."));
+	if (!Cast<ATankPlayerState>(AffectedPlayerState))
+		return;
+	
+	AActor* SpawnPoint = SpawnManager->GetRandomSpawnPointFromTeam(Cast<ATankPlayerState>(AffectedPlayerState)->GetCurrentTeam());
+	if (SpawnPoint)
+	{
+		AffectedPlayerState->GetPawn()->Restart();
+		RestartPlayerAtPlayerStart(AffectedPlayerState->GetPlayerController(), SpawnPoint);
 
+		DrawDebugSphere(GetWorld(), SpawnPoint->GetActorLocation(), 50, 16, FColor::Emerald, true);
+	}
 }
 
 void ATanksGameMode::BindDelegates(AActor* SpawnedActor)

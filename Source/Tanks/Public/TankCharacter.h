@@ -73,6 +73,9 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 protected:
+	UFUNCTION(BlueprintNativeEvent)
+	void HandleTakeDamage(float DamageAmount, class AController* EventInstigator, AActor* DamageCauser);
+	
 	UFUNCTION(BlueprintCallable, Category="Setup") 
 	void SetComponentReferences(UTankHealthComponent* Health) { HealthComponent = Health; }
 	
@@ -216,7 +219,7 @@ protected:
 	 * Falloff exponent of damage from DamageInnerRadius to DamageOuterRadius
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
-	double DamageFalloff;
+	double DamageFalloffExponent;
 
 	// This is the minimum spring arm length when zooming in.
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Setup|Gameplay|Gun Elevation")

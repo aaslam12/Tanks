@@ -22,6 +22,8 @@ class TANKS_API ATankPlayerState : public APlayerState
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	virtual void OnRep_PlayerName() override;
+
 public:
 	UPROPERTY(ReplicatedUsing=OnRep_CurrentTeam, BlueprintReadWrite, Category="Teams")
 	ETeam CurrentTeam;

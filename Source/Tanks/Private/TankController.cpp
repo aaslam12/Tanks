@@ -9,11 +9,13 @@
 #include "TankCameraManager.h"
 #include "TankCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Components/TankHealthComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): bIsAlive(true), LookValues(), MoveValues(), bCanMove(true), ShootTimerDuration(3),
+ATankController::ATankController(): bIsAlive(true), LookValues(), MoveValues(), bIsInAir(true), ShootTimerDuration(3),
                                     MouseSensitivity(FVector(0.4)),
                                     bStopTurn(false),
                                     VehicleYaw(0),
@@ -39,10 +41,18 @@ void ATankController::Tick(float DeltaSeconds)
 		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
 		TankPlayer->SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
 	}
+
+	if (TankPlayer)
+		if (TankPlayer->GetHealthComponent())
+		{
+			// if not dead, set bIsAlive as true
+			bIsAlive = !TankPlayer->GetHealthComponent()->IsDead();
+		}
 }
 
 void ATankController::SetDefaults()
 {
+	bCanShoot = true;
 	TankPlayer = Cast<ATankCharacter>(GetPawn());
 	
 	if (!TankPlayer)
@@ -62,45 +72,53 @@ void ATankController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
+	// SetupInput();
 	SetDefaults();
+	// BindControls();
+}
+
+void ATankController::SetupInput()
+{
+	// Add Input Mapping Context
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
+		UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		if (!Subsystem->HasMappingContext(DefaultMappingContext))
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+
+	EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
+	checkf(EnhancedInputComponent, TEXT("(ATankController::SetupInputComponent) EnhancedInputComponent is NULL!!!"));
+
 	BindControls();
 }
 
 void ATankController::BeginPlay()
 {
 	Super::BeginPlay();
-	SetDefaults();
-	BindControls();
 }
 
 void ATankController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	// Add Input Mapping Context
-	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
-			UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
-		Subsystem->AddMappingContext(DefaultMappingContext, 0);
-
-	EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
-	checkf(EnhancedInputComponent, TEXT("(ATankController::SetupInputComponent) EnhancedInputComponent is NULL!!!"));
+	SetupInput();
 }
 
 void ATankController::OnDie_Implementation()
 {
 	SetCanShoot(false);
-	bIsAlive = true;
+	bIsAlive = false;
 	ShootTimerHandle.Invalidate();
 }
 
 void ATankController::OnRespawn_Implementation()
 {
+	SetDefaults();
 }
 
 void ATankController::BindControls()
 {
 	// Set up action bindings
-	if (EnhancedInputComponent && TankPlayer)
+	if (EnhancedInputComponent)
 	{
 		// Moving forward and backward
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATankController::Move);
@@ -133,17 +151,19 @@ void ATankController::BindControls()
 	}
 }
 
+bool ATankController::CanRegisterInput() const
+{
+	return TankPlayer && bIsAlive;
+}
+
 void ATankController::Move(const FInputActionValue& Value)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
 
 	MoveValues.Y = Value.GetMagnitude();
-	bCanMove = !TankPlayer->IsInAir();
+	bIsInAir = !TankPlayer->IsInAir();
 	
-	// if (bCanMove == false)
-	// 	return;
-
 	if (MoveValues.Y >= 0)
 	{
 		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
@@ -154,15 +174,11 @@ void ATankController::Move(const FInputActionValue& Value)
 		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
 		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(FMath::Abs(MoveValues.Y));
 	}
-	
-
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Move) Move: %s"), *MoveValues.ToString()),
-	// 		true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankController::Look(const FInputActionValue& Value)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
 	
 	// input is a Vector2D
@@ -175,15 +191,12 @@ void ATankController::Look(const FInputActionValue& Value)
 
 void ATankController::Turn(const FInputActionValue& Value)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
     		
 	MoveValues.X = Value.GetMagnitude();
-	bCanMove = !TankPlayer->IsInAir();
+	bIsInAir = !TankPlayer->IsInAir();
 	
-	// if (bCanMove == false)
-	// 	return;
-
 	if (bStopTurn)
 		TankPlayer->GetVehicleMovementComponent()->SetYawInput(0);
 	else
@@ -195,7 +208,7 @@ void ATankController::Turn(const FInputActionValue& Value)
 
 void ATankController::TurnStarted(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
 	
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0.1);
@@ -203,7 +216,7 @@ void ATankController::TurnStarted(const FInputActionValue& InputActionValue)
 
 void ATankController::TurnCompleted(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
 	
 	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
@@ -224,7 +237,7 @@ void ATankController::StartShootTimer()
 
 void ATankController::Shoot(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
 	
 	if (!TankPlayer->GetShootSocket())
@@ -242,7 +255,7 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 
 void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
 	
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(true);
@@ -250,7 +263,7 @@ void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue
 
 void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
 {
-	if (!TankPlayer || !bIsAlive)
+	if (!CanRegisterInput())
 		return;
     		
 	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(false);

@@ -65,22 +65,12 @@ void UTankHealthComponent::MC_Die_Implementation()
 	OnDie.Broadcast(Cast<APawn>(GetOwner())->GetPlayerState());
 }
 
-void UTankHealthComponent::OnTakeDamaged(AActor* DamagedActor, float Damage, const UDamageType*,
+void UTankHealthComponent::OnDamaged(AActor* DamagedActor, float Damage, const UDamageType*,
                                      AController* InstigatedBy, AActor* DamageCauser)
 {
 	const double OldHealth = CurrentHealth;
 	SetHealth(GetHealth() - Damage);
 	OnTakeDamage.Broadcast(OldHealth, CurrentHealth);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), 
-		  FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s damaged: %.2f"), *GetOwner()->GetName(), Damage), 
-		  true, true, FLinearColor::Red, 1000000
-	);
-
-	UKismetSystemLibrary::PrintString(GetWorld(), 
-		  FString::Printf(TEXT("(UTankHealthComponent::OnTakeDamaged) %s CurrentHealth: %.2f"), *GetOwner()->GetName(), CurrentHealth), 
-		  true, true, FLinearColor::Red, 1000000
-	);
 }
 
 void UTankHealthComponent::SetHealth(int NewHealth)

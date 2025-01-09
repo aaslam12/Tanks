@@ -23,7 +23,7 @@ protected:
 	void OnRep_Teams();
 	
 public:
-	virtual void OnPostLogin(APlayerState* NewPlayer);
+	virtual void AssignPlayerToTeam(APlayerState* NewPlayer);
 	
 	FTeamData* FindTeam(const ETeam TeamName);
 

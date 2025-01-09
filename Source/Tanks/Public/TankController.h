@@ -33,7 +33,8 @@ class TANKS_API ATankController : public APlayerController
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void OnPossess(APawn* InPawn) override;
-	
+	void SetupInput();
+
 public:
 	/** Runs after the shoot input has been processed */
 	UPROPERTY(BlueprintAssignable, Category = "Delegate Functions")
@@ -48,6 +49,7 @@ public:
 protected:
 	UFUNCTION(BlueprintCallable)
 	void BindControls();
+	bool CanRegisterInput() const;
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector2D LookValues;
@@ -56,7 +58,7 @@ protected:
 	FVector2D MoveValues;
 
 	UPROPERTY(BlueprintReadOnly)
-	bool bCanMove;
+	bool bIsInAir;
 
 private:
 	///////////////////////////////////////////////////////////////////////////////////

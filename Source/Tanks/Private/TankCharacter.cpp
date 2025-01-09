@@ -17,6 +17,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Libraries/TFL.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/RadialForceComponent.h"
 #include "Projectiles/ProjectilePool.h"
@@ -201,12 +202,7 @@ void ATankCharacter::Tick(float DeltaTime)
 		}
 
 		if (HealthComponent->IsDead())
-		{
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Actor is dead %s"), *GetName()),
-					true, true, FLinearColor::Yellow, 15);
-			
 			return;
-		}
 
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
@@ -218,18 +214,23 @@ void ATankCharacter::Tick(float DeltaTime)
 		if (GetPlayerState())
 			if (Cast<ATankPlayerState>(GetPlayerState()))
 				TankPlayerState = Cast<ATankPlayerState>(GetPlayerState());
-
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATanksCharacter::Tick) Tick running in %s"), *GetName()),
-			true, true, FLinearColor::Yellow, 0);
 	}
 }
 
-float ATankCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-	class AController* EventInstigator, AActor* DamageCauser)
+void ATankCharacter::HandleTakeDamage_Implementation(float DamageAmount, class AController* EventInstigator, AActor* DamageCauser)
 {
 	if (Execute_GetCurrentTeam(this) != Execute_GetCurrentTeam(DamageCauser)) // add a IsFriendlyFireOn toggle here
-		HealthComponent->OnTakeDamaged(this, DamageAmount, nullptr, EventInstigator, DamageCauser);
-	return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+		HealthComponent->OnDamaged(this, DamageAmount, nullptr, EventInstigator, DamageCauser);
+}
+
+float ATankCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+                                 class AController* EventInstigator, AActor* DamageCauser)
+{
+	double ActualDamageAmount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	
+	HandleTakeDamage(ActualDamageAmount, EventInstigator, DamageCauser);
+
+	return ActualDamageAmount;
 }
 
 void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
@@ -530,17 +531,20 @@ void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectil
 
 void ATankCharacter::ApplyRadialDamage_Implementation(const FHitResult& Hit)
 {
-	DrawDebugSphere(GetWorld(), Hit.Location, 50, 16, FColor::Red, true);
-	DrawDebugSphere(GetWorld(), Hit.Location, DamageInnerRadius, 16, FColor::White, true);
-	DrawDebugSphere(GetWorld(), Hit.Location, DamageOuterRadius, 16, FColor::Yellow, true);
-	
 	UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(),
-		BaseDamage, BaseDamage * 0.1, Hit.Location,
-		DamageInnerRadius, DamageOuterRadius, DamageFalloff, UTankDamageType::StaticClass(),
-		{}, this, GetController());
+	                                   BaseDamage, BaseDamage * 0.1, Hit.Location,
+	                                   DamageInnerRadius, DamageOuterRadius, DamageFalloffExponent, UTankDamageType::StaticClass(),
+	                                   {}, this, GetController());
+}
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s Applying damage to: %s %.5f"), *GetName(), *Hit.GetActor()->GetName(), BaseDamage),
-			true, true, FLinearColor::Red, 15);
+void ATankCharacter::SR_ApplyRadialDamage_Implementation(const FHitResult& Hit)
+{
+	MC_ApplyRadialDamage(Hit);
+}
+
+void ATankCharacter::MC_ApplyRadialDamage_Implementation(const FHitResult& Hit)
+{
+	ApplyRadialDamage(Hit);
 }
 
 void ATankCharacter::Restart()
@@ -549,9 +553,6 @@ void ATankCharacter::Restart()
 
 	if (!GetWorld()->HasBegunPlay())
 		return;
-
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::ApplyRadialDamage) %s restarted"), *GetName()),
-			true, true, FLinearColor::Red, 20);
 
 	SR_Restart();
 }
@@ -588,25 +589,6 @@ void ATankCharacter::Restart__Internal()
 
 	if (HealthComponent)
 		HealthComponent->OnPlayerRespawn();
-
-	UKismetSystemLibrary::PrintString(
-		  GetWorld(), 
-		  FString::Printf(TEXT("(ATankCharacter::Restart) %s restarted"), *GetName()), 
-		  true, 
-		  true, 
-		  FLinearColor::Red, 
-		  1000000
-	);
-}
-
-void ATankCharacter::SR_ApplyRadialDamage_Implementation(const FHitResult& Hit)
-{
-	MC_ApplyRadialDamage(Hit);
-}
-
-void ATankCharacter::MC_ApplyRadialDamage_Implementation(const FHitResult& Hit)
-{
-	ApplyRadialDamage(Hit);
 }
 
 void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState)

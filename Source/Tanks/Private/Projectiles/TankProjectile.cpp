@@ -66,9 +66,9 @@ void ATankProjectile::OnSphereComponentHit(UPrimitiveComponent* HitComponent, AA
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankProjectile::OnSphereComponentHit) Projectile Hit: %s"), *OtherActor->GetName()),
 	// 		true, true, FLinearColor::Red, 15);
 
-	DrawDebugSphere(GetWorld(),
-		NormalImpulse,
-		150, 32, FColor::Blue, true);
+	// DrawDebugSphere(GetWorld(),
+	// 	NormalImpulse,
+	// 	150, 32, FColor::Blue, true);
 }
 
 void ATankProjectile::SpawnHitParticleSystem(const FVector& Location)

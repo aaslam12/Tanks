@@ -22,6 +22,13 @@ void ATankPlayerState::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 }
 
+void ATankPlayerState::OnRep_PlayerName()
+{
+	Super::OnRep_PlayerName();
+
+	CustomPlayerName = GetPlayerName();
+}
+
 void ATankPlayerState::SetCurrentTeam(const ETeam NewTeam)
 {
 	SR_SetCurrentTeam(NewTeam);

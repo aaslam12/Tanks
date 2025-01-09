@@ -19,7 +19,7 @@ void ATankGameState::OnRep_Teams()
 {
 }
 
-void ATankGameState::OnPostLogin(APlayerState* NewPlayer)
+void ATankGameState::AssignPlayerToTeam(APlayerState* NewPlayer)
 {
 	if (!UKismetSystemLibrary::IsValid(NewPlayer))
 		return;
