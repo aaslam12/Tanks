@@ -46,7 +46,8 @@ class TANKS_API UTankHealthComponent : public UActorComponent
 	// the current health of the player. will start with the max health possible
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = Values, meta=(AllowPrivateAccess="true"))
 	double CurrentHealth;
-	
+	FTimerHandle SelfDestructTimerHandle;
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Functions")
 	FOnTakeDamage OnTakeDamage;
@@ -74,6 +75,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void OnDamaged(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
+
+	UFUNCTION(BlueprintCallable, Category = "Functions")
+	virtual void SelfDestruct(float Delay);
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void SetHealth(int NewHealth);

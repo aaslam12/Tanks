@@ -73,10 +73,19 @@ void UTankHealthComponent::OnDamaged(AActor* DamagedActor, float Damage, const U
 	OnTakeDamage.Broadcast(OldHealth, CurrentHealth);
 }
 
+void UTankHealthComponent::SelfDestruct(float Delay)
+{
+	GetWorld()->GetTimerManager().SetTimer(SelfDestructTimerHandle, [this]
+	{
+		SetHealth(0);
+	},
+	Delay, false);
+}
+
 void UTankHealthComponent::SetHealth(int NewHealth)
 {
 	CurrentHealth = NewHealth;
-
+ 
 	OnHealthChanged.Broadcast(NewHealth, false);
 
 	if (CurrentHealth <= 0)

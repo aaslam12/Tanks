@@ -636,7 +636,7 @@ void ATankCharacter::OnShoot_Implementation()
 		End,
 		TraceTypeQuery1,
 		false,
-		{},
+		{this},
 		EDrawDebugTrace::ForDuration,
 		OutHit,
 		true,
