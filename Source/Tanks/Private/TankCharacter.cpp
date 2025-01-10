@@ -11,7 +11,6 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
