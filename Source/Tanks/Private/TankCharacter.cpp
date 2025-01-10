@@ -161,13 +161,11 @@ void ATankCharacter::BindDelegates()
 	}
 }
 
-void ATankCharacter::ResetCameraRotation()
+void ATankCharacter::ResetCameraRotation_Implementation()
 {
-	if (BackCameraComp)
+	if (BackCameraComp && BackSpringArmComp)
 	{
-		FRotator Rot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), GetActorForwardVector() * 1000);
-		BackCameraComp->SetWorldRotation(Rot);
-		
+		// attempt to reset camera rotation when the pawn first spawns at game start but was unseccessful.
 	}
 }
 
@@ -677,8 +675,8 @@ void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
 	double AdjustedPitchMin = BasePitchMin + GetActorRotation().Pitch;
 	double AdjustedPitchMax = BasePitchMax + GetActorRotation().Pitch;
 
-	AdjustedPitchMin = FMath::Fmod(AdjustedPitchMin + 180.0, 360.0) - 180.0;
-	AdjustedPitchMax = FMath::Fmod(AdjustedPitchMax + 180.0, 360.0) - 180.0;
+	// AdjustedPitchMin = FMath::Fmod(AdjustedPitchMin + 180.0, 360.0) - 180.0;
+	// AdjustedPitchMax = FMath::Fmod(AdjustedPitchMax + 180.0, 360.0) - 180.0;
 
 	// Apply the adjusted limits
 	PlayerController->PlayerCameraManager->ViewPitchMin = BasePitchMin;
