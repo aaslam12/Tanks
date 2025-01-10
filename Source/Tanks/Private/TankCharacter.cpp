@@ -165,7 +165,7 @@ void ATankCharacter::ResetCameraRotation_Implementation()
 {
 	if (BackCameraComp && BackSpringArmComp)
 	{
-		// attempt to reset camera rotation when the pawn first spawns at game start but was unseccessful.
+		// attempt to reset camera rotation when the pawn first spawns at game start but was unsuccessful.
 	}
 }
 
@@ -672,8 +672,8 @@ void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
 		return;
 
 	// Adjust the pitch limits based on the tank's current pitch
-	double AdjustedPitchMin = BasePitchMin + GetActorRotation().Pitch;
-	double AdjustedPitchMax = BasePitchMax + GetActorRotation().Pitch;
+	// double AdjustedPitchMin = BasePitchMin + GetActorRotation().Pitch;
+	// double AdjustedPitchMax = BasePitchMax + GetActorRotation().Pitch;
 
 	// AdjustedPitchMin = FMath::Fmod(AdjustedPitchMin + 180.0, 360.0) - 180.0;
 	// AdjustedPitchMax = FMath::Fmod(AdjustedPitchMax + 180.0, 360.0) - 180.0;
