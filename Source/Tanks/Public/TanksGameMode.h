@@ -54,7 +54,7 @@ protected:
 	/**
 	 * How long the delay should be to wait for players to connect before the game starts.
 	 */
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(UIMin="1", ClampMin="1"), Category="_Setup")
 	float GameStartDelay;
 
 public:

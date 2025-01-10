@@ -1,13 +1,13 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class TanksTarget : TargetRules
+public class TanksServerTarget : TargetRules
 {
-	public TanksTarget(TargetInfo Target) : base(Target)
+	public TanksServerTarget(TargetInfo Target) : base(Target)
 	{
-		Type = TargetType.Game;
+		Type = TargetType.Server;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_5;
 		ExtraModuleNames.Add("Tanks");
