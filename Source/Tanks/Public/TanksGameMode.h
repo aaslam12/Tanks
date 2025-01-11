@@ -8,7 +8,6 @@
 
 class UTankSpawnManagerComponent;
 enum class ETeam : uint8;
-class AProjectilePool;
 
 /**
  * The base tanks game mode class
@@ -19,8 +18,7 @@ class TANKS_API ATanksGameMode : public AGameMode
 	GENERATED_BODY()
 
 	ATanksGameMode();
-	void SpawnProjectilePool();
-	void RemoveAllProjectilePools() const;
+	
 	virtual void PostInitializeComponents() override;
 	UFUNCTION()
 	AActor* SpawnPlayerPawn(AController* NewPlayer) const;
@@ -56,15 +54,6 @@ protected:
 	 */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta=(UIMin="1", ClampMin="1"), Category="_Setup")
 	float GameStartDelay;
-
-public:
-	// reference to the singular projectile pool in each level
-	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
-	TObjectPtr<AProjectilePool> ProjectilePool;
-
-	// the class that will be spawned before game begins
-	UPROPERTY(EditDefaultsOnly, Category="Classes")
-	TSubclassOf<AProjectilePool> ProjectilePoolClass;
 
 	// reference to the singular projectile pool in each level
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))

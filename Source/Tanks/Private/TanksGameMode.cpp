@@ -21,42 +21,6 @@ void ATanksGameMode::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	bUseSeamlessTravel = true;
-	SpawnProjectilePool();
-}
-
-void ATanksGameMode::SpawnProjectilePool()
-{
-	RemoveAllProjectilePools();
-
-	auto SpawnLocation = FVector::ZeroVector;
-	auto SpawnRotation = FRotator::ZeroRotator;
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	
-	auto SpawnedActor = GetWorld()->SpawnActor(
-		ProjectilePoolClass,
-		&SpawnLocation,
-		&SpawnRotation
-	);
-
-	if (SpawnedActor)
-		if (Cast<AProjectilePool>(SpawnedActor))
-			ProjectilePool = Cast<AProjectilePool>(SpawnedActor);
-}
-
-void ATanksGameMode::RemoveAllProjectilePools() const
-{
-	TArray<AActor*> OutActors;
-	UGameplayStatics::GetAllActorsOfClass(
-		GetWorld(),
-		AProjectilePool::StaticClass(),
-		OutActors
-	);
-
-	for (auto OutActor : OutActors)
-		if (UKismetSystemLibrary::IsValid(OutActor))
-			OutActor->Destroy();
 }
 
 AActor* ATanksGameMode::SpawnPlayerPawn(AController* NewPlayer) const

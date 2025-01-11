@@ -7,6 +7,7 @@
 #include "Libraries/TankStructLibrary.h"
 #include "TankGameState.generated.h"
 
+class AProjectilePool;
 struct FTeamData;
 /**
  * 
@@ -16,7 +17,11 @@ class TANKS_API ATankGameState : public AGameState
 {
 	GENERATED_BODY()
 
+	void SpawnProjectilePool();
+	void RemoveAllProjectilePools() const;
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
 
 protected:
 	UFUNCTION()
@@ -37,4 +42,12 @@ public:
 	// Get players in a specific team
 	UFUNCTION(BlueprintCallable, Category="Teams")
 	const FTeamData& GetPlayersInTeam(const ETeam TeamName);
+
+	// reference to the singular projectile pool in each level
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<AProjectilePool> ProjectilePool;
+
+	// the class that will be spawned before game begins
+	UPROPERTY(EditDefaultsOnly, Category="Classes")
+	TSubclassOf<AProjectilePool> ProjectilePoolClass;
 };

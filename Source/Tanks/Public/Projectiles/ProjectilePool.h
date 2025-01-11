@@ -9,7 +9,8 @@
 class ATankProjectile;
 
 /**
- *  If manually placed in a level, it will be deleted and another will be created.
+ *  Static Projectile Pool. Handles the spawning and "deletion" of projectiles.
+ *  Note: If manually placed in a level, it will be deleted and another will be created.
  */
 UCLASS(Abstract)
 class TANKS_API AProjectilePool : public AActor

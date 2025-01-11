@@ -5,8 +5,10 @@
 
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/TankPlayerState.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "Projectiles/ProjectilePool.h"
 
 void ATankGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -15,8 +17,57 @@ void ATankGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ThisClass, Teams);
 }
 
+void ATankGameState::BeginPlay()
+{
+	Super::BeginPlay();
+
+	
+}
+
 void ATankGameState::OnRep_Teams()
 {
+}
+
+void ATankGameState::SpawnProjectilePool()
+{
+	RemoveAllProjectilePools();
+
+	auto SpawnLocation = FVector::ZeroVector;
+	auto SpawnRotation = FRotator::ZeroRotator;
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	
+	auto SpawnedActor = GetWorld()->SpawnActor(
+		ProjectilePoolClass,
+		&SpawnLocation,
+		&SpawnRotation
+	);
+
+	if (SpawnedActor)
+		if (Cast<AProjectilePool>(SpawnedActor))
+			ProjectilePool = Cast<AProjectilePool>(SpawnedActor);
+}
+
+void ATankGameState::RemoveAllProjectilePools() const
+{
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(),
+		AProjectilePool::StaticClass(),
+		OutActors
+	);
+
+	for (const auto OutActor : OutActors)
+		if (UKismetSystemLibrary::IsValid(OutActor))
+			OutActor->Destroy();
+}
+
+void ATankGameState::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	SpawnProjectilePool();
 }
 
 void ATankGameState::AssignPlayerToTeam(APlayerState* NewPlayer)
