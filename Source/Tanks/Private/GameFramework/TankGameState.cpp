@@ -21,7 +21,6 @@ void ATankGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
 }
 
 void ATankGameState::OnRep_Teams()
@@ -92,7 +91,6 @@ void ATankGameState::AssignPlayerToTeam(APlayerState* NewPlayer)
 	// Assign to the team with fewer players
 	ETeam TeamToAssign = Team1Count <= Team2Count ? ETeam::Team1 : ETeam::Team2;
 	
-	// Assign the player to the chosen team
 	AssignPlayerToTeam(NewPlayer, TeamToAssign);
 
 	// Update the player's name to reflect their team assignment

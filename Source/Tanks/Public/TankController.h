@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "TankController.generated.h"
 
+class UChaosVehicleMovementComponent;
 class ATankProjectile;
 struct FInputActionValue;
 class UInputAction;
@@ -25,6 +26,7 @@ class TANKS_API ATankController : public APlayerController
 	GENERATED_BODY()
 
 	bool bIsAlive;
+	double PrevTurnInput;
 
 	ATankController();
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -49,15 +51,17 @@ public:
 protected:
 	UFUNCTION(BlueprintCallable)
 	void BindControls();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool CanRegisterInput() const;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	FVector2D LookValues;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	FVector2D MoveValues;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	bool bIsInAir;
 
 private:
@@ -98,7 +102,7 @@ private:
 
 	/** Handbrake Input Action */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> HandbrakeAction;
+	TObjectPtr<UInputAction> SelfDestructAction;
 
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Setup
@@ -123,6 +127,9 @@ private:
 protected:
 	UPROPERTY(BlueprintReadOnly, Category="Default", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<ATankCharacter> TankPlayer;
+
+	UPROPERTY(BlueprintReadOnly, Category="Default", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UChaosVehicleMovementComponent> VehicleMovementComponent;
 	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent;
@@ -130,7 +137,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bStopTurn;
 
-	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	double VehicleYaw;
 
 	// this is true when the tank is reloading
@@ -145,20 +152,30 @@ protected:
 	/// Input functions
 	
 	/** Called for movement input */
-	void Move(const FInputActionValue& Value);
+	virtual void Move(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable)
+	virtual void SR_Move(double Value);
+	UFUNCTION(NetMulticast, Reliable)
+	virtual void MC_Move(double Value);
+	virtual void Move__Internal(double Value);
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+	void Turn__Internal(const FInputActionValue& Value);
 
+	UFUNCTION(Server, Reliable)
+	void SR_Turn(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable)
+	void SR_TurnCompleted(const FInputActionValue& Value);
 	/** Called for turning input */
 	void Turn(const FInputActionValue& Value);
-	void TurnStarted(const FInputActionValue& InputActionValue);
 	void TurnCompleted(const FInputActionValue& InputActionValue);
-	
+
 	void Shoot(const FInputActionValue& InputActionValue);
 
-	void HandbrakeStarted(const FInputActionValue& InputActionValue);
-	void HandbrakeEnded(const FInputActionValue& InputActionValue);
+	void SelfDestruct(const FInputActionValue& InputActionValue);
 
 	void MouseWheelUp(const FInputActionValue& InputActionValue);
 	void MouseWheelDown(const FInputActionValue& InputActionValue);

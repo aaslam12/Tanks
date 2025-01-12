@@ -6,11 +6,11 @@
 #include "ChaosVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "TankController.h"
-#include "TanksGameMode.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -208,15 +208,16 @@ void ATankCharacter::Tick(float DeltaTime)
 			LookValues = PlayerController->GetLookValues();
 		}
 
-		if (HealthComponent->IsDead())
-			return;
+		if (HealthComponent)
+			if (HealthComponent->IsDead())
+				return;
 
-		UpdateTurretTurning(DeltaTime);
-		UpdateGunElevation(DeltaTime);
-		CheckIfGunCanLowerElevationTick(DeltaTime);
-		UpdateCameraPitchLimits();
+		// UpdateTurretTurning(DeltaTime);
+		// UpdateGunElevation(DeltaTime);
+		// CheckIfGunCanLowerElevationTick(DeltaTime);
+		// UpdateCameraPitchLimits();
 
-		UpdateIsInAir();
+		// UpdateIsInAir();
 
 		if (GetPlayerState())
 			if (Cast<ATankPlayerState>(GetPlayerState()))
@@ -599,7 +600,7 @@ void ATankCharacter::Restart__Internal()
 		HealthComponent->OnPlayerRespawn();
 }
 
-void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState)
+void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState, bool bSelfDestruct)
 {
 	if (OnDieStaticMesh)
 	{
@@ -652,7 +653,7 @@ void ATankCharacter::OnShoot_Implementation()
 	else
 	{
 		// spawn projectile for the rest of the way.
-		auto GameMode = Cast<ATanksGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+		auto GameMode = Cast<ATankGameState>(UGameplayStatics::GetGameState(GetWorld()));
 		
 		if (GameMode != nullptr)
 		{
@@ -828,6 +829,17 @@ void ATankCharacter::SpawnShootEmitters()
 		).Vector() * RadialForceComponent->ImpulseStrength * 10 + GetVehicleMovementComponent()->GetForwardSpeedMPH() * 1000,
 		GetMesh()->GetSocketLocation("gun_jnt") 
 	);
+}
+
+bool ATankCharacter::IsAimingIn() const
+{
+	if (BackSpringArmComp == nullptr)
+		return false;
+	if (BackSpringArmComp->TargetArmLength == MaxZoomIn)
+		return true;
+	if (BackSpringArmComp->TargetArmLength > MaxZoomIn)
+		return false;
+	return false;
 }
 
 void ATankCharacter::MC_SpawnShootEmitters_Implementation()

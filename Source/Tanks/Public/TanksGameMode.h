@@ -30,7 +30,7 @@ class TANKS_API ATanksGameMode : public AGameMode
 	FTimerHandle GetPlayerTimerHandle(APlayerState* PlayerState);
 	
 	UFUNCTION()
-	void OnPlayerDie(APlayerState* PlayerState);
+	void OnPlayerDie(APlayerState* AffectedPlayerState, bool bSelfDestruct);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MC_OnPlayerDie(APlayerState* PlayerState);

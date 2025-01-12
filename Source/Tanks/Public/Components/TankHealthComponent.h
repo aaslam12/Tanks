@@ -13,7 +13,13 @@ UDELEGATE()
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTakeDamage, int, OldHealth, int, NewHealth);
 
 UDELEGATE()
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDie, APlayerState*, PlayerState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelfDestructTriggered);
+
+UDELEGATE()
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelfDestructCancelled);
+
+UDELEGATE()
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDie, APlayerState*, PlayerState, bool, bSelfDestruct);
 
 UDELEGATE()
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDieUnreplicated, APlayerState*, AffectedPlayerState);
@@ -37,6 +43,9 @@ class TANKS_API UTankHealthComponent : public UActorComponent
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true", UIMin=0.01, ClampMin=0.01, UIMax=15))
+	double DefaultSelfDestructDelay;
+
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))
 	double MinHealth;
 
@@ -59,28 +68,44 @@ public:
 	FOnDie OnDie;
 
 	UPROPERTY(BlueprintAssignable, Category = "Functions")
+	FOnSelfDestructTriggered OnSelfDestructStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Functions")
+	FOnSelfDestructCancelled OnSelfDestructCancelled;
+
+	UPROPERTY(BlueprintAssignable, Category = "Functions")
 	FOnDieUnreplicated OnDieUnreplicated;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Functions")
 	void OnPlayerRespawn();
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
-	virtual void Die();
+	virtual void Die(bool IsSelfDestruct);
 
 	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Functions")
-	virtual void SR_Die();
+	virtual void SR_Die(bool IsSelfDestruct);
 
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category = "Functions")
-	virtual void MC_Die();
+	virtual void MC_Die(bool IsSelfDestruct);
 
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void OnDamaged(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
 
+	/**
+	 * Destroys the tank after a delay, then respawns it after the respawn delay has passed.
+	 * @param Delay How long the delay should be. if given a value that is less than or greater than 0, it will default to the DefaultSelfDestructDelay in the class.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void SelfDestruct(float Delay);
 
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category = "Functions")
+	virtual void SR_SelfDestruct(float Delay);
+
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category = "Functions")
+	virtual void MC_SelfDestruct(float Delay);
+
 	UFUNCTION(BlueprintCallable, Category = "Functions")
-	virtual void SetHealth(int NewHealth);
+	virtual void SetHealth(int NewHealth, bool IsSelfDestruct);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Functions")
 	virtual int GetHealth();

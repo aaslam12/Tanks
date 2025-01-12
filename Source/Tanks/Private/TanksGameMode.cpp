@@ -145,7 +145,7 @@ FTimerHandle ATanksGameMode::GetPlayerTimerHandle(APlayerState* PlayerState)
 	return TimerRef ? TimerRef->Value : FTimerHandle(); // should never actually be null
 }
 
-void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState)
+void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState, bool bSelfDestruct)
 {
 	FTimerHandle TimerHandle = GetPlayerTimerHandle(AffectedPlayerState);
 	

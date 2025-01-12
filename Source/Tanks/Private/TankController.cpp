@@ -11,7 +11,6 @@
 #include "Camera/CameraComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Kismet/GameplayStatics.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
@@ -36,10 +35,10 @@ void ATankController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (TankPlayer && bIsAlive)
+	if (TankPlayer && bIsAlive && VehicleMovementComponent)
 	{
 		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
-		TankPlayer->SetSpeed(TankPlayer->GetVehicleMovementComponent()->GetForwardSpeed());
+		TankPlayer->SetSpeed(VehicleMovementComponent->GetForwardSpeed());
 	}
 
 	if (TankPlayer)
@@ -58,14 +57,10 @@ void ATankController::SetDefaults()
 	if (!TankPlayer)
 		return;
 	
-	if (TankPlayer->GetBackSpringArmComp()->TargetArmLength == TankPlayer->GetMaxZoomIn())
-	{
-		TankPlayer->bAimingIn = true;
-	}
-	else if (TankPlayer->GetBackSpringArmComp()->TargetArmLength > TankPlayer->GetMaxZoomIn())
-	{
-		TankPlayer->bAimingIn = false;
-	}
+	TankPlayer->bAimingIn = TankPlayer->IsAimingIn();
+
+	if (TankPlayer->GetVehicleMovementComponent())
+		VehicleMovementComponent = TankPlayer->GetVehicleMovementComponent();
 }
 
 void ATankController::OnPossess(APawn* InPawn)
@@ -127,10 +122,6 @@ void ATankController::BindControls()
 
 		// Turning left and right
 		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Triggered, this, &ATankController::Turn);
-		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Completed, this, &ATankController::Turn);
-		
-		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Started, this, &ATankController::TurnStarted);
-		
 		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Canceled, this, &ATankController::TurnCompleted);
 		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Completed, this, &ATankController::TurnCompleted);
 
@@ -145,15 +136,35 @@ void ATankController::BindControls()
 		EnhancedInputComponent->BindAction(MouseWheelUpAction, ETriggerEvent::Started, this, &ATankController::MouseWheelUp);
 		EnhancedInputComponent->BindAction(MouseWheelDownAction, ETriggerEvent::Completed, this, &ATankController::MouseWheelDown);
 
-		// Handbrake
-		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Started, this, &ATankController::HandbrakeStarted);
-		EnhancedInputComponent->BindAction(HandbrakeAction, ETriggerEvent::Completed, this, &ATankController::HandbrakeEnded);
+		// Self Destruct
+		EnhancedInputComponent->BindAction(SelfDestructAction, ETriggerEvent::Started, this, &ATankController::SelfDestruct);
 	}
 }
 
 bool ATankController::CanRegisterInput() const
 {
-	return TankPlayer && bIsAlive;
+	return TankPlayer && bIsAlive && VehicleMovementComponent;
+}
+
+void ATankController::MC_Move_Implementation(double Value)
+{
+	Move__Internal(Value);
+}
+
+void ATankController::Move__Internal(double Value)
+{
+	MoveValues.Y = Value;
+	
+	if (Value >= 0)
+	{
+		VehicleMovementComponent->SetThrottleInput(Value);
+		VehicleMovementComponent->SetBrakeInput(0);
+	}
+	else
+	{
+		VehicleMovementComponent->SetThrottleInput(0);
+		VehicleMovementComponent->SetBrakeInput(FMath::Abs(Value));
+	}
 }
 
 void ATankController::Move(const FInputActionValue& Value)
@@ -161,19 +172,13 @@ void ATankController::Move(const FInputActionValue& Value)
 	if (!CanRegisterInput())
 		return;
 
-	MoveValues.Y = Value.GetMagnitude();
 	bIsInAir = !TankPlayer->IsInAir();
-	
-	if (MoveValues.Y >= 0)
-	{
-		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(MoveValues.Y);
-		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
-	}
-	else
-	{
-		TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
-		TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(FMath::Abs(MoveValues.Y));
-	}
+	Move__Internal(Value.GetMagnitude());
+}
+
+void ATankController::SR_Move_Implementation(double Value)
+{
+	Move__Internal(Value);
 }
 
 void ATankController::Look(const FInputActionValue& Value)
@@ -189,38 +194,56 @@ void ATankController::Look(const FInputActionValue& Value)
 	AddPitchInput(LookValues.Y);
 }
 
+void ATankController::Turn__Internal(const FInputActionValue& Value)
+{
+	if (!FMath::IsNearlyEqual(PrevTurnInput, Value.GetMagnitude()))
+	{
+		PrevTurnInput = Value.GetMagnitude();
+		
+		MoveValues.X = Value.GetMagnitude();
+		bIsInAir = !TankPlayer->IsInAir();
+	
+		VehicleMovementComponent->SetYawInput(MoveValues.X);
+	}
+	else
+	{
+		// it is same. do nothing
+	}
+}
+
+void ATankController::SR_Turn_Implementation(const FInputActionValue& Value)
+{
+	Turn__Internal(Value);
+}
+
+void ATankController::SR_TurnCompleted_Implementation(const FInputActionValue& Value)
+{
+	// code should be the same as ATankController::TurnCompleted
+	VehicleMovementComponent->SetThrottleInput(0);
+	VehicleMovementComponent->SetBrakeInput(0);
+	VehicleMovementComponent->SetYawInput(0);
+	
+	PrevTurnInput = 0; // fixes a bug. keep it
+}
+
 void ATankController::Turn(const FInputActionValue& Value)
 {
 	if (!CanRegisterInput())
 		return;
-    		
-	MoveValues.X = Value.GetMagnitude();
-	bIsInAir = !TankPlayer->IsInAir();
-	
-	if (bStopTurn)
-		TankPlayer->GetVehicleMovementComponent()->SetYawInput(0);
-	else
-	{
-		VehicleYaw = MoveValues.X;
-		TankPlayer->GetVehicleMovementComponent()->SetYawInput(VehicleYaw * 2);
-	}
+
+	Turn__Internal(Value);
+	SR_Turn(Value);
 }
 
-void ATankController::TurnStarted(const FInputActionValue& InputActionValue)
+void ATankController::TurnCompleted(const FInputActionValue& Value)
 {
-	if (!CanRegisterInput())
-		return;
+	VehicleMovementComponent->SetThrottleInput(0);
+	VehicleMovementComponent->SetBrakeInput(0);
+	VehicleMovementComponent->SetYawInput(0);
 	
-	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0.1);
-}
+	PrevTurnInput = 0; // fixes a bug. keep it
 
-void ATankController::TurnCompleted(const FInputActionValue& InputActionValue)
-{
-	if (!CanRegisterInput())
-		return;
-	
-	TankPlayer->GetVehicleMovementComponent()->SetThrottleInput(0);
-	TankPlayer->GetVehicleMovementComponent()->SetBrakeInput(0);
+	SR_TurnCompleted(Value);
 }
 
 void ATankController::StartShootTimer()
@@ -253,20 +276,13 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	OnShoot.Broadcast();
 }
 
-void ATankController::HandbrakeStarted(const FInputActionValue& InputActionValue)
+void ATankController::SelfDestruct(const FInputActionValue& InputActionValue)
 {
 	if (!CanRegisterInput())
 		return;
 	
-	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(true);
-}
-
-void ATankController::HandbrakeEnded(const FInputActionValue& InputActionValue)
-{
-	if (!CanRegisterInput())
-		return;
-    		
-	TankPlayer->GetVehicleMovementComponent()->SetHandbrakeInput(false);
+	if (auto e = TankPlayer->GetHealthComponent())
+		e->SelfDestruct(-1);
 }
 
 void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)

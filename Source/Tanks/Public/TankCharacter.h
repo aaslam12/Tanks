@@ -130,8 +130,8 @@ protected:
 	void OnShoot();
 
 	UFUNCTION(BlueprintNativeEvent)
-	void OnDie(APlayerState* AffectedPlayerState);
-
+	void OnDie(APlayerState* AffectedPlayerState, bool bSelfDestruct);
+	
 	// called when player respawns
 	virtual void Restart() override;
 	void Restart__Internal();
@@ -402,6 +402,12 @@ protected:
 	UFUNCTION(BlueprintCallable, NetMulticast, Unreliable)
 	void MC_SpawnShootEmitters();
 
+public:
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="IsAimingIn")
+	bool IsAimingIn() const;
+	
+protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent, DisplayName="GetShootSocket")
 	USceneComponent* GetShootSocke() const;
