@@ -7,6 +7,9 @@
 
 UTankWheel::UTankWheel()
 {
+	if (!GEngine)
+		return;
+	
 	auto UserSettings = UGameUserSettings::GetGameUserSettings();
 
 	if (!UserSettings)
