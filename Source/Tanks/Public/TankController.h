@@ -25,12 +25,12 @@ class TANKS_API ATankController : public APlayerController
 {
 	GENERATED_BODY()
 
-	bool bIsAlive;
 	double PrevTurnInput;
 
 	ATankController();
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void Tick(float DeltaSeconds) override;
+	UFUNCTION(BlueprintCallable)
 	void SetDefaults();
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
@@ -116,6 +116,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Controls")
 	FVector2D MouseSensitivity;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsAlive;
 
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Variables 

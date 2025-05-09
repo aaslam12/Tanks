@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "TankInterface.h"
-#include "WheeledVehiclePawn.h"
+// #include "WheeledVehiclePawn.h"
 #include "GameFramework/TankGameInstance.h"
 #include "Projectiles/ShootingInterface.h"
+#include "Tanks/Template/MyProjectSportsCar.h"
 #include "TankCharacter.generated.h"
 
 class UWB_PlayerInfo;
@@ -35,7 +36,7 @@ FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
 }
 
 UCLASS(Abstract)
-class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterface, public IShootingInterface
+class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterface, public IShootingInterface
 {
 	GENERATED_BODY()
 
@@ -64,6 +65,7 @@ class TANKS_API ATankCharacter : public AWheeledVehiclePawn, public ITankInterfa
 	virtual ~ATankCharacter() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual auto GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const -> void override;
+	virtual void PossessedBy(AController* NewController) override;
 
 	void BindDelegates();
 	
@@ -259,6 +261,10 @@ protected:
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FVector TurretImpactPoint;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	bool bIsInAir;
 	
 	/** Please add a variable description */
@@ -369,6 +375,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetLightsEmissivity(double LightsEmissivity) const;
 protected:
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_SetLightsEmissivity(double LightsEmissivity) const;
+	
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetLightsEmissivity(double LightsEmissivity) const;

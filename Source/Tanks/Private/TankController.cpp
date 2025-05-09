@@ -14,8 +14,8 @@
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): bIsAlive(true), LookValues(), MoveValues(), bIsInAir(true), ShootTimerDuration(3),
-                                    MouseSensitivity(FVector(0.4)),
+ATankController::ATankController(): LookValues(), MoveValues(), bIsInAir(true), ShootTimerDuration(3), MouseSensitivity(FVector(0.4)),
+                                    bIsAlive(true),
                                     bStopTurn(false),
                                     VehicleYaw(0),
                                     bCanShoot(true), bShootingBlocked(false)
@@ -52,7 +52,8 @@ void ATankController::Tick(float DeltaSeconds)
 void ATankController::SetDefaults()
 {
 	bCanShoot = true;
-	TankPlayer = Cast<ATankCharacter>(GetPawn());
+	if (GetPawn())
+		TankPlayer = Cast<ATankCharacter>(GetPawn());
 	
 	if (!TankPlayer)
 		return;

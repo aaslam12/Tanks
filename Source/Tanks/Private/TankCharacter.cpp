@@ -85,6 +85,9 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 
 	BackCameraComp = GetBackCamera();
 	BackSpringArmComp = GetBackSpringArm();
+
+	if (BackSpringArmComp)
+		BackSpringArmComp->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("CameraSocket"));
 }
 
 void ATankCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -94,6 +97,16 @@ void ATankCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 	DOREPLIFETIME(ThisClass, CurrentTurretAngle);
 	DOREPLIFETIME(ThisClass, CurrentTeam);
 	DOREPLIFETIME(ThisClass, PlayerName);
+}
+
+void ATankCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	SetDefaults();
+
+	DamagedStaticMesh->SetHiddenInGame(true);
+	DamagedStaticMesh->SetVisibility(false);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -212,16 +225,12 @@ void ATankCharacter::Tick(float DeltaTime)
 			if (HealthComponent->IsDead())
 				return;
 
-		// UpdateTurretTurning(DeltaTime);
-		// UpdateGunElevation(DeltaTime);
-		// CheckIfGunCanLowerElevationTick(DeltaTime);
-		// UpdateCameraPitchLimits();
+		UpdateTurretTurning(DeltaTime);
+		UpdateGunElevation(DeltaTime);
+		CheckIfGunCanLowerElevationTick(DeltaTime);
+		UpdateCameraPitchLimits();
 
 		// UpdateIsInAir();
-
-		if (GetPlayerState())
-			if (Cast<ATankPlayerState>(GetPlayerState()))
-				TankPlayerState = Cast<ATankPlayerState>(GetPlayerState());
 	}
 }
 
@@ -283,8 +292,8 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		// Calculate the target angle
 		double DotProduct = FVector::DotProduct(TurretForwardVector, TurretToLookDir);
 
-		// DO NOT CHANGE TOLERANCE
-		constexpr double Tolerance = 0.01; // setting it to 0.01 fixed it now somehow when it wasnt working before. DO NOT CHANGE
+		// DO NOT CHANGE TOLERANCE (0.008 also works ig. idk which value is better)
+		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasnt working before. DO NOT CHANGE
 		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
 			DotProduct = 1.f; // Prevent any small rounding errors
 		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
@@ -421,7 +430,7 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 		return;
 	}
 
-	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 7000.0);
+	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 10000.0);
 
 	FHitResult OutHit;
 	auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
@@ -431,16 +440,17 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
 		false,
 		{this},
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		OutHit,
 		true
 	);
 
 	auto LookAtRot = UKismetMathLibrary::FindLookAtRotation(
 		GetMesh()->GetSocketLocation("gun_jnt"),
-		bHit ? OutHit.Location : GunLocation
+		bHit ? OutHit.ImpactPoint : GunLocation
 	);
 
+	TurretImpactPoint = bHit ? OutHit.ImpactPoint : GunLocation;
 	GunRotation = LookAtRot;
 	DesiredGunElevation = GunRotation.Pitch;
 	
@@ -708,6 +718,9 @@ void ATankCharacter::SpawnHitParticleSystem(const FVector& Location) const
 		FRotator( 0), FVector(1), true,
 		EPSCPoolMethod::AutoRelease
 	);
+
+	DrawDebugSphere(GetWorld(), Location, 75, 16, FColor::Red, true);
+	// UGameplayStatics::SetGamePaused(GetWorld(), true);
 }
 
 void ATankCharacter::SR_SetGunElevation_Implementation(double NewGunElevation) const
@@ -765,10 +778,17 @@ void ATankCharacter::SetLightsEmissivity(double LightsEmissivity) const
 	if (BodyMaterial == nullptr)
 		return;
 
-	if (HasAuthority())
-		BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
-	else
-		MC_SetLightsEmissivity(LightsEmissivity);
+	BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
+	SR_SetLightsEmissivity(LightsEmissivity);
+}
+
+void ATankCharacter::SR_SetLightsEmissivity_Implementation(double LightsEmissivity) const
+{
+	if (BodyMaterial == nullptr)
+		return;
+	
+	BodyMaterial->SetScalarParameterValue("EmissiveMultiplier", LightsEmissivity);
+	MC_SetLightsEmissivity(LightsEmissivity);
 }
 
 void ATankCharacter::MC_SetLightsEmissivity_Implementation(double LightsEmissivity) const
