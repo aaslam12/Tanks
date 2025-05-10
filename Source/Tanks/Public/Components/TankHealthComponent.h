@@ -19,7 +19,7 @@ UDELEGATE()
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelfDestructCancelled);
 
 UDELEGATE()
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDie, APlayerState*, PlayerState, bool, bSelfDestruct);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDie, APlayerState*, PlayerState, bool, bSelfDestruct, bool, bShouldRespawn);
 
 UDELEGATE()
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDieUnreplicated, APlayerState*, AffectedPlayerState);
@@ -43,7 +43,10 @@ class TANKS_API UTankHealthComponent : public UActorComponent
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true", UIMin=0.01, ClampMin=0.01, UIMax=15))
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))
+	bool bShouldRespawn;
+	
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true", UIMin=0.01, ClampMin=0.01, UIMax=15, EditCondition="bShouldSelfDestruct"))
 	double DefaultSelfDestructDelay;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))

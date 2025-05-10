@@ -7,7 +7,8 @@
 
 
 // Sets default values for this component's properties
-UTankHealthComponent::UTankHealthComponent(): DefaultSelfDestructDelay(5), MinHealth(0), MaxHealth(1000),
+UTankHealthComponent::UTankHealthComponent(): bShouldRespawn(true), DefaultSelfDestructDelay(5), MinHealth(0),
+                                              MaxHealth(1000),
                                               CurrentHealth(MaxHealth)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
@@ -63,7 +64,7 @@ void UTankHealthComponent::MC_Die_Implementation(bool IsSelfDestruct)
 	if (!Cast<APawn>(GetOwner()))
 		return;
 	
-	OnDie.Broadcast(Cast<APawn>(GetOwner())->GetPlayerState(), IsSelfDestruct);
+	OnDie.Broadcast(Cast<APawn>(GetOwner())->GetPlayerState(), IsSelfDestruct, bShouldRespawn);
 }
 
 void UTankHealthComponent::OnDamaged(AActor* DamagedActor, float Damage, const UDamageType*,
@@ -102,6 +103,7 @@ void UTankHealthComponent::MC_SelfDestruct_Implementation(float Delay)
 	{
 		// cancel the timer
 		GetWorld()->GetTimerManager().ClearTimer(SelfDestructTimerHandle); // also invalidates the timer
+		SelfDestructTimerHandle.Invalidate();
 		OnSelfDestructCancelled.Broadcast();
 
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(MC_SelfDestruct) self destruct cancelled")),

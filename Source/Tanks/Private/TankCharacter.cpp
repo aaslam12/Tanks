@@ -5,6 +5,7 @@
 
 #include "ChaosVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "TankController.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
@@ -41,7 +42,7 @@ ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobje
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
-	RadialForceComponent->SetupAttachment(RootComponent);
+	// RadialForceComponent->SetupAttachment(RootComponent, "Muzzle");
 	DamagedStaticMesh->SetHiddenInGame(false);
 	DamagedStaticMesh->SetVisibility(true);
 
@@ -88,6 +89,13 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 
 	if (BackSpringArmComp)
 		BackSpringArmComp->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("CameraSocket"));
+
+	if (FrontSpringArmComp)
+		FrontSpringArmComp->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("FirstPersonSocket"));
+
+	if (RadialForceComponent)
+		RadialForceComponent->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("Muzzle"));
+
 }
 
 void ATankCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -117,6 +125,27 @@ void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	if (PlayerInputComponent)
 		if (Cast<UEnhancedInputComponent>(PlayerInputComponent))
 			EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+}
+
+void ATankCharacter::TurretTraceTick()
+{
+	constexpr double ShootTraceDistance = 15000.0;
+
+	const FVector TurretStart = GetMesh()->GetSocketLocation("GunShootSocket");
+	TurretEnd = TurretStart + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * ShootTraceDistance;
+
+	UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		TurretStart,
+		TurretEnd,
+		TraceTypeQuery1,
+		false,
+		{this},
+		bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+		TurretTraceHit,
+		true,
+		FLinearColor::Black
+	);
 }
 
 void ATankCharacter::SetDefaults_Implementation()
@@ -225,6 +254,7 @@ void ATankCharacter::Tick(float DeltaTime)
 			if (HealthComponent->IsDead())
 				return;
 
+		TurretTraceTick();
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
 		CheckIfGunCanLowerElevationTick(DeltaTime);
@@ -257,18 +287,10 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 
 	if (bAimingIn)
 	{
-		// first person turret rotation
-		float DesiredTurretAngle = AnimInstance->TurretAngle + FMath::Clamp(LookValues.X * 25, -MaxTurretRotationSpeed / 2, MaxTurretRotationSpeed / 2);
+		// First person turret rotation
+		float DeltaTurretAngle = FMath::Clamp(LookValues.X, -MaxTurretRotationSpeed / 2, MaxTurretRotationSpeed / 2);
+		CurrentTurretAngle += DeltaTurretAngle;
 
-		// Smoothly interpolate towards the desired angle
-		CurrentTurretAngle = FMath::FInterpTo(
-			CurrentTurretAngle,
-			DesiredTurretAngle,
-			DeltaTime,
-			3.0f
-		);
-
-		// Apply the interpolated value to the turret rotation
 		SetTurretRotation(CurrentTurretAngle);
 	}
 	else
@@ -336,7 +358,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 		TopHit,
 		false
 	);
@@ -353,7 +375,7 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 		TraceTypeQuery1,
 		false,
 		{},
-		EDrawDebugTrace::ForOneFrame,
+		bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 		BottomHit,
 		false
 	);
@@ -430,7 +452,7 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 		return;
 	}
 
-	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 10000.0);
+	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 15000.0);
 
 	FHitResult OutHit;
 	auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
@@ -440,18 +462,18 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
 		false,
 		{this},
-		EDrawDebugTrace::ForOneFrame,
+		bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 		OutHit,
 		true
 	);
 
-	auto LookAtRot = UKismetMathLibrary::FindLookAtRotation(
+	TurretImpactPoint = bHit ? OutHit.ImpactPoint : GunLocation;
+
+	GunRotation = UKismetMathLibrary::FindLookAtRotation(
 		GetMesh()->GetSocketLocation("gun_jnt"),
-		bHit ? OutHit.ImpactPoint : GunLocation
+		TurretImpactPoint
 	);
 
-	TurretImpactPoint = bHit ? OutHit.ImpactPoint : GunLocation;
-	GunRotation = LookAtRot;
 	DesiredGunElevation = GunRotation.Pitch;
 	
 	GunElevation = FMath::Clamp(
@@ -482,7 +504,7 @@ void ATankCharacter::UpdateIsInAir_Implementation()
 	// 	ActorOrigin - FVector(0, 0, 40),
 	// 	TraceTypeQuery1,
 	// 	false, {this},
-	// 	EDrawDebugTrace::None,
+	//	bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 	// 	Hit,
 	// 	true,
 	// 	FLinearColor::Red
@@ -610,7 +632,7 @@ void ATankCharacter::Restart__Internal()
 		HealthComponent->OnPlayerRespawn();
 }
 
-void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState, bool bSelfDestruct)
+void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState, bool bSelfDestruct, bool bShouldRespawn)
 {
 	if (OnDieStaticMesh)
 	{
@@ -633,32 +655,16 @@ void ATankCharacter::OnShoot_Implementation()
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation)")),
 	// 		true, true, FLinearColor::Yellow, 0);
 
-	constexpr double ShootTraceDistance = 15000.0;
-
 	// Spawning muzzle fire and dust around the tank 
 	SR_SpawnShootEmitters();
-	FVector TurretStart = GetMesh()->GetSocketLocation("GunShootSocket");
-	FVector End = TurretStart + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * ShootTraceDistance;
 
-	FHitResult OutHit;
-	bool bHit = UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		TurretStart,
-		End,
-		TraceTypeQuery1,
-		false,
-		{this},
-		EDrawDebugTrace::ForDuration,
-		OutHit,
-		true,
-		FLinearColor::Black
-	);
-
-	// check if trace hit something
-	if (bHit)
+	// check if trace hit something. the trace is running on tick in another function
+	if (TurretTraceHit.IsValidBlockingHit())
 	{
-		SpawnHitParticleSystem(OutHit.Location);
-		SR_ApplyRadialDamage(OutHit);
+		SpawnHitParticleSystem(TurretTraceHit);
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation) trace hit something")),
+				true, true, FLinearColor::Black, 5);
+		SR_ApplyRadialDamage(TurretTraceHit);
 	}
 	else
 	{
@@ -669,8 +675,8 @@ void ATankCharacter::OnShoot_Implementation()
 		{
 			if (GameMode->ProjectilePool != nullptr)
 			{
-				auto Rot = UKismetMathLibrary::FindLookAtRotation(OutHit.TraceStart, OutHit.TraceEnd);
-				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, OutHit.TraceEnd));
+				auto Rot = UKismetMathLibrary::FindLookAtRotation(TurretTraceHit.TraceStart, TurretTraceHit.TraceEnd);
+				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, TurretTraceHit.TraceEnd));
 			}
 		}
 	}
@@ -711,15 +717,24 @@ void ATankCharacter::SetGunElevation(const double NewGunElevation) const
 		SR_SetGunElevation(NewGunElevation);
 }
 
-void ATankCharacter::SpawnHitParticleSystem(const FVector& Location) const
+void ATankCharacter::SpawnHitParticleSystem(const FHitResult& Hit) const
 {
-	UGameplayStatics::SpawnEmitterAtLocation( GetWorld(),
-		ShootHitParticleSystem, Location,
-		FRotator( 0), FVector(1), true,
-		EPSCPoolMethod::AutoRelease
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		ShootHitParticleSystem,
+		Hit.Location,
+		Hit.Normal.Rotation(), // rotate to match hit surface
+		FVector(1),
+		true,
+		true,
+		ENCPoolMethod::AutoRelease
 	);
 
-	DrawDebugSphere(GetWorld(), Location, 75, 16, FColor::Red, true);
+	DrawDebugSphere(GetWorld(),
+		Hit.Location, 75, 16,
+		FColor::Red, false,
+		bShowDebugTracesForTurret ? 5 : -1
+	);
 	// UGameplayStatics::SetGamePaused(GetWorld(), true);
 }
 
@@ -837,8 +852,19 @@ void ATankCharacter::SetHatchesAngles(double HatchAngle)
 
 void ATankCharacter::SpawnShootEmitters()
 {
+	const FTransform Transform = GetShootSocket()->GetComponentTransform();
+
 	for (auto ParticleSystem : GetShootEmitterSystems())
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem, GetShootSocket()->GetComponentTransform());
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(
+			GetWorld(),
+			ParticleSystem,
+			FTransform(
+				Transform.GetRotation(),
+				Transform.GetLocation(),
+				FVector(0.5))
+		);
+	}
 
 	RadialForceComponent->FireImpulse();
 	
@@ -860,6 +886,29 @@ bool ATankCharacter::IsAimingIn() const
 	if (BackSpringArmComp->TargetArmLength > MaxZoomIn)
 		return false;
 	return false;
+}
+
+const UCameraComponent* ATankCharacter::GetActiveCamera() const
+{
+	if (IsAimingIn())
+	{
+		if (FrontCameraComp)
+			return FrontCameraComp;
+		else
+			return nullptr;
+	}
+	else
+	{
+		if (BackCameraComp)
+			return BackCameraComp;
+		else
+			return nullptr;
+	}
+}
+
+const ATankController* ATankCharacter::GetPlayerController() const
+{
+	return PlayerController;
 }
 
 void ATankCharacter::MC_SpawnShootEmitters_Implementation()

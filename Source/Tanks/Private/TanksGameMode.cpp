@@ -145,8 +145,11 @@ FTimerHandle ATanksGameMode::GetPlayerTimerHandle(APlayerState* PlayerState)
 	return TimerRef ? TimerRef->Value : FTimerHandle(); // should never actually be null
 }
 
-void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState, bool bSelfDestruct)
+void ATanksGameMode::OnPlayerDie(APlayerState* AffectedPlayerState, bool bSelfDestruct, bool bShouldRespawn)
 {
+	if (!bShouldRespawn)
+		return;
+	
 	FTimerHandle TimerHandle = GetPlayerTimerHandle(AffectedPlayerState);
 	
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, AffectedPlayerState]

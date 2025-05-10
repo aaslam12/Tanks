@@ -10,6 +10,8 @@
 #include "Tanks/Template/MyProjectSportsCar.h"
 #include "TankCharacter.generated.h"
 
+class UTankAimAssistComponent;
+class UNiagaraSystem;
 class UWB_PlayerInfo;
 class ATankPlayerState;
 class UPostProcessComponent;
@@ -71,6 +73,7 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 	
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	void TurretTraceTick();
 	virtual void Tick(float DeltaTime) override;
 
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
@@ -132,7 +135,7 @@ protected:
 	void OnShoot();
 
 	UFUNCTION(BlueprintNativeEvent)
-	void OnDie(APlayerState* AffectedPlayerState, bool bSelfDestruct);
+	void OnDie(APlayerState* AffectedPlayerState, bool bSelfDestruct, bool bShouldRespawn);
 	
 	// called when player respawns
 	virtual void Restart() override;
@@ -156,7 +159,7 @@ protected:
 
 	/** All of these particle systems will be activated when the tank shoots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Setup")
-	TObjectPtr<UParticleSystem> ShootHitParticleSystem;
+	TObjectPtr<UNiagaraSystem> ShootHitParticleSystem;
 	
 	/** The anim class to use for the tank. This is mainly here to set the anim bp in C++ */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup")
@@ -227,6 +230,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double DamageFalloffExponent;
 
+	// Toggles all debug traces for turret
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Damage")
+	bool bShowDebugTracesForTurret;
+
 	// This is the minimum spring arm length when zooming in.
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Setup|Gameplay|Gun Elevation")
 	double MinGunElevation;
@@ -238,6 +245,10 @@ protected:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
 	double CurrentTurretAngle;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FHitResult TurretTraceHit;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
@@ -262,6 +273,10 @@ protected:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	FVector TurretImpactPoint;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FVector TurretEnd;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
@@ -321,14 +336,6 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool bAimingIn;
 
-	/** This hold the values where the gun sight is on screen */
-	UPROPERTY(BlueprintReadWrite)
-	FVector2D GunTraceScreenPosition;
-
-	/** This hold the value where the gun sight trace ends in world */
-	UPROPERTY(BlueprintReadWrite)
-	FVector GunTraceEndpoint;
-	
 	/** Please add a variable description */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Default", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UMaterialInstanceDynamic> BodyMaterial;
@@ -344,7 +351,7 @@ public:
 
 	/** Simple function that spawns a new particle everytime. */
 	UFUNCTION(BlueprintCallable)
-	void SpawnHitParticleSystem(const FVector& Location) const;
+	void SpawnHitParticleSystem(const FHitResult& Location) const;
 
 protected:
 	/** Please add a function description */
@@ -416,6 +423,14 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="IsAimingIn")
 	bool IsAimingIn() const;
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	const UCameraComponent* GetActiveCamera() const;
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	const ATankController* GetPlayerController() const;
 	
 protected:
 	/** Please add a function description */
@@ -457,7 +472,7 @@ public:
 	FORCEINLINE USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
 	FORCEINLINE USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
 	FORCEINLINE TArray<UParticleSystem*> GetShootEmitterSystems() const { return ShootEmitterSystems; }
-	FORCEINLINE UParticleSystem* GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
+	FORCEINLINE UNiagaraSystem* GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
 	FORCEINLINE bool IsInAir() const { return bIsInAir; }
 	FORCEINLINE double GetAbsoluteMinGunElevation() const { return AbsoluteMinGunElevation; }
 	FORCEINLINE double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
