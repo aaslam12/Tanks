@@ -18,6 +18,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "PhysicsEngine/PhysicsObjectBlueprintLibrary.h"
 #include "PhysicsEngine/RadialForceComponent.h"
 #include "Projectiles/ProjectilePool.h"
 #include "Projectiles/TankDamageType.h"
@@ -127,7 +128,7 @@ void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 			EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 }
 
-void ATankCharacter::TurretTraceTick()
+void ATankCharacter::TurretTraceTick_Implementation()
 {
 	constexpr double ShootTraceDistance = 15000.0;
 
@@ -185,6 +186,11 @@ void ATankCharacter::SetDefaults_Implementation()
 	if (GetPlayerState())
 		if (Cast<ATankPlayerState>(GetPlayerState()))
 			PlayerName = Cast<ATankPlayerState>(GetPlayerState())->CustomPlayerName;
+
+	StartRadius = 45;
+	DistanceExponent = 1.5;
+	EndRadiusExponent = 1;
+	ConeLengthExponent = 1.320883;
 }
 
 void ATankCharacter::BindDelegates()
@@ -232,6 +238,40 @@ void ATankCharacter::BeginPlay()
 	DamagedStaticMesh->SetVisibility(false);
 }
 
+void ATankCharacter::ConeTraceTick_Implementation()
+{
+	FVector StartLocation = GetMesh()->GetSocketLocation("Muzzle");
+	FVector Direction = GetMesh()->GetSocketQuaternion("Muzzle").GetForwardVector();
+		
+	EndRadius = FMath::Pow(StartRadius * Steps, EndRadiusExponent);
+	ConeLength = FMath::Pow(FMath::Pow(StartRadius * Steps, ConeLengthExponent), EndRadiusExponent);
+		
+	for (int32 i = 0; i < Steps; ++i)
+	{
+		float Alpha = (float)i / (float)(Steps - 1);
+		float Distance = FMath::Pow(Alpha, DistanceExponent) * ConeLength;
+		FVector SweepCenter = StartLocation + Direction * Distance;
+		float Radius = FMath::Lerp(StartRadius, EndRadius, Alpha);
+
+		FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
+		TArray<FHitResult> Hits;
+
+		if (bShowDebugTracesForTurret)
+			DrawDebugSphere(GetWorld(), SweepCenter, Radius, 16, FColor::Orange, false, 0);
+
+		GetWorld()->SweepMultiByChannel(
+			Hits,
+			SweepCenter,
+			SweepCenter,
+			FQuat::Identity,
+			ECC_Visibility,
+			Sphere
+		);
+
+		// Process Hits as needed
+	}
+}
+
 // Called every frame
 void ATankCharacter::Tick(float DeltaTime)
 {
@@ -255,6 +295,7 @@ void ATankCharacter::Tick(float DeltaTime)
 				return;
 
 		TurretTraceTick();
+		// ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
 		CheckIfGunCanLowerElevationTick(DeltaTime);
@@ -569,12 +610,51 @@ void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectil
 	TankProjectile->ResetTransform();
 }
 
+void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult& Hit)
+{
+	FHitResult OutHit;
+	double TraceRadius = RadialForceComponent->Radius;
+
+	bool bHit = GetWorld()->SweepSingleByChannel(
+		OutHit,
+		Hit.Location,
+		Hit.Location,
+		FQuat::Identity,
+		ECC_Visibility,
+		FCollisionShape::MakeSphere(TraceRadius)
+	);
+	
+	if (bHit)
+	{
+		UPrimitiveComponent* HitComp = OutHit.GetComponent();
+
+		if (HitComp && HitComp->IsSimulatingPhysics())
+		{
+			FVector ImpulseOrigin = OutHit.ImpactPoint;
+			float ImpulseStrength = FMath::Pow(RadialForceComponent->ImpulseStrength * 3, 1.0f - (OutHit.Distance / TraceRadius));
+			float ImpulseRadius = RadialForceComponent->Radius;
+
+			HitComp->AddRadialImpulse(
+				ImpulseOrigin,
+				ImpulseRadius,
+				ImpulseStrength,
+				RIF_Constant,
+				true // velocity change
+			);
+		}
+
+		DrawDebugSphere(GetWorld(), Hit.ImpactPoint, TraceRadius, 16, FColor::White, false, 5.0f);
+	}
+}
+
 void ATankCharacter::ApplyRadialDamage_Implementation(const FHitResult& Hit)
 {
 	UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(),
 	                                   BaseDamage, BaseDamage * 0.1, Hit.Location,
 	                                   DamageInnerRadius, DamageOuterRadius, DamageFalloffExponent, UTankDamageType::StaticClass(),
 	                                   {}, this, GetController());
+
+	ApplyRadialImpulseToObjects(Hit);
 }
 
 void ATankCharacter::SR_ApplyRadialDamage_Implementation(const FHitResult& Hit)
@@ -616,6 +696,7 @@ void ATankCharacter::Restart__Internal()
 		GetMesh()->SetSimulatePhysics(true);
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
 		
+		RadialForceComponent->FireImpulse();
 		DamagedStaticMesh->SetWorldTransform(FTransform(FRotator::ZeroRotator, FVector(0, 0, -100000))); // TODO. add a small impulse to the tank and bounce it up
 		DamagedStaticMesh->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 		DamagedStaticMesh->SetHiddenInGame(true);
@@ -640,6 +721,7 @@ void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState, boo
 		GetMesh()->SetSimulatePhysics(false);
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 		
+		RadialForceComponent->FireImpulse();
 		DamagedStaticMesh->SetWorldTransform(GetActorTransform()); // TODO. add a small impulse to the tank and bounce it up
 		DamagedStaticMesh->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
 		DamagedStaticMesh->SetHiddenInGame(false);

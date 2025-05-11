@@ -73,8 +73,8 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 	
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-	void TurretTraceTick();
 	virtual void Tick(float DeltaTime) override;
+	
 
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
@@ -92,6 +92,14 @@ protected:
 	UFUNCTION(BlueprintNativeEvent)
 	void SetDefaults();
 
+	/** Traces spheres increasing in radius in the shape of a cone. */
+	UFUNCTION(BlueprintNativeEvent)
+	void ConeTraceTick();
+
+	/** Traces from the muzzle to the point where it is looking at ahead. */
+	UFUNCTION(BlueprintNativeEvent)
+	void TurretTraceTick();
+	
 	/** Updates turret angle to where the camera is looking */
 	UFUNCTION(BlueprintNativeEvent)
 	void UpdateTurretTurning(float DeltaTime);
@@ -120,6 +128,11 @@ protected:
 	UFUNCTION(BlueprintNativeEvent)
 	void ApplyRadialDamage(const FHitResult& Hit);
 
+	// Traces a sphere at hit point. Then applies radial impulse to any hit actors.
+	// Scales with distance from the hit point exponentially.
+	UFUNCTION(BlueprintNativeEvent)
+	void ApplyRadialImpulseToObjects(const FHitResult& Hit);
+	
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SR_ApplyRadialDamage(const FHitResult& Hit);
 
@@ -231,8 +244,29 @@ protected:
 	double DamageFalloffExponent;
 
 	// Toggles all debug traces for turret
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Damage")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Debug")
 	bool bShowDebugTracesForTurret;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	int32 Steps;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	float StartRadius;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
+	float DistanceExponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	float EndRadius;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
+	float EndRadiusExponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	float ConeLength;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
+	float ConeLengthExponent;
 
 	// This is the minimum spring arm length when zooming in.
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Setup|Gameplay|Gun Elevation")
