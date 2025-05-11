@@ -256,13 +256,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
 	float DistanceExponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
 	float EndRadius;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
 	float EndRadiusExponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
 	float ConeLength;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
