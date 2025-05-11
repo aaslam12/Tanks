@@ -125,6 +125,7 @@ class TANKS_API ATankProjectile : public AActor
 	void OnSphereComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	ATankProjectile();
 	virtual ~ATankProjectile() override;
+	void ApplyRadialImpulseToObjects(const FHitResult& Hit);
 	void CreateMesh();
 	void SetMeshAssets();
 	virtual void BeginPlay() override;

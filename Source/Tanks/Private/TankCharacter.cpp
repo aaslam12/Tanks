@@ -611,11 +611,11 @@ void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectil
 
 void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult& Hit)
 {
-	FHitResult OutHit;
-	double TraceRadius = RadialForceComponent->Radius;
+	TArray<FHitResult> OutHits;
+	double TraceRadius = 2500;
 
-	bool bHit = GetWorld()->SweepSingleByChannel(
-		OutHit,
+	bool bHit = GetWorld()->SweepMultiByChannel(
+		OutHits,
 		Hit.Location,
 		Hit.Location,
 		FQuat::Identity,
@@ -623,26 +623,33 @@ void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult
 		FCollisionShape::MakeSphere(TraceRadius)
 	);
 	
+	DrawDebugSphere(GetWorld(), Hit.ImpactPoint, TraceRadius, 16, FColor::White, false, 5.0f);
+
 	if (bHit)
 	{
-		UPrimitiveComponent* HitComp = OutHit.GetComponent();
-
-		if (HitComp && HitComp->IsSimulatingPhysics())
+		for (auto OutHit : OutHits)
 		{
-			FVector ImpulseOrigin = OutHit.ImpactPoint;
-			float ImpulseStrength = FMath::Pow(RadialForceComponent->ImpulseStrength * 3, 1.0f - (OutHit.Distance / TraceRadius));
-			float ImpulseRadius = RadialForceComponent->Radius;
+			if (OutHit.GetActor() == this)
+				continue;
+			
+			UPrimitiveComponent* HitComp = OutHit.GetComponent();
 
-			HitComp->AddRadialImpulse(
-				ImpulseOrigin,
-				ImpulseRadius,
-				ImpulseStrength,
-				RIF_Constant,
-				true // velocity change
-			);
+			if (HitComp && HitComp->IsSimulatingPhysics())
+			{
+				FVector ImpulseOrigin = OutHit.ImpactPoint;
+				float ImpulseStrength = FMath::Pow(RadialForceComponent->ImpulseStrength * 3, 1.0f - (OutHit.Distance / TraceRadius));
+				float ImpulseRadius = RadialForceComponent->Radius;
+
+				HitComp->AddRadialImpulse(
+					ImpulseOrigin,
+					ImpulseRadius,
+					ImpulseStrength,
+					RIF_Constant,
+					true // velocity change
+				);
+			}
+
 		}
-
-		DrawDebugSphere(GetWorld(), Hit.ImpactPoint, TraceRadius, 16, FColor::White, false, 5.0f);
 	}
 }
 
@@ -757,7 +764,7 @@ void ATankCharacter::OnShoot_Implementation()
 			if (GameMode->ProjectilePool != nullptr)
 			{
 				auto Rot = UKismetMathLibrary::FindLookAtRotation(TurretTraceHit.TraceStart, TurretTraceHit.TraceEnd);
-				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, TurretTraceHit.TraceEnd));
+				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, TurretTraceHit.TraceEnd), this);
 			}
 		}
 	}
