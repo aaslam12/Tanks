@@ -4,6 +4,7 @@
 #include "Tanks/Public/TankCharacter.h"
 
 #include "ChaosVehicleMovementComponent.h"
+#include "ChaosWheeledVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TankController.h"
@@ -148,6 +149,37 @@ void ATankCharacter::TurretTraceTick_Implementation()
 	);
 }
 
+void ATankCharacter::SetWheelIndices()
+{
+	auto* MoveComp = Cast<UChaosWheeledVehicleMovementComponent>(GetVehicleMovementComponent());
+
+	if (!MoveComp) return;
+
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	check(SkelMesh);
+
+	LeftWheelIndices.Reset();
+	RightWheelIndices.Reset();
+	
+	const FTransform& RootTM = SkelMesh->GetComponentTransform();
+
+	// WheelSetups is the array you configured in the component (one per bone)
+	for (int32 i = 0; i < MoveComp->WheelSetups.Num(); ++i)
+	{
+		const FChaosWheelSetup& Setup = MoveComp->WheelSetups[i];
+		// Get bone world location:
+		FVector BoneWorldLoc = SkelMesh->GetBoneLocation(Setup.BoneName);
+		// Convert to local vehicle space:
+		FVector LocalLoc = RootTM.InverseTransformPosition(BoneWorldLoc);
+
+		// Y > 0 = right side, Y < 0 = left side (UE uses X forward, Y right)
+		if (LocalLoc.Y > 0.f)
+			RightWheelIndices.Add(i);
+		else
+			LeftWheelIndices.Add(i);
+	}
+}
+
 void ATankCharacter::SetDefaults_Implementation()
 {
 	SetActorScale3D(FVector(0.95));
@@ -192,6 +224,8 @@ void ATankCharacter::SetDefaults_Implementation()
 	ConeLengthExponent = 1.320883;
 
 	ImpulseStrengthExponent = 1.2;
+
+	SetWheelIndices();
 }
 
 void ATankCharacter::BindDelegates()
@@ -528,11 +562,20 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 
 	SetGunElevation(GunElevation);
 
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunElevation: %.5f"), GunElevation),
-	// 		true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) OutHit.ImpactPoint: %s"), *OutHit.ImpactPoint.ToString()),
+	// 								  true, true, FLinearColor::Yellow, 0);
 	//
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimitsTick) GunRotation: %s"), *GunRotation.ToString()),
-	// 		true, true, FLinearColor::Yellow, 0);
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunLocation: %s"), *GunLocation.ToString()),
+	// 								  true, true, FLinearColor::Yellow, 0);
+	//
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) TurretImpactPoint: %s"), *TurretImpactPoint.ToString()),
+	// 								  true, true, FLinearColor::Yellow, 0);
+	//
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) DesiredGunElevation: %f"), DesiredGunElevation),
+	// 								  true, true, FLinearColor::Yellow, 0);
+	//
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunElevation: %f"), GunElevation),
+	// 								  true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::UpdateIsInAir_Implementation()

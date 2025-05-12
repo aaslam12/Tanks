@@ -73,6 +73,7 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 	
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	void SetWheelIndices();
 	virtual void Tick(float DeltaTime) override;
 	
 
@@ -219,6 +220,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Gun Elevation", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double GunElevationInterpSpeed;
 
+public:
+	TArray<int32> LeftWheelIndices;
+	TArray<int32> RightWheelIndices;
+
+protected:
 	/**
 	 * The base damage to apply, i.e. the damage at the origin.
 	 */

@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "TankController.generated.h"
 
+class UChaosWheeledVehicleMovementComponent;
 class UChaosVehicleMovementComponent;
 class ATankProjectile;
 struct FInputActionValue;
@@ -133,6 +134,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category="Default", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UChaosVehicleMovementComponent> VehicleMovementComponent;
+
+	UPROPERTY(BlueprintReadOnly, Category="Default", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UChaosWheeledVehicleMovementComponent> ChaosWheeledVehicleMovementComponent;
 	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Default", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent;

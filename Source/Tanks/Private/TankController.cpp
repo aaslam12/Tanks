@@ -4,6 +4,7 @@
 #include "TankController.h"
 
 #include "ChaosVehicleMovementComponent.h"
+#include "ChaosWheeledVehicleMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "TankCameraManager.h"
@@ -11,10 +12,12 @@
 #include "Camera/CameraComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): LookValues(), MoveValues(), bIsInAir(true), ShootTimerDuration(3), MouseSensitivity(FVector(0.4)),
+ATankController::ATankController(): PrevTurnInput(0), LookValues(), MoveValues(), bIsInAir(true), ShootTimerDuration(3),
+                                    MouseSensitivity(FVector(0.4)),
                                     bIsAlive(true),
                                     bStopTurn(false),
                                     VehicleYaw(0),
@@ -61,7 +64,10 @@ void ATankController::SetDefaults()
 	TankPlayer->bAimingIn = TankPlayer->IsAimingIn();
 
 	if (TankPlayer->GetVehicleMovementComponent())
+	{
 		VehicleMovementComponent = TankPlayer->GetVehicleMovementComponent();
+		ChaosWheeledVehicleMovementComponent = Cast<UChaosWheeledVehicleMovementComponent>(VehicleMovementComponent);
+	}
 }
 
 void ATankController::OnPossess(APawn* InPawn)
@@ -155,17 +161,18 @@ void ATankController::MC_Move_Implementation(double Value)
 void ATankController::Move__Internal(double Value)
 {
 	MoveValues.Y = Value;
+
+	constexpr float MaxTorquePerWheel = ChaosWheeledVehicleMovementComponent->EngineSetup.MaxTorque;
+
+	// Spin-in-place formula:
+	float LeftPower  = Value;
+	float RightPower = Value;
+		
+	for (int32 Idx : TankPlayer->LeftWheelIndices)
+		ChaosWheeledVehicleMovementComponent->SetDriveTorque(LeftPower * MaxTorquePerWheel, Idx);
 	
-	if (Value >= 0)
-	{
-		VehicleMovementComponent->SetThrottleInput(Value);
-		VehicleMovementComponent->SetBrakeInput(0);
-	}
-	else
-	{
-		VehicleMovementComponent->SetThrottleInput(0);
-		VehicleMovementComponent->SetBrakeInput(FMath::Abs(Value));
-	}
+	for (int32 Idx : TankPlayer->RightWheelIndices)
+		ChaosWheeledVehicleMovementComponent->SetDriveTorque(RightPower * MaxTorquePerWheel, Idx);
 }
 
 void ATankController::Move(const FInputActionValue& Value)
