@@ -96,7 +96,7 @@ public:
 
 	/**
 	 * Destroys the tank after a delay, then respawns it after the respawn delay has passed.
-	 * @param Delay How long the delay should be. if given a value that is less than or greater than 0, it will default to the DefaultSelfDestructDelay in the class.
+	 * @param Delay How long the delay should be. if given a value that is less than or equal to 0, it will default to the DefaultSelfDestructDelay member variable
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	virtual void SelfDestruct(float Delay);

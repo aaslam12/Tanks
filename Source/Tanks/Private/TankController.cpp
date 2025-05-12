@@ -162,7 +162,7 @@ void ATankController::Move__Internal(double Value)
 {
 	MoveValues.Y = Value;
 
-	constexpr float MaxTorquePerWheel = ChaosWheeledVehicleMovementComponent->EngineSetup.MaxTorque;
+	const float MaxTorquePerWheel = ChaosWheeledVehicleMovementComponent->EngineSetup.MaxTorque;
 
 	// Spin-in-place formula:
 	float LeftPower  = Value;

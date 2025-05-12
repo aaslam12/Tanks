@@ -87,9 +87,9 @@ protected:
 	void HandleTakeDamage(float DamageAmount, class AController* EventInstigator, AActor* DamageCauser);
 	
 	UFUNCTION(BlueprintCallable, Category="Setup") 
-	void SetComponentReferences(UTankHealthComponent* Health) { HealthComponent = Health; }
+	void SetComponentReferences(UTankHealthComponent* Health = nullptr) { HealthComponent = Health; }
 	
-	/** Sets all the needed references to other classes */
+	/** Sets all the necessary references to other classes */
 	UFUNCTION(BlueprintNativeEvent)
 	void SetDefaults();
 

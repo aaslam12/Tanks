@@ -98,6 +98,9 @@ void UTankHealthComponent::MC_SelfDestruct_Implementation(float Delay)
 		}, Delay, false);
 		
 		OnSelfDestructStarted.Broadcast();
+
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(MC_SelfDestruct) self destruct started")),
+										  true, true, FLinearColor::Yellow, 25);
 	}
 	else
 	{
