@@ -190,6 +190,8 @@ void ATankCharacter::SetDefaults_Implementation()
 	DistanceExponent = 1.5;
 	EndRadiusExponent = 1;
 	ConeLengthExponent = 1.320883;
+
+	ImpulseStrengthExponent = 1.2;
 }
 
 void ATankCharacter::BindDelegates()
@@ -637,7 +639,7 @@ void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult
 			if (HitComp && HitComp->IsSimulatingPhysics())
 			{
 				FVector ImpulseOrigin = OutHit.ImpactPoint;
-				float ImpulseStrength = FMath::Pow(RadialForceComponent->ImpulseStrength * 3, 1.0f - (OutHit.Distance / TraceRadius));
+				float ImpulseStrength = FMath::Pow(FMath::Pow(RadialForceComponent->ImpulseStrength, ImpulseStrengthExponent), 1.0f - (OutHit.Distance / TraceRadius));
 				float ImpulseRadius = RadialForceComponent->Radius;
 
 				HitComp->AddRadialImpulse(
@@ -645,7 +647,7 @@ void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult
 					ImpulseRadius,
 					ImpulseStrength,
 					RIF_Constant,
-					true // velocity change
+					false // velocity change
 				);
 			}
 

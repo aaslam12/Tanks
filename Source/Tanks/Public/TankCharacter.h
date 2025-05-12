@@ -268,6 +268,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
 	float ConeLengthExponent;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Radial Impulse at hit location", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
+	float ImpulseStrengthExponent;
+
 	// This is the minimum spring arm length when zooming in.
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Setup|Gameplay|Gun Elevation")
 	double MinGunElevation;
