@@ -30,6 +30,8 @@ class TANKS_API ATankController : public APlayerController
 
 	ATankController();
 	virtual void OnConstruction(const FTransform& Transform) override;
+	void ClampVehicleSpeed();
+	void HandleVehicleDeceleration() const;
 	virtual void Tick(float DeltaSeconds) override;
 	UFUNCTION(BlueprintCallable)
 	void SetDefaults();
