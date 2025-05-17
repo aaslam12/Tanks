@@ -22,6 +22,6 @@ void UTankWheel::SetSweepShapeBasedOnGraphicsSettings()
     int ScalabilityLevel = UserSettings->GetOverallScalabilityLevel();
     UE_LOG(LogTemp, Log, TEXT("ScalabilityLevel: %d"), ScalabilityLevel);
     
-    // Value -1:custom, 0:low, 1:medium, 2:high, 3:epic, 4:cinemati
+    // Value -1:custom, 0:low, 1:medium, 2:high, 3:epic, 4:cinematic
     SweepShape = (ScalabilityLevel <= 1) ? ESweepShape::Raycast : ESweepShape::Spherecast;
 }

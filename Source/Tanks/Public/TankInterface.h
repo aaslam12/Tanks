@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "TankInterface.generated.h"
 
+enum class EPowerUpType : uint8;
 enum class ETeam : uint8;
 // This class does not need to be modified.
 UINTERFACE()
@@ -28,4 +29,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	ETeam GetCurrentTeam();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void PowerUpActivated(const EPowerUpType PowerUpType);
 };

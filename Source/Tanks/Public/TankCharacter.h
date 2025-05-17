@@ -10,6 +10,7 @@
 #include "Tanks/Template/MyProjectSportsCar.h"
 #include "TankCharacter.generated.h"
 
+class UTankPowerUpManagerComponent;
 class UTankAimAssistComponent;
 class UNiagaraSystem;
 class UWB_PlayerInfo;
@@ -47,6 +48,9 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UTankHighlightingComponent> TankHighlightingComponent;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UTankPowerUpManagerComponent> TankPowerUpManagerComponent;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<URadialForceComponent> RadialForceComponent;
@@ -120,6 +124,7 @@ protected:
 	// ITankInterface functions start
 	virtual void OutlineTank_Implementation(const bool bActivate, const bool bIsFriend) override;
 	virtual ETeam GetCurrentTeam_Implementation() override;
+	virtual void PowerUpActivated_Implementation(const EPowerUpType PowerUpType) override;
 	// ITankInterface functions end
 	
 	// IShootingInterface functions start
@@ -447,14 +452,14 @@ public:
 public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetHatchesAngles(double HatchAngle);
+	void SetHatchesAngles(double HatchAngle) const;
 protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
 	void MC_SetHatchesAngles(double HatchAngle);
 
 	UFUNCTION(BlueprintCallable)
-	void SpawnShootEmitters();
+	void SpawnShootEmitters() const;
 
 	UFUNCTION(BlueprintCallable, Server, Unreliable)
 	void SR_SpawnShootEmitters();

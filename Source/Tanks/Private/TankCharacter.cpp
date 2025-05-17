@@ -12,6 +12,7 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
+#include "Components/TankPowerUpManagerComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
@@ -29,6 +30,7 @@ static int FriendStencilValue = 2;
 static int EnemyStencilValue = 1;
 
 ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobject<UTankHighlightingComponent>("TankHighlightingComponent")),
+								  TankPowerUpManagerComponent(CreateDefaultSubobject<UTankPowerUpManagerComponent>("TankPowerUpManagerComponent")),
 								  RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
 								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
 								  MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
@@ -607,33 +609,24 @@ void ATankCharacter::OutlineTank_Implementation(const bool bActivate, const bool
 	{
 		if (bIsFriend)
 		{
-			if (GetMesh()->CustomDepthStencilValue == 0)
+			if (GetMesh()->CustomDepthStencilValue == 0 && GetMesh()->CustomDepthStencilValue != FriendStencilValue)
 			{
-				if (GetMesh()->CustomDepthStencilValue != FriendStencilValue)
-				{
-					GetMesh()->SetCustomDepthStencilValue(FriendStencilValue);
-				}
+				GetMesh()->SetCustomDepthStencilValue(FriendStencilValue);
 			}
 		}
 		else
 		{
-			if (GetMesh()->CustomDepthStencilValue != FriendStencilValue)
+			if (GetMesh()->CustomDepthStencilValue != FriendStencilValue && GetMesh()->CustomDepthStencilValue != EnemyStencilValue)
 			{
-				if (GetMesh()->CustomDepthStencilValue != EnemyStencilValue)
-				{
-					GetMesh()->SetCustomDepthStencilValue(EnemyStencilValue);
-				}
+				GetMesh()->SetCustomDepthStencilValue(EnemyStencilValue);
 			}
 		}
 	}
 	else
 	{
-		if (GetMesh()->CustomDepthStencilValue == EnemyStencilValue)
+		if (GetMesh()->CustomDepthStencilValue == EnemyStencilValue && GetMesh()->CustomDepthStencilValue != 0)
 		{
-			if (GetMesh()->CustomDepthStencilValue != 0)
-			{
-				GetMesh()->SetCustomDepthStencilValue(0);
-			}
+			GetMesh()->SetCustomDepthStencilValue(0);
 		}
 	}
 }
@@ -643,6 +636,10 @@ ETeam ATankCharacter::GetCurrentTeam_Implementation()
 	if (TankPlayerState)
 		return TankPlayerState->GetCurrentTeam();
 	return ETeam::Unassigned; // empty string
+}
+
+void ATankCharacter::PowerUpActivated_Implementation(const EPowerUpType PowerUpType)
+{
 }
 
 void ATankCharacter::ProjectileHit_Implementation(ATankProjectile* TankProjectile, UPrimitiveComponent* HitComponent, AActor* OtherActor,
@@ -977,17 +974,17 @@ void ATankCharacter::MC_SetSpeed_Implementation(double Speed)
 	SetWheelSmoke(!bIsInAir ? Speed : 0);
 }
 
-void ATankCharacter::SetHatchesAngles(double HatchAngle)
+void ATankCharacter::SetHatchesAngles(double HatchAngle) const
 {
 	if (AnimInstance)
 		AnimInstance->HatchAngle = HatchAngle;
 }
 
-void ATankCharacter::SpawnShootEmitters()
+void ATankCharacter::SpawnShootEmitters() const
 {
 	const FTransform Transform = GetShootSocket()->GetComponentTransform();
 
-	for (auto ParticleSystem : GetShootEmitterSystems())
+	for (UParticleSystem* ParticleSystem : GetShootEmitterSystems())
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(
 			GetWorld(),

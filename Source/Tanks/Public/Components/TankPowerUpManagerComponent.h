@@ -7,7 +7,7 @@
 #include "TankPowerUpManagerComponent.generated.h"
 
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Abstract)
 class TANKS_API UTankPowerUpManagerComponent : public UActorComponent
 {
 	GENERATED_BODY()
