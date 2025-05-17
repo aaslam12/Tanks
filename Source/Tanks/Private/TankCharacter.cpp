@@ -1023,20 +1023,13 @@ bool ATankCharacter::IsAimingIn() const
 
 const UCameraComponent* ATankCharacter::GetActiveCamera() const
 {
-	if (IsAimingIn())
-	{
-		if (FrontCameraComp)
-			return FrontCameraComp;
-		else
-			return nullptr;
-	}
-	else
-	{
-		if (BackCameraComp)
-			return BackCameraComp;
-		else
-			return nullptr;
-	}
+	if (IsAimingIn() && FrontCameraComp)
+		return FrontCameraComp;
+
+	if (BackCameraComp)
+		return BackCameraComp;
+	
+	return nullptr;
 }
 
 const ATankController* ATankCharacter::GetPlayerController() const

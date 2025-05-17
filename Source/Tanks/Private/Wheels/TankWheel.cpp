@@ -7,44 +7,21 @@
 
 UTankWheel::UTankWheel()
 {
-	if (!GEngine)
-		return;
-	
-	auto UserSettings = UGameUserSettings::GetGameUserSettings();
+    SetSweepShapeBasedOnGraphicsSettings();
+}
 
-	if (!UserSettings)
-		return;
+void UTankWheel::SetSweepShapeBasedOnGraphicsSettings()
+{
+    if (!GEngine)
+        return;
 
-	// Value -1:custom, 0:low, 1:medium, 2:high, 3:epic, 4:cinematic
-	auto ScalabilityLevel = UserSettings->GetOverallScalabilityLevel();
-
-	switch (ScalabilityLevel)
-	{
-		case -1:
-		{
-			SweepShape = ESweepShape::Spherecast;
-			break;
-		}
-		
-		case 0:
-		case 1:
-		{
-			SweepShape = ESweepShape::Raycast;
-			break;
-		}
-
-		case 2:
-		case 3:
-		{
-			SweepShape = ESweepShape::Spherecast;
-			break;
-		}
-		
-		case 4:
-		{
-			SweepShape = ESweepShape::Shapecast;
-			break;
-		}
-	default: break;
-	}
+    auto UserSettings = UGameUserSettings::GetGameUserSettings();
+    if (!UserSettings)
+        return;
+    
+    int ScalabilityLevel = UserSettings->GetOverallScalabilityLevel();
+    UE_LOG(LogTemp, Log, TEXT("ScalabilityLevel: %d"), ScalabilityLevel);
+    
+    // Value -1:custom, 0:low, 1:medium, 2:high, 3:epic, 4:cinemati
+    SweepShape = (ScalabilityLevel <= 1) ? ESweepShape::Raycast : ESweepShape::Spherecast;
 }

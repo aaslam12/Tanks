@@ -30,14 +30,18 @@ class TANKS_API ATankController : public APlayerController
 
 	ATankController();
 	virtual void OnConstruction(const FTransform& Transform) override;
-	void ClampVehicleSpeed();
+	void ClampVehicleSpeed() const;
+	void SetDriveTorque(float DecelerationTorque) const;
+	void SetDriveTorque(float LeftDecelerationTorque, float RightDecelerationTorque) const;
 	void HandleVehicleDeceleration() const;
+	void RefreshTankPlayerState();
 	virtual void Tick(float DeltaSeconds) override;
 	UFUNCTION(BlueprintCallable)
 	void SetDefaults();
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void OnPossess(APawn* InPawn) override;
+	void AddInputMappingContext() const;
 	void SetupInput();
 
 public:
@@ -198,10 +202,10 @@ protected:
 	
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
-	FVector2D GetMoveValues() const;
+	FVector2D GetMoveValues() const { return MoveValues; }
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
-	FVector2D GetLookValues() const;
+	FVector2D GetLookValues() const { return LookValues; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Data")
 	bool CanShoot() const { return bCanShoot; }

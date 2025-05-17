@@ -16,4 +16,5 @@ class TANKS_API UTankWheel : public UChaosVehicleWheel
 
 public:
 	UTankWheel();
+	void SetSweepShapeBasedOnGraphicsSettings();
 };

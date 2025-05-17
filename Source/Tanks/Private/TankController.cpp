@@ -12,7 +12,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Libraries/TFL.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
@@ -34,109 +34,97 @@ void ATankController::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 }
 
-void ATankController::ClampVehicleSpeed()
+void ATankController::ClampVehicleSpeed() const
 {
-	// 1. Define your max speed (in cm/s)
-	//    e.g. 1000 cm/s ≈ 36 km/h
 	constexpr float MaxSpeedCmPerSec = 1000.0f;  
 
-	// 2. Get the movement component and root physics body
-	if (!ChaosWheeledVehicleMovementComponent) return;
+	if (!ChaosWheeledVehicleMovementComponent && !GetPawn())
+		return;
 
-	UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(GetPawn()->GetRootComponent());
-	if (!Root || !Root->IsSimulatingPhysics()) return;
-
-	// 3. Read current forward speed (in cm/s)
 	float ForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();  
 
-	// 4. If speed exceeds maximum, clamp the world-space velocity
-	if (FMath::Abs(ForwardSpeed) > MaxSpeedCmPerSec)
-	{
-		// Compute forward axis in world space
-		FVector ForwardDir = GetPawn()->GetActorForwardVector().GetSafeNormal();
+	if (FMath::Abs(ForwardSpeed) <= MaxSpeedCmPerSec)
+		return;
 
-		// Preserve sign (forward vs. reverse)
-		float ClampedSpeed = FMath::Sign(ForwardSpeed) * MaxSpeedCmPerSec;
+	UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(GetPawn()->GetRootComponent());
+	
+	if (!Root || !Root->IsSimulatingPhysics())
+		return;
 
-		// Build new velocity vector
-		FVector NewVel = ForwardDir * ClampedSpeed;
+	FVector ForwardDir = GetPawn()->GetActorForwardVector().GetSafeNormal();
 
-		// Optionally preserve vertical velocity:
-		FVector CurrentVel = Root->GetPhysicsLinearVelocity();
-		NewVel.Z = CurrentVel.Z;
+	// Preserve sign (forward or reverse)
+	float ClampedSpeed = FMath::Sign(ForwardSpeed) * MaxSpeedCmPerSec;
 
-		// Apply clamp
-		Root->SetPhysicsLinearVelocity(NewVel, false);
-	}
+	FVector NewVel = ForwardDir * ClampedSpeed;
+
+	// Preserves vertical velocity
+	FVector CurrentVel = Root->GetPhysicsLinearVelocity();
+	NewVel.Z = CurrentVel.Z;
+
+	Root->SetPhysicsLinearVelocity(NewVel, false);
+}
+
+void ATankController::SetDriveTorque(const float DecelerationTorque) const
+{
+	SetDriveTorque(DecelerationTorque, DecelerationTorque);
+}
+
+void ATankController::SetDriveTorque(const float LeftDecelerationTorque, const float RightDecelerationTorque) const
+{
+	for (const int32 Idx : TankPlayer->LeftWheelIndices)
+		ChaosWheeledVehicleMovementComponent->SetDriveTorque(LeftDecelerationTorque, Idx);
+			
+	for (const int32 Idx : TankPlayer->RightWheelIndices)
+		ChaosWheeledVehicleMovementComponent->SetDriveTorque(RightDecelerationTorque, Idx);
 }
 
 void ATankController::HandleVehicleDeceleration() const
 {
-	// Check if movement input is zero
 	if (ChaosWheeledVehicleMovementComponent && TankPlayer
 		&& MoveValues.Y == 0 && MoveValues.X == 0)
 	{
-		const float DecelerationRate = 2500.0f; // Adjust to control the rate of deceleration
+		constexpr float DecelerationRate = 1250.0f;
 		const float CurrentForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();
 		const float CurrentTurnInput = MoveValues.X;
 
-		if (FMath::Abs(CurrentForwardSpeed) > KINDA_SMALL_NUMBER) // Decelerate linear motion
+		if (FMath::Abs(CurrentForwardSpeed) > KINDA_SMALL_NUMBER)
 		{
 			float DecelerationTorque = -FMath::Sign(CurrentForwardSpeed) * DecelerationRate;
 
-			for (int32 Idx : TankPlayer->LeftWheelIndices)
-			{
-				ChaosWheeledVehicleMovementComponent->SetDriveTorque(DecelerationTorque, Idx);
-			}
-			for (int32 Idx : TankPlayer->RightWheelIndices)
-			{
-				ChaosWheeledVehicleMovementComponent->SetDriveTorque(DecelerationTorque, Idx);
-			}
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::HandleVehicleDeceleration) DecelerationTorque: %f"), DecelerationTorque),
-			                                  true, true, FLinearColor::Yellow, 0);
+			SetDriveTorque(DecelerationTorque);
 		}
 
-		// Smoothly reduce turning torque as well
 		if (FMath::Abs(CurrentTurnInput) > KINDA_SMALL_NUMBER)
 		{
-			const float TurnDecelerationRate = 500.0f; // Turning deceleration rate
+			constexpr float TurnDecelerationRate = 500.0f;
 			float ReducedTurnTorque = -FMath::Sign(CurrentTurnInput) * TurnDecelerationRate;
 
-			for (int32 Idx : TankPlayer->LeftWheelIndices)
-			{
-				ChaosWheeledVehicleMovementComponent->SetDriveTorque(ReducedTurnTorque, Idx);
-			}
-			for (int32 Idx : TankPlayer->RightWheelIndices)
-			{
-				ChaosWheeledVehicleMovementComponent->SetDriveTorque(-ReducedTurnTorque, Idx);
-			}
-
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::HandleVehicleDeceleration) ReducedTurnTorque: %f"), ReducedTurnTorque),
-			                                  true, true, FLinearColor::Yellow, 0);
+			SetDriveTorque(ReducedTurnTorque, -ReducedTurnTorque);
 		}
 	}
+}
 
-	if (ChaosWheeledVehicleMovementComponent)
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::HandleVehicleDeceleration) ForwardSpeed: %f"), ChaosWheeledVehicleMovementComponent->GetForwardSpeed()),
-												  true, true, FLinearColor::Red, 0);
+void ATankController::RefreshTankPlayerState()
+{
+	if (TankPlayer && bIsAlive && VehicleMovementComponent)
+	{
+		bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
+		TankPlayer->SetSpeed(VehicleMovementComponent->GetForwardSpeed());
+	}
+
+	if (TankPlayer && TankPlayer->GetHealthComponent())
+	{
+		// if not dead, set bIsAlive as true
+		bIsAlive = !TankPlayer->GetHealthComponent()->IsDead();
+	}
 }
 
 void ATankController::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    if (TankPlayer && bIsAlive && VehicleMovementComponent)
-    {
-        bStopTurn = TankPlayer->GetMesh()->GetPhysicsAngularVelocityInDegrees().Length() > 30.0;
-        TankPlayer->SetSpeed(VehicleMovementComponent->GetForwardSpeed());
-    }
-
-    if (TankPlayer && TankPlayer->GetHealthComponent())
-    {
-        // if not dead, set bIsAlive as true
-        bIsAlive = !TankPlayer->GetHealthComponent()->IsDead();
-    }
-
+    RefreshTankPlayerState();
     ClampVehicleSpeed();
     HandleVehicleDeceleration();
 }
@@ -144,6 +132,7 @@ void ATankController::Tick(float DeltaSeconds)
 void ATankController::SetDefaults()
 {
 	bCanShoot = true;
+	
 	if (GetPawn())
 		TankPlayer = Cast<ATankCharacter>(GetPawn());
 	
@@ -163,18 +152,20 @@ void ATankController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	// SetupInput();
 	SetDefaults();
-	// BindControls();
 }
 
-void ATankController::SetupInput()
+void ATankController::AddInputMappingContext() const
 {
-	// Add Input Mapping Context
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
 		UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		if (!Subsystem->HasMappingContext(DefaultMappingContext))
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+}
+
+void ATankController::SetupInput()
+{
+	AddInputMappingContext();
 
 	EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
 	checkf(EnhancedInputComponent, TEXT("(ATankController::SetupInputComponent) EnhancedInputComponent is NULL!!!"));
@@ -256,13 +247,9 @@ void ATankController::Move__Internal(double Value)
 	// Spin-in-place formula:
 	float LeftPower  = Value;
 	float RightPower = Value;
-		
-	for (int32 Idx : TankPlayer->LeftWheelIndices)
-		ChaosWheeledVehicleMovementComponent->SetDriveTorque(LeftPower * MaxTorquePerWheel, Idx);
-	
-	for (int32 Idx : TankPlayer->RightWheelIndices)
-		ChaosWheeledVehicleMovementComponent->SetDriveTorque(RightPower * MaxTorquePerWheel, Idx);
 
+	SetDriveTorque(LeftPower * MaxTorquePerWheel, RightPower * MaxTorquePerWheel);
+		
 	ClampVehicleSpeed();
 	HandleVehicleDeceleration();
 }
@@ -376,7 +363,7 @@ void ATankController::SelfDestruct(const FInputActionValue& InputActionValue)
 	if (!CanRegisterInput())
 		return;
 	
-	if (auto e = TankPlayer->GetHealthComponent())
+	if (UTankHealthComponent* e = TankPlayer->GetHealthComponent())
 		e->SelfDestruct(-1);
 }
 
@@ -388,7 +375,7 @@ void ATankController::MouseWheelUp(const FInputActionValue& InputActionValue)
 	if (!TankPlayer->GetBackSpringArmComp() || !TankPlayer->GetFrontCameraComp())
 		return;
 
-	auto BackSpringArmComp = TankPlayer->GetBackSpringArmComp();
+	USpringArmComponent* BackSpringArmComp = TankPlayer->GetBackSpringArmComp();
 
 	if (BackSpringArmComp->TargetArmLength == TankPlayer->GetMaxZoomIn())
 		return;
@@ -420,7 +407,7 @@ void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 	if (!TankPlayer->GetBackSpringArmComp() || !TankPlayer->GetFrontCameraComp())
 		return;
 
-	auto BackSpringArmComp = TankPlayer->GetBackSpringArmComp();
+	USpringArmComponent* BackSpringArmComp = TankPlayer->GetBackSpringArmComp();
 
 	if (BackSpringArmComp->TargetArmLength == TankPlayer->GetMaxZoomOut())
 		return;
@@ -441,14 +428,4 @@ void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 			TankPlayer->bAimingIn = false;
 		}
 	}
-}
-
-FVector2D ATankController::GetMoveValues() const
-{
-	return MoveValues;
-}
-
-FVector2D ATankController::GetLookValues() const
-{
-	return LookValues;
 }
