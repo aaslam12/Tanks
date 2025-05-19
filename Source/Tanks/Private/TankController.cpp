@@ -260,12 +260,12 @@ void ATankController::Move(const FInputActionValue& Value)
 		return;
 
 	bIsInAir = !TankPlayer->IsInAir();
-	Move__Internal(Value.GetMagnitude());
+	SR_Move(Value.GetMagnitude());
 }
 
 void ATankController::SR_Move_Implementation(double Value)
 {
-	Move__Internal(Value);
+	MC_Move(Value);
 }
 
 void ATankController::Look(const FInputActionValue& Value)
@@ -281,9 +281,9 @@ void ATankController::Look(const FInputActionValue& Value)
 	AddPitchInput(LookValues.Y);
 }
 
-void ATankController::Turn__Internal(const FInputActionValue& Value)
+void ATankController::Turn__Internal(double Value)
 {
-	MoveValues.X = Value.GetMagnitude();
+	MoveValues.X = Value;
 	bIsInAir = !TankPlayer->IsInAir();
 	
 	VehicleMovementComponent->SetYawInput(MoveValues.X);
@@ -292,14 +292,18 @@ void ATankController::Turn__Internal(const FInputActionValue& Value)
 	HandleVehicleDeceleration();
 }
 
-void ATankController::SR_Turn_Implementation(const FInputActionValue& Value)
+void ATankController::MC_Turn_Implementation(const FInputActionValue& Value)
 {
-	Turn__Internal(Value);
+	Turn__Internal(Value.GetMagnitude());
 }
 
-void ATankController::SR_TurnCompleted_Implementation(const FInputActionValue& Value)
+void ATankController::SR_Turn_Implementation(const FInputActionValue& Value)
 {
-	// code should be the same as ATankController::TurnCompleted
+	MC_Turn(Value);
+}
+
+void ATankController::TurnCompleted__Internal()
+{
 	VehicleMovementComponent->SetThrottleInput(0);
 	VehicleMovementComponent->SetBrakeInput(0);
 	VehicleMovementComponent->SetYawInput(0);
@@ -308,23 +312,31 @@ void ATankController::SR_TurnCompleted_Implementation(const FInputActionValue& V
 	MoveValues.X = 0;
 }
 
+void ATankController::SR_TurnCompleted_Implementation(const FInputActionValue& Value)
+{
+	MC_TurnCompleted(Value);
+}
+
+void ATankController::MC_TurnCompleted_Implementation(const FInputActionValue& Value)
+{
+	TurnCompleted__Internal();
+}
+
 void ATankController::Turn(const FInputActionValue& Value)
 {
 	if (!CanRegisterInput())
 		return;
 
-	Turn__Internal(Value);
+	Turn__Internal(Value.GetMagnitude());
 	SR_Turn(Value);
 }
 
 void ATankController::TurnCompleted(const FInputActionValue& Value)
 {
-	VehicleMovementComponent->SetThrottleInput(0);
-	VehicleMovementComponent->SetBrakeInput(0);
-	VehicleMovementComponent->SetYawInput(0);
+	if (!CanRegisterInput())
+		return;
 	
-	PrevTurnInput = 0; // fixes a bug. keep it
-
+	TurnCompleted__Internal();
 	SR_TurnCompleted(Value);
 }
 

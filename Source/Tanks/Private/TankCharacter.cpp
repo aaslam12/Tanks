@@ -213,9 +213,6 @@ void ATankCharacter::SetDefaults_Implementation()
 
 	SetLightsEmissivity(0);
 
-	if (UWorld* World = GetWorld())
-		World->Exec(World, TEXT("p.Vehicle.SetMaxMPH 30"));
-
 	if (GetPlayerState())
 		if (Cast<ATankPlayerState>(GetPlayerState()))
 			PlayerName = Cast<ATankPlayerState>(GetPlayerState())->CustomPlayerName;

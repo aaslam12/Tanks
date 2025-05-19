@@ -175,15 +175,23 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-	void Turn__Internal(const FInputActionValue& Value);
+	void Turn__Internal(double Value);
 
 	UFUNCTION(Server, Reliable)
 	void SR_Turn(const FInputActionValue& Value);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_Turn(const FInputActionValue& Value);
+
 	UFUNCTION(Server, Reliable)
 	void SR_TurnCompleted(const FInputActionValue& Value);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_TurnCompleted(const FInputActionValue& Value);
+	
 	/** Called for turning input */
 	void Turn(const FInputActionValue& Value);
+	void TurnCompleted__Internal();
 	void TurnCompleted(const FInputActionValue& InputActionValue);
 
 	void Shoot(const FInputActionValue& InputActionValue);
