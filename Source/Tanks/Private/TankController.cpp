@@ -12,12 +12,12 @@
 #include "Camera/CameraComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Libraries/TFL.h"
 
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
-ATankController::ATankController(): PrevTurnInput(0), LookValues(), MoveValues(), bIsInAir(true), ShootTimerDuration(3),
-                                    MouseSensitivity(FVector(0.4)),
+ATankController::ATankController(): PrevTurnInput(0), LookValues(), MoveValues(), bIsInAir(true),
+                                    bInputMasterSwitch(false), ShootTimerDuration(3),
+                                    MouseSensitivity(0.4),
                                     bIsAlive(true),
                                     bStopTurn(false),
                                     VehicleYaw(0),
@@ -230,7 +230,7 @@ void ATankController::BindControls()
 
 bool ATankController::CanRegisterInput() const
 {
-	return TankPlayer && bIsAlive && VehicleMovementComponent;
+	return TankPlayer && bIsAlive && VehicleMovementComponent && bInputMasterSwitch;
 }
 
 void ATankController::MC_Move_Implementation(double Value)

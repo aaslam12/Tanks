@@ -71,6 +71,11 @@ protected:
 	UPROPERTY(BlueprintReadWrite)
 	bool bIsInAir;
 
+public:
+	// If false, all input is ignored.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Setup|Controls")
+	bool bInputMasterSwitch;
+
 private:
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Input variables

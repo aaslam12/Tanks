@@ -149,7 +149,7 @@ protected:
 	UFUNCTION(BlueprintNativeEvent)
 	void UpdateCameraPitchLimits() const;
 
-	/** This function is binded to the controller's input shoot function */
+	/** This function is bound to the controller's input shoot function */
 	UFUNCTION(BlueprintNativeEvent)
 	void OnShoot();
 
@@ -289,8 +289,12 @@ protected:
 	// flat max gun elevation value
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	double MaxGunElevation;
+	
+	/** Turret Up/Down Rotation */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	double GunElevation;
 
-	/** Please add a variable description */
+	/** Turret Left/Right Rotation */
 	UPROPERTY(BlueprintReadOnly, Category = "Default", Replicated)
 	double CurrentTurretAngle;
 
@@ -313,10 +317,6 @@ protected:
 	/** The Player controller of this pawn */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<ATankController> PlayerController;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
-	double GunElevation;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
@@ -530,12 +530,4 @@ public:
 	FORCEINLINE UTankHealthComponent* GetHealthComponent() const { return HealthComponent; }
 	FORCEINLINE UTankHighlightingComponent* GetTankHighlightingComponent() const { return TankHighlightingComponent; }
 	FORCEINLINE URadialForceComponent* GetRadialForceComponent() const { return RadialForceComponent; }
-
-
-	//////////////////////////////////////////////////////////////////
-	/// Blueprint-Only Functions
-
-	/* Returns the location of where the trace ends */
-	// UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category="Tick")
-	// void GunSightTick(UPARAM(ref) FVector& EndPoint, UPARAM(ref) FVector2D& ScreenPosition);
 };
