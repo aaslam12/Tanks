@@ -230,7 +230,7 @@ void ATankController::BindControls()
 
 bool ATankController::CanRegisterInput() const
 {
-	return TankPlayer && bIsAlive && VehicleMovementComponent;
+	return TankPlayer && bIsAlive && VehicleMovementComponent && bInputMasterSwitch;
 }
 
 void ATankController::MC_Move_Implementation(double Value)

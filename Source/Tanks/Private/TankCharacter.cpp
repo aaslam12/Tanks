@@ -5,6 +5,7 @@
 
 #include "ChaosVehicleMovementComponent.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
+#include "EnhancedCodeFlow.h"
 #include "EnhancedInputComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TankController.h"
@@ -36,7 +37,7 @@ ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobje
 								  MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
                                   AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
                                   GunElevationInterpSpeed(10), BaseDamage(500),
-                                  MinGunElevation(-15), MaxGunElevation(20), CurrentTurretAngle(0), GunElevation(0),
+                                  MinGunElevation(-15), MaxGunElevation(20), GunElevation(0), CurrentTurretAngle(0),
                                   bIsInAir(false), 
                                   DesiredGunElevation(0), 
                                   LookValues(), MoveValues(), bAimingIn(false)
@@ -244,10 +245,39 @@ void ATankCharacter::BindDelegates()
 
 void ATankCharacter::ResetCameraRotation_Implementation()
 {
-	if (BackCameraComp && BackSpringArmComp)
+    if (!BackCameraComp || !BackSpringArmComp || !PlayerController)
+	    return;
+
+	const FTransform OldTransform = GetActorTransform();
+	
+	PlayerController->SetControlRotation(GetActorForwardVector().Rotation());
+	GunElevation = 0;
+	CurrentTurretAngle = 0;
+
+    FHitResult OutHit;
+	UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		GetActorLocation(),
+		GetActorLocation() - FVector(0, 0, -2000),
+		TraceTypeQuery1,
+		false, {},
+		EDrawDebugTrace::ForDuration,
+		OutHit,
+		true
+	);
+
+	SetActorTransform(
+		FTransform(OldTransform.GetRotation(), OutHit.Location, OldTransform.GetScale3D()),
+		false, nullptr,
+		ETeleportType::ResetPhysics
+	);
+
+	PlayerController->bInputMasterSwitch = false;
+
+	FFlow::Delay(this, 5.0, [this]
 	{
-		// attempt to reset camera rotation when the pawn first spawns at game start but was unsuccessful.
-	}
+		PlayerController->bInputMasterSwitch = true;
+	});
 }
 
 void ATankCharacter::BeginPlay()
