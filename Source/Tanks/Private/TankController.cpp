@@ -16,7 +16,7 @@
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
 ATankController::ATankController(): PrevTurnInput(0), LookValues(), MoveValues(), bIsInAir(true),
-                                    bInputMasterSwitch(false), ShootTimerDuration(3),
+                                    bInputMasterSwitch(false), bDecelerateWhenIdle(true), ShootTimerDuration(3),
                                     MouseSensitivity(0.4),
                                     bIsAlive(true),
                                     bStopTurn(false),
@@ -82,7 +82,7 @@ void ATankController::SetDriveTorque(const float LeftDecelerationTorque, const f
 void ATankController::HandleVehicleDeceleration() const
 {
 	if (ChaosWheeledVehicleMovementComponent && TankPlayer
-		&& MoveValues.Y == 0 && MoveValues.X == 0)
+		&& MoveValues.Y == 0 && MoveValues.X == 0 && bDecelerateWhenIdle)
 	{
 		constexpr float DecelerationRate = 1250.0f;
 		const float CurrentForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();

@@ -40,7 +40,7 @@ void UTankHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UTankHealthComponent::OnPlayerRespawn_Implementation()
 {
-	CurrentHealth = MaxHealth;
+	SetHealth(MaxHealth, false);
 }
 
 void UTankHealthComponent::Die(bool IsSelfDestruct)

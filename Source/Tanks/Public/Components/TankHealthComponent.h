@@ -46,7 +46,7 @@ class TANKS_API UTankHealthComponent : public UActorComponent
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))
 	bool bShouldRespawn;
 	
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true", UIMin=0.01, ClampMin=0.01, UIMax=15, EditCondition="bShouldSelfDestruct"))
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true", UIMin=0.01, ClampMin=0.01, UIMax=15, EditCondition="bShouldRespawn"))
 	double DefaultSelfDestructDelay;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))

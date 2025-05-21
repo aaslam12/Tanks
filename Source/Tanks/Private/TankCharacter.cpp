@@ -121,14 +121,59 @@ void ATankCharacter::PossessedBy(AController* NewController)
 	DamagedStaticMesh->SetVisibility(false);
 }
 
-void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void ATankCharacter::BeginPlay()
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	Super::BeginPlay();
+	
+	if (!IsLocallyControlled())
+	{
+		// Destroy post-process component if not locally owned
+		if (TankPostProcessVolume)
+		{
+			TankPostProcessVolume->DestroyComponent();
+			TankPostProcessVolume = nullptr;
+		}
+	}
+	
+	ResetCameraRotation();
+	SetDefaults();
+	BindDelegates();
 
-	// cache the EnhancedInputComponent to bind controls later in BeginPlay after the controller is available.
-	if (PlayerInputComponent)
-		if (Cast<UEnhancedInputComponent>(PlayerInputComponent))
-			EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	DamagedStaticMesh->SetHiddenInGame(true);
+	DamagedStaticMesh->SetVisibility(false);
+}
+
+// Called every frame
+void ATankCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!GetWorld())
+		return;
+
+	// Only run trace logic for the local player or server, not unnecessary clients
+	if (HasAuthority() || IsLocallyControlled())
+	{
+		// If we're the server or the local player, run the traces and related logic
+		if (PlayerController)
+		{
+			MoveValues = PlayerController->GetMoveValues();
+			LookValues = PlayerController->GetLookValues();
+		}
+
+		if (HealthComponent)
+			if (HealthComponent->IsDead())
+				return;
+
+		TurretTraceTick();
+		// ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
+		UpdateTurretTurning(DeltaTime);
+		UpdateGunElevation(DeltaTime);
+		CheckIfGunCanLowerElevationTick(DeltaTime);
+		UpdateCameraPitchLimits();
+
+		// UpdateIsInAir();
+	}
 }
 
 void ATankCharacter::TurretTraceTick_Implementation()
@@ -228,6 +273,16 @@ void ATankCharacter::SetDefaults_Implementation()
 	SetWheelIndices();
 }
 
+void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	// cache the EnhancedInputComponent to bind controls later in BeginPlay after the controller is available.
+	if (PlayerInputComponent)
+		if (Cast<UEnhancedInputComponent>(PlayerInputComponent))
+			EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+}
+
 void ATankCharacter::BindDelegates()
 {
 	if (PlayerController)
@@ -238,6 +293,9 @@ void ATankCharacter::BindDelegates()
 
 	if (HealthComponent)
 	{
+		if (!HealthComponent->OnHealthChanged.IsAlreadyBound(this, &ATankCharacter::OnHealthChanged))
+			HealthComponent->OnHealthChanged.AddDynamic(this, &ATankCharacter::OnHealthChanged);
+		
 		if (!HealthComponent->OnDie.IsAlreadyBound(this, &ATankCharacter::OnDie))
 			HealthComponent->OnDie.AddDynamic(this, &ATankCharacter::OnDie);
 	}
@@ -280,28 +338,6 @@ void ATankCharacter::ResetCameraRotation_Implementation()
 	});
 }
 
-void ATankCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-	
-	if (!IsLocallyControlled())
-	{
-		// Destroy post-process component if not locally owned
-		if (TankPostProcessVolume)
-		{
-			TankPostProcessVolume->DestroyComponent();
-			TankPostProcessVolume = nullptr;
-		}
-	}
-	
-	ResetCameraRotation();
-	SetDefaults();
-	BindDelegates();
-
-	DamagedStaticMesh->SetHiddenInGame(true);
-	DamagedStaticMesh->SetVisibility(false);
-}
-
 void ATankCharacter::ConeTraceTick_Implementation()
 {
 	FVector StartLocation = GetMesh()->GetSocketLocation("Muzzle");
@@ -333,39 +369,6 @@ void ATankCharacter::ConeTraceTick_Implementation()
 		);
 
 		// Process Hits as needed
-	}
-}
-
-// Called every frame
-void ATankCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	if (!GetWorld())
-		return;
-
-	// Only run trace logic for the local player or server, not unnecessary clients
-	if (HasAuthority() || IsLocallyControlled())
-	{
-		// If we're the server or the local player, run the traces and related logic
-		if (PlayerController)
-		{
-			MoveValues = PlayerController->GetMoveValues();
-			LookValues = PlayerController->GetLookValues();
-		}
-
-		if (HealthComponent)
-			if (HealthComponent->IsDead())
-				return;
-
-		TurretTraceTick();
-		// ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
-		UpdateTurretTurning(DeltaTime);
-		UpdateGunElevation(DeltaTime);
-		CheckIfGunCanLowerElevationTick(DeltaTime);
-		UpdateCameraPitchLimits();
-
-		// UpdateIsInAir();
 	}
 }
 
@@ -805,6 +808,10 @@ void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState, boo
 
 	if (PlayerController)
 		PlayerController->OnDie();
+}
+
+void ATankCharacter::OnHealthChanged_Implementation(float NewHealth, bool bIsRegenerating)
+{
 }
 
 void ATankCharacter::OnShoot_Implementation()

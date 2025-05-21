@@ -76,6 +76,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Setup|Controls")
 	bool bInputMasterSwitch;
 
+	/// If true, the tank will decelerate when idle.
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Setup|Controls")
+	bool bDecelerateWhenIdle;
+
 private:
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Input variables
