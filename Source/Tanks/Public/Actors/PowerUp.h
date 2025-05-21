@@ -35,8 +35,12 @@ class TANKS_API APowerUp : public AActor
 {
 	GENERATED_BODY()
 
+protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))
 	EPowerUpType PowerUpType;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))
+	double PowerUpDuration;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UStaticMeshComponent> StaticMesh;
@@ -44,7 +48,6 @@ class TANKS_API APowerUp : public AActor
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USphereComponent> SphereCollision;
 
-protected:
 	UFUNCTION(BlueprintNativeEvent)
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
@@ -58,6 +61,7 @@ protected:
 	void FadeOut();
 	
 public:
+	void SetPowerUpDuration();
 	APowerUp();
 
 protected:

@@ -155,6 +155,9 @@ protected:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void OnDie(APlayerState* AffectedPlayerState, bool bSelfDestruct, bool bShouldRespawn);
+
+	UFUNCTION(BlueprintNativeEvent)
+	void OnHealthChanged(float NewHealth, bool bIsRegenerating);
 	
 	// called when player respawns
 	virtual void Restart() override;
