@@ -19,8 +19,30 @@ APowerUp::APowerUp() : PowerUpType(EPowerUpType::Health), PowerUpDuration(30),
 	SetRootComponent(SphereCollision);
 	bReplicates = true;
 
-	// will be set in blueprints
-	StaticMesh->SetCollisionResponseToAllChannels(ECR_Overlap);
+	if (StaticMesh && SkeletalMesh)
+	{
+		if (bUseStaticMesh)
+		{
+			StaticMesh->SetCollisionResponseToAllChannels(ECR_Overlap);
+			SkeletalMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+		
+			StaticMesh->SetVisibility(true);
+			SkeletalMesh->SetVisibility(false);
+		}
+		else
+		{
+		
+			SkeletalMesh->SetCollisionResponseToAllChannels(ECR_Overlap);
+			StaticMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+		
+			StaticMesh->SetVisibility(false);
+			SkeletalMesh->SetVisibility(true);
+		}
+	}
+	else
+	{
+		UE_LOG(LogBlueprintUserMessages, Error, TEXT("StaticMesh or SkeletalMesh is null in APowerUp constructor [%s]"), *GetFullName());
+	}
 
 	SphereCollision->SetSphereRadius(200.0f);
 	SphereCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
@@ -71,13 +93,19 @@ void APowerUp::SetPowerUpDuration()
 	}
 }
 
+void APowerUp::Activate_Implementation()
+{
+	PlayActivateAnimation();
+	
+}
+
 void APowerUp::OnOverlapBegin_Implementation(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                              UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                              const FHitResult& SweepResult)
 {
 	ITankInterface::Execute_PowerUpActivated(OtherActor, PowerUpType);
 
-	PlayActivateAnimation();
+	Activate();
 	FadeOut();
 
 	UKismetSystemLibrary::PrintString(
@@ -86,7 +114,7 @@ void APowerUp::OnOverlapBegin_Implementation(UPrimitiveComponent* OverlappedComp
 		  true, 
 		  true, 
 		  FLinearColor::Red, 
-		  1000000
+		  5
 	);
 }
 
@@ -99,7 +127,7 @@ void APowerUp::OnOverlapEnd_Implementation(UPrimitiveComponent* OverlappedCompon
 		  true, 
 		  true, 
 		  FLinearColor::Red, 
-		  1000000
+		  5
 	);
 }
 
