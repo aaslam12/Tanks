@@ -18,6 +18,10 @@ struct FHealthBarConfig
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))
 	FText Text;
 
+	/* Should hide the widget when switching to this state? */
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"), DisplayName="Hide Widget?")
+	bool bHideWidget;
+
 	/* The progress bar style */ 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Setup, meta=(AllowPrivateAccess="true"))
 	FProgressBarStyle Style;
@@ -56,14 +60,12 @@ class TANKS_API UWB_HealthBar : public UUserWidget
 	TObjectPtr<UTextBlock> HealthText;
 
 protected:
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void ResetText() const;
+	virtual void ResetText() const;
+	virtual void SetText(const FText& NewText) const;
+	virtual void SetProgress(const float NewProgress) const;
 	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void SetText(const FText& NewText) const;
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void SetProgress(const float NewProgress) const;
+	UFUNCTION(BlueprintNativeEvent)
+	void SetDefaults();
 	
 	UFUNCTION(BlueprintNativeEvent)
 	void PlayerIsDead();

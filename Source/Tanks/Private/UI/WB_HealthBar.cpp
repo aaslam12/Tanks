@@ -10,16 +10,22 @@ void UWB_HealthBar::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
-	SetText(DefaultConfig.Text);
-	SetProgress(1);
+	SetDefaults();
 }
 
-void UWB_HealthBar::ResetText_Implementation() const
+void UWB_HealthBar::SetDefaults_Implementation()
+{
+	SetText(DefaultConfig.Text);
+	SetProgress(1);
+	HealthChanged(1,1);
+}
+
+void UWB_HealthBar::ResetText() const
 {
 	SetText(DefaultConfig.Text);
 }
 
-void UWB_HealthBar::SetText_Implementation(const FText& NewText) const
+void UWB_HealthBar::SetText(const FText& NewText) const
 {
 	if (HealthText)
 	{
@@ -27,7 +33,7 @@ void UWB_HealthBar::SetText_Implementation(const FText& NewText) const
 	}
 }
 
-void UWB_HealthBar::SetProgress_Implementation(const float NewProgress) const
+void UWB_HealthBar::SetProgress(const float NewProgress) const
 {
 	if (HealthBar)
 	{
@@ -40,6 +46,8 @@ void UWB_HealthBar::PlayerIsDead_Implementation()
 	SetText(DeadConfig.Text);
 	SetProgress(0);
 	bIsDead = true;
+
+	SetVisibility(DeadConfig.bHideWidget ? ESlateVisibility::Hidden : ESlateVisibility::HitTestInvisible);
 }
 
 void UWB_HealthBar::HealthChanged_Implementation(const float NewHealth, const float MaxHealth)
@@ -53,5 +61,7 @@ void UWB_HealthBar::HealthChanged_Implementation(const float NewHealth, const fl
 		SetText(DefaultConfig.Text);
 		SetProgress(NewHealth / MaxHealth);
 		bIsDead = false;
+
+		SetVisibility(DefaultConfig.bHideWidget ? ESlateVisibility::Hidden : ESlateVisibility::HitTestInvisible);
 	}
 }
