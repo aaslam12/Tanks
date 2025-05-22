@@ -6,9 +6,15 @@
 #include "TankInterface.h"
 // #include "WheeledVehiclePawn.h"
 #include "GameFramework/TankGameInstance.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Projectiles/ShootingInterface.h"
 #include "Tanks/Template/MyProjectSportsCar.h"
 #include "TankCharacter.generated.h"
+
+namespace EDrawDebugTrace
+{
+	enum Type : int;
+}
 
 class UTankTargetingSystem;
 class UTankPowerUpManagerComponent;
@@ -38,6 +44,48 @@ FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
 {
 	return A.GetActor() == B.GetActor();
 }
+
+USTRUCT(BlueprintType)
+struct FConeTraceConfig
+{
+	GENERATED_BODY()
+
+	// Only one config should have this on !!!
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, DisplayName="Is Used For Tank Targeting?", Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	bool bIsUsedForTankTargeting;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	int32 Steps = 5;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
+	float StartRadius = 45;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
+	float DistanceExponent = 1.5;
+
+	// calculated
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	float EndRadius;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
+	float EndRadiusExponent = 1;
+
+	// calculated
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	float ConeLength;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
+	float ConeLengthExponent = 1.320883;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	FLinearColor ConeTraceColor = FLinearColor::Black;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	FLinearColor ConeTraceHitColor = FColor::Emerald;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	TEnumAsByte<EDrawDebugTrace::Type> DrawDebugTrace = EDrawDebugTrace::ForOneFrame;
+};
 
 UCLASS(Abstract)
 class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterface, public IShootingInterface
@@ -271,25 +319,7 @@ protected:
 	bool bShowDebugTracesForTurret;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
-	int32 Steps;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
-	float StartRadius;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
-	float DistanceExponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
-	float EndRadius;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
-	float EndRadiusExponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
-	float ConeLength;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
-	float ConeLengthExponent;
+	TArray<FConeTraceConfig> ConeTraceConfigs;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Radial Impulse at hit location", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
 	float ImpulseStrengthExponent;

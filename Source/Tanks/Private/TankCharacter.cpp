@@ -265,10 +265,10 @@ void ATankCharacter::SetDefaults_Implementation()
 		if (Cast<ATankPlayerState>(GetPlayerState()))
 			PlayerName = Cast<ATankPlayerState>(GetPlayerState())->CustomPlayerName;
 
-	StartRadius = 45;
-	DistanceExponent = 1.5;
-	EndRadiusExponent = 1;
-	ConeLengthExponent = 1.320883;
+	// Config.StartRadius = 45;
+	// DistanceExponent = 1.5;
+	// Config.EndRadiusExponent = 1;
+	// Config.ConeLengthExponent = 1.320883;
 
 	ImpulseStrengthExponent = 1.2;
 
@@ -342,41 +342,54 @@ void ATankCharacter::ResetCameraRotation_Implementation()
 
 void ATankCharacter::ConeTraceTick_Implementation()
 {
-	FVector StartLocation = GetMesh()->GetSocketLocation("Muzzle");
-	FVector Direction = GetMesh()->GetSocketQuaternion("Muzzle").GetForwardVector();
-		
-	EndRadius = FMath::Pow(StartRadius * Steps, EndRadiusExponent);
-	ConeLength = FMath::Pow(FMath::Pow(StartRadius * Steps, ConeLengthExponent), EndRadiusExponent);
-		
-	for (int32 i = 0; i < Steps; ++i)
+	if (ConeTraceConfigs.IsEmpty())
+		return;
+
+	const FVector StartLocation = GetMesh()->GetSocketLocation("Muzzle");
+	const FVector Direction = GetMesh()->GetSocketQuaternion("Muzzle").GetForwardVector();
+
+	for (int i = 0; i < ConeTraceConfigs.Num(); ++i)
 	{
-		float Alpha = (float)i / (float)(Steps - 1);
-		float Distance = FMath::Pow(Alpha, DistanceExponent) * ConeLength;
-		FVector SweepCenter = StartLocation + Direction * Distance;
-		float Radius = FMath::Lerp(StartRadius, EndRadius, Alpha);
+		FConeTraceConfig& Config = ConeTraceConfigs[i];
+		
+		Config.EndRadius = FMath::Pow(Config.StartRadius * Config.Steps, Config.EndRadiusExponent);
+		Config.ConeLength = FMath::Pow(FMath::Pow(Config.StartRadius * Config.Steps, Config.ConeLengthExponent), Config.EndRadiusExponent);
+		
+		for (int32 k = 0; k < Config.Steps; ++k)
+		{
+			float Alpha = (float)k / (float)(Config.Steps - 1);
+			float Distance = FMath::Pow(Alpha, Config.DistanceExponent) * Config.ConeLength;
+			FVector SweepCenter = StartLocation + Direction * Distance;
+			float Radius = FMath::Lerp(Config.StartRadius, Config.EndRadius, Alpha);
 
-		TArray<FHitResult> Hits;
-		UKismetSystemLibrary::SphereTraceMultiForObjects(
-			GetWorld(),
-			SweepCenter,
-			SweepCenter,
-			Radius,
-			{ ObjectTypeQuery5 },
-			false,
-			{},
-			bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
-			Hits,
-			true,
-			FLinearColor::Gray
-		);
+			TArray<FHitResult> Hits;
+			UKismetSystemLibrary::SphereTraceMultiForObjects(
+				GetWorld(),
+				SweepCenter,
+				SweepCenter,
+				Radius,
+				{ ObjectTypeQuery5 },
+				false,
+				{},
+				bShowDebugTracesForTurret ? Config.DrawDebugTrace.GetValue() : EDrawDebugTrace::None,
+				Hits,
+				true,
+				Config.ConeTraceColor,
+				Config.ConeTraceHitColor
+			);
 
-		for (const FHitResult& Hit : Hits)
-			AllHits.Add(Hit);
+			if (Config.bIsUsedForTankTargeting)
+				for (const FHitResult& Hit : Hits)
+					AllHits.Add(Hit);
+		}
+
+		// Process Hits as needed
+		if (Config.bIsUsedForTankTargeting)
+		{
+			TankTargetingSystem->ProcessHitResults(AllHits);
+			AllHits.Empty();
+		}
 	}
-
-	// Process Hits as needed
-	TankTargetingSystem->ProcessHitResults(AllHits);
-	AllHits.Empty();
 }
 
 void ATankCharacter::HandleTakeDamage_Implementation(float DamageAmount, class AController* EventInstigator, AActor* DamageCauser)
