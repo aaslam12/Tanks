@@ -11,6 +11,7 @@
 #include "Tanks/Template/MyProjectSportsCar.h"
 #include "TankCharacter.generated.h"
 
+// forward declaring the enum
 namespace EDrawDebugTrace
 {
 	enum Type : int;
@@ -34,16 +35,6 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
-
-FORCEINLINE uint32 GetTypeHash(const FHitResult& Hit)
-{
-	return FCrc::StrCrc32(*Hit.GetActor()->GetName());
-}
-
-FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
-{
-	return A.GetActor() == B.GetActor();
-}
 
 USTRUCT(BlueprintType)
 struct FConeTraceConfig
@@ -100,6 +91,9 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UTankPowerUpManagerComponent> TankPowerUpManagerComponent;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UTankAimAssistComponent> TankAimAssistComponent;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UTankTargetingSystem> TankTargetingSystem;

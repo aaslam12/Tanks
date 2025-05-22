@@ -11,6 +11,7 @@
 #include "TankController.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
+#include "Components/TankAimAssistComponent.h"
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
 #include "Components/TankPowerUpManagerComponent.h"
@@ -33,6 +34,7 @@ static int EnemyStencilValue = 1;
 
 ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobject<UTankHighlightingComponent>("TankHighlightingComponent")),
 								  TankPowerUpManagerComponent(CreateDefaultSubobject<UTankPowerUpManagerComponent>("TankPowerUpManagerComponent")),
+								  TankAimAssistComponent(CreateDefaultSubobject<UTankAimAssistComponent>("TankAimAssistComponent")),
 								  TankTargetingSystem(CreateDefaultSubobject<UTankTargetingSystem>("TankTargetingSystem")),
 								  RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
 								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
@@ -386,8 +388,11 @@ void ATankCharacter::ConeTraceTick_Implementation()
 		// Process Hits as needed
 		if (Config.bIsUsedForTankTargeting)
 		{
-			TankTargetingSystem->ProcessHitResults(AllHits);
+			AActor* const LockedTarget = TankTargetingSystem->ProcessHitResults(AllHits);
 			AllHits.Empty();
+
+			// passes work off to the actor component
+			TankAimAssistComponent->AimAssist(LockedTarget);
 		}
 	}
 }
