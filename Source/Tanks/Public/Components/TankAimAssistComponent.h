@@ -6,6 +6,13 @@
 #include "Components/ActorComponent.h"
 #include "TankAimAssistComponent.generated.h"
 
+/**
+ * Component responsible for providing aim assist functionality for the owning actor.
+ * Designed to interact with other systems such as targeting or aiming mechanisms to ease aiming.
+ * This component is blueprint-spawnable and can be used in custom classes.
+ *
+ * Run the UTankAimAssistComponent::AimAssist(...) function.
+ */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TANKS_API UTankAimAssistComponent : public UActorComponent
 {
