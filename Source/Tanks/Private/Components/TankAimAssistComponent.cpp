@@ -3,6 +3,17 @@
 
 #include "Components/TankAimAssistComponent.h"
 
+#include "TankCharacter.h"
+
+
+void UTankAimAssistComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (GetOwner())
+		if (Cast<ATankCharacter>(GetOwner()))
+			TankCharacter = Cast<ATankCharacter>(GetOwner());
+}
 
 // Sets default values for this component's properties
 UTankAimAssistComponent::UTankAimAssistComponent()
@@ -16,6 +27,8 @@ UTankAimAssistComponent::UTankAimAssistComponent()
 
 void UTankAimAssistComponent::AimAssist_Implementation(AActor* const LockedTarget)
 {
+	if (!TankCharacter || !LockedTarget)
+		return;
+
 	
 }
-
