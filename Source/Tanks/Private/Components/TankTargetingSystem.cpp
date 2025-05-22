@@ -105,6 +105,9 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 
 			PendingTime = LockAcquireTime;
 			LostTime = 0;
+
+			// need to make sure this only get called once
+			OnTargetLocked.Broadcast(LockedTarget);
 		}
 		else if (PendingTime == 0 && LostTime == LockLoseTime && PendingTarget != LockedTarget) // if it is time to lose lock, and if we are not looking at the locked target (looking at another tank or null) 
 		{
@@ -134,6 +137,9 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 
 		if (LostTime == LockLoseTime)
 		{
+			// need to make sure this only get called once
+			OnTargetLost.Broadcast(LockedTarget);
+
 			// lost lock
 			LockedTarget = nullptr;
 			PendingTarget = nullptr;
