@@ -30,9 +30,11 @@ protected:
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
 	const FHitResult* FindClosestTarget(const TArray<FHitResult>& HitResults) const;
+	void LosingLock(double Delta);
+	void GainingLock(double Delta);
 
 	// helps identify which actor we are locking on
-	void DebugSphereAboveActor(const AActor* Closest, const FColor& Color) const;
+	void DebugSphereAboveActor(const AActor* Actor, const FColor& Color, const FVector& Offset = FVector::ZeroVector) const;
 
 public:
 	/** Call each tick after your cone trace; supply all hit results */
