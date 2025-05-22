@@ -5,11 +5,10 @@
 
 #include "Kismet/KismetSystemLibrary.h"
 
-#define DELTA_S GetWorld()->GetDeltaSeconds()
-
-UTankTargetingSystem::UTankTargetingSystem(): LockedTarget(nullptr), PendingTarget(nullptr)
+UTankTargetingSystem::UTankTargetingSystem(): LockedTarget(nullptr), PendingTarget(nullptr), bIsLockedOn(false),
+                                              bIsGainingLock(false)
 {
-    PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UTankTargetingSystem::BeginPlay()
@@ -77,17 +76,24 @@ void UTankTargetingSystem::LosingLock(const double Delta)
 {
 	PendingTime = FMath::Clamp(PendingTime - Delta, 0, LockAcquireTime);
 	LostTime = FMath::Clamp(LostTime + Delta, 0, LockLoseTime);
+
+	bIsGainingLock = false;
 }
 
 void UTankTargetingSystem::GainingLock(const double Delta)
 {
 	PendingTime = FMath::Clamp(PendingTime + Delta, 0, LockAcquireTime);
 	LostTime = 0;
+
+	bIsGainingLock = true;
 }
 
 AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitResults)
 {
 	const double Delta = GetWorld()->GetDeltaSeconds();
+
+	// Keep the old target around so we can detect transitions
+	AActor* OldLockedTarget = LockedTarget;
 	
 	const FHitResult* Closest = FindClosestTarget(HitResults);
 	AActor* ClosestActor = nullptr;
@@ -102,12 +108,16 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 		{
 			// locked on
 			LockedTarget = ClosestActor;
+			bIsLockedOn = true;
 
 			PendingTime = LockAcquireTime;
 			LostTime = 0;
 
-			// need to make sure this only get called once
-			OnTargetLocked.Broadcast(LockedTarget);
+			// is only called once
+			if (OldLockedTarget != LockedTarget)
+			{
+				OnTargetLocked.Broadcast(LockedTarget);
+			}
 		}
 		else if (PendingTime == 0 && LostTime == LockLoseTime && PendingTarget != LockedTarget) // if it is time to lose lock, and if we are not looking at the locked target (looking at another tank or null) 
 		{
@@ -137,12 +147,16 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 
 		if (LostTime == LockLoseTime)
 		{
-			// need to make sure this only get called once
-			OnTargetLost.Broadcast(LockedTarget);
-
 			// lost lock
 			LockedTarget = nullptr;
 			PendingTarget = nullptr;
+			bIsLockedOn = false;
+
+			// is only called once
+			if (OldLockedTarget != LockedTarget)
+			{
+				OnTargetLost.Broadcast(OldLockedTarget);
+			}
 		}
 	}
 

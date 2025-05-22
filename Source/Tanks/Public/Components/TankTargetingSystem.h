@@ -42,11 +42,11 @@ public:
 	AActor* ProcessHitResults(const TArray<FHitResult>& HitResults);
 
 	/** How long we need to see the same target before we call it “locked” */
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking")
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(UIMin=0.01, ClampMin=0.01))
 	float LockAcquireTime = 0.5f;
 
 	/** How long we can lose sight before we drop the lock */
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking")
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(UIMin=0.01, ClampMin=0.01))
 	float LockLoseTime = 0.5f;
 
 	/** Fired once when LockTarget is first reached */
@@ -73,4 +73,19 @@ protected:
 	/** How long we’ve been without seeing LockedTarget */
 	UPROPERTY(BlueprintReadOnly, Category="Target Locking", meta=(ClampMin=0))
 	float LostTime = 0.f;
+
+private:
+	// is true when lock has been gained.
+	bool bIsLockedOn;
+
+	// is true when target is locked on or is gaining lock.
+	// will be false when either locked target or pending target is null 
+	bool bIsGainingLock;
+
+public:
+	UFUNCTION(BlueprintCallable, Category=Getters)
+	bool IsLockedOn() const { return bIsLockedOn; }
+
+	UFUNCTION(BlueprintCallable, Category=Getters)
+	bool IsGainingLock() const { return bIsGainingLock; }
 };
