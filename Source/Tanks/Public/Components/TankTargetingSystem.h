@@ -59,13 +59,13 @@ public:
 
 	/** The actor we currently have locked (nullptr if none) */
 	UPROPERTY(BlueprintReadOnly, Category="Target Locking")
-	AActor* LockedTarget;
+	TObjectPtr<AActor> LockedTarget;
+
+	/** Candidate we’re currently looking at */
+	UPROPERTY(BlueprintReadOnly, Category="Target Locking")
+	TObjectPtr<AActor> PendingTarget;
 
 protected:
-	/** Candidate we’re currently tracking before fully locked */
-	UPROPERTY(BlueprintReadOnly, Category="Target Locking")
-	AActor* PendingTarget;
-
 	/** How long we’ve continuously seen PendingTarget */
 	UPROPERTY(BlueprintReadOnly, Category="Target Locking", meta=(ClampMin=0))
 	float PendingTime = 0.f;
@@ -73,10 +73,4 @@ protected:
 	/** How long we’ve been without seeing LockedTarget */
 	UPROPERTY(BlueprintReadOnly, Category="Target Locking", meta=(ClampMin=0))
 	float LostTime = 0.f;
-
-	float PendingLostTime = 0.f;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Target Locking")
-	float PendingLoseGrace = 0.2f;
-
 };

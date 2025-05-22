@@ -95,20 +95,9 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 	if (Closest)
 		ClosestActor = Closest->GetActor();
 
-	UKismetSystemLibrary::PrintString(GetWorld(),
-		FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) PendingTarget %s"), PendingTarget ? *PendingTarget->GetName() : TEXT("NULL")),
-		true, true, FLinearColor::White, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(),
-		FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) LockedTarget %s"), LockedTarget ? *LockedTarget->GetName() : TEXT("NULL")),
-		true, true, FLinearColor::White, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(),
-		FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) ClosestActor %s"), ClosestActor ? *ClosestActor->GetName() : TEXT("NULL")),
-		true, true, FLinearColor::White, 0);
-	
 	if (ClosestActor)
 	{
+		// is it time to lock OR are we looking at locked target
 		if (PendingTime == LockAcquireTime || ClosestActor == LockedTarget)
 		{
 			// locked on
@@ -116,12 +105,8 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 
 			PendingTime = LockAcquireTime;
 			LostTime = 0;
-
-			UKismetSystemLibrary::PrintString(GetWorld(),
-				FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) locked on to %s"), ClosestActor ? *ClosestActor->GetName() : TEXT("NULL")),
-				true, true, FLinearColor::Green, 0);
 		}
-		else if (PendingTime == 0 && LostTime == LockLoseTime && PendingTarget != LockedTarget)
+		else if (PendingTime == 0 && LostTime == LockLoseTime && PendingTarget != LockedTarget) // if it is time to lose lock, and if we are not looking at the locked target (looking at another tank or null) 
 		{
 			LockedTarget = nullptr;
 
@@ -133,10 +118,6 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 			LosingLock(Delta);
 
 			PendingTarget = ClosestActor;
-
-			UKismetSystemLibrary::PrintString(GetWorld(),
-				FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) losing lock on %s | not looking at locked target"), LockedTarget ? *LockedTarget->GetName() : TEXT("NULL")),
-				true, true, FLinearColor::Red, 0);
 		}
 		else
 		{
@@ -144,10 +125,6 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 			GainingLock(Delta);
 
 			PendingTarget = ClosestActor;
-
-			UKismetSystemLibrary::PrintString(GetWorld(),
-				FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) gaining lock on %s"), ClosestActor ? *ClosestActor->GetName() : TEXT("NULL")),
-				true, true, FLinearColor::Green, 0);
 		}
 	}
 	else
@@ -160,21 +137,10 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitRes
 			// lost lock
 			LockedTarget = nullptr;
 			PendingTarget = nullptr;
-
-			UKismetSystemLibrary::PrintString(GetWorld(),
-				FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) losing lock from %s"), LockedTarget ? *LockedTarget->GetName() : TEXT("NULL")),
-				true, true, FLinearColor::Red, 0);
 		}
 	}
 
-	UKismetSystemLibrary::PrintString(GetWorld(),
-				FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) PendingTime: (%.3f/%.3f)"), PendingTime, LockAcquireTime),
-				true, true, FLinearColor::Green, 0);
-
-	UKismetSystemLibrary::PrintString(GetWorld(),
-				FString::Printf(TEXT("(UTankTargetingSystem::ProcessHitResults) LostTime: (%.3f/%.3f)"), LostTime, LockLoseTime),
-				true, true, FLinearColor::Green, 0);
-
+	// will still keep this as it will help later
 	DebugSphereAboveActor(LockedTarget, FColor::Green, FVector(0,0, 100));
 	DebugSphereAboveActor(PendingTarget, FColor::Magenta);
 	return LockedTarget;
