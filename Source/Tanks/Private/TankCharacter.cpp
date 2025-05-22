@@ -14,6 +14,7 @@
 #include "Components/TankHealthComponent.h"
 #include "Components/TankHighlightingComponent.h"
 #include "Components/TankPowerUpManagerComponent.h"
+#include "Components/TankTargetingSystem.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/TankGameState.h"
 #include "GameFramework/TankPlayerState.h"
@@ -32,6 +33,7 @@ static int EnemyStencilValue = 1;
 
 ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobject<UTankHighlightingComponent>("TankHighlightingComponent")),
 								  TankPowerUpManagerComponent(CreateDefaultSubobject<UTankPowerUpManagerComponent>("TankPowerUpManagerComponent")),
+								  TankTargetingSystem(CreateDefaultSubobject<UTankTargetingSystem>("TankTargetingSystem")),
 								  RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
 								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
 								  MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
@@ -166,7 +168,7 @@ void ATankCharacter::Tick(float DeltaTime)
 				return;
 
 		TurretTraceTick();
-		// ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
+		ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
 		CheckIfGunCanLowerElevationTick(DeltaTime);
@@ -353,23 +355,28 @@ void ATankCharacter::ConeTraceTick_Implementation()
 		FVector SweepCenter = StartLocation + Direction * Distance;
 		float Radius = FMath::Lerp(StartRadius, EndRadius, Alpha);
 
-		FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
 		TArray<FHitResult> Hits;
-
-		if (bShowDebugTracesForTurret)
-			DrawDebugSphere(GetWorld(), SweepCenter, Radius, 16, FColor::Orange, false, 0);
-
-		GetWorld()->SweepMultiByChannel(
+		UKismetSystemLibrary::SphereTraceMultiForObjects(
+			GetWorld(),
+			SweepCenter,
+			SweepCenter,
+			Radius,
+			{ ObjectTypeQuery5 },
+			false,
+			{},
+			bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 			Hits,
-			SweepCenter,
-			SweepCenter,
-			FQuat::Identity,
-			ECC_Visibility,
-			Sphere
+			true,
+			FLinearColor::Gray
 		);
 
-		// Process Hits as needed
+		for (const FHitResult& Hit : Hits)
+			AllHits.Add(Hit);
 	}
+
+	// Process Hits as needed
+	TankTargetingSystem->ProcessHitResults(AllHits);
+	AllHits.Empty();
 }
 
 void ATankCharacter::HandleTakeDamage_Implementation(float DamageAmount, class AController* EventInstigator, AActor* DamageCauser)
@@ -695,7 +702,7 @@ void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult
 		FCollisionShape::MakeSphere(TraceRadius)
 	);
 	
-	DrawDebugSphere(GetWorld(), Hit.ImpactPoint, TraceRadius, 16, FColor::White, false, 5.0f);
+	// DrawDebugSphere(GetWorld(), Hit.ImpactPoint, TraceRadius, 16, FColor::White, false, 5.0f);
 
 	if (bHit)
 	{
@@ -826,8 +833,8 @@ void ATankCharacter::OnShoot_Implementation()
 	if (TurretTraceHit.IsValidBlockingHit())
 	{
 		SpawnHitParticleSystem(TurretTraceHit);
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation) trace hit something")),
-				true, true, FLinearColor::Black, 5);
+		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation) trace hit something")),
+		// 		true, true, FLinearColor::Black, 5);
 		SR_ApplyRadialDamage(TurretTraceHit);
 	}
 	else
@@ -894,11 +901,11 @@ void ATankCharacter::SpawnHitParticleSystem(const FHitResult& Hit) const
 		ENCPoolMethod::AutoRelease
 	);
 
-	DrawDebugSphere(GetWorld(),
-		Hit.Location, 75, 16,
-		FColor::Red, false,
-		bShowDebugTracesForTurret ? 5 : -1
-	);
+	// DrawDebugSphere(GetWorld(),
+	// 	Hit.Location, 75, 16,
+	// 	FColor::Red, false,
+	// 	bShowDebugTracesForTurret ? 5 : -1
+	// );
 	// UGameplayStatics::SetGamePaused(GetWorld(), true);
 }
 

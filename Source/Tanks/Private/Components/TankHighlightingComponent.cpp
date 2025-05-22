@@ -163,7 +163,8 @@ void UTankHighlightingComponent::HighlightEnemyTanksIfDetected_Implementation()
 	for (const FHitResult& Hit : HighlightedEnemyTanks)
 		if (Hit.IsValidBlockingHit())
 			if (Hit.GetActor())
-				ITankInterface::Execute_OutlineTank(Hit.GetActor(), true, false);
+				if (Hit.GetActor()->GetClass()->ImplementsInterface(UTankInterface::StaticClass()))
+					ITankInterface::Execute_OutlineTank(Hit.GetActor(), true, false);
 }
 
 void UTankHighlightingComponent::TickComponent(float DeltaTime, ELevelTick TickType,

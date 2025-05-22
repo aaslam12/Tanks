@@ -108,27 +108,27 @@ void APowerUp::OnOverlapBegin_Implementation(UPrimitiveComponent* OverlappedComp
 	Activate();
 	FadeOut();
 
-	UKismetSystemLibrary::PrintString(
-		  GetWorld(), 
-		  FString::Printf(TEXT("(APowerUp::OnOverlapBegin) %s Actor %s begin overlap"), *GetName(), *OtherActor->GetName()), 
-		  true, 
-		  true, 
-		  FLinearColor::Red, 
-		  5
-	);
+	// UKismetSystemLibrary::PrintString(
+	// 	  GetWorld(), 
+	// 	  FString::Printf(TEXT("(APowerUp::OnOverlapBegin) %s Actor %s begin overlap"), *GetName(), *OtherActor->GetName()), 
+	// 	  true, 
+	// 	  true, 
+	// 	  FLinearColor::Red, 
+	// 	  5
+	// );
 }
 
 void APowerUp::OnOverlapEnd_Implementation(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                            UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	UKismetSystemLibrary::PrintString(
-		  GetWorld(), 
-		  FString::Printf(TEXT("(APowerUp::OnOverlapEnd) %s Actor %s end overlap"), *GetName(), *OtherActor->GetName()), 
-		  true, 
-		  true, 
-		  FLinearColor::Red, 
-		  5
-	);
+	// UKismetSystemLibrary::PrintString(
+	// 	  GetWorld(), 
+	// 	  FString::Printf(TEXT("(APowerUp::OnOverlapEnd) %s Actor %s end overlap"), *GetName(), *OtherActor->GetName()), 
+	// 	  true, 
+	// 	  true, 
+	// 	  FLinearColor::Red, 
+	// 	  5
+	// );
 }
 
 void APowerUp::PlayActivateAnimation_Implementation()

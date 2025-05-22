@@ -10,6 +10,7 @@
 #include "Tanks/Template/MyProjectSportsCar.h"
 #include "TankCharacter.generated.h"
 
+class UTankTargetingSystem;
 class UTankPowerUpManagerComponent;
 class UTankAimAssistComponent;
 class UNiagaraSystem;
@@ -51,6 +52,9 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UTankPowerUpManagerComponent> TankPowerUpManagerComponent;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UTankTargetingSystem> TankTargetingSystem;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<URadialForceComponent> RadialForceComponent;
@@ -100,6 +104,11 @@ protected:
 	/** Traces spheres increasing in radius in the shape of a cone. */
 	UFUNCTION(BlueprintNativeEvent)
 	void ConeTraceTick();
+
+	// only used for cone trace.
+	// is a member variable to improve performance from constant adding and
+	// removing every frame.
+	TArray<FHitResult> AllHits;
 
 	/** Traces from the muzzle to the point where it is looking at ahead. */
 	UFUNCTION(BlueprintNativeEvent)
@@ -257,7 +266,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Damage", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double DamageFalloffExponent;
 
-	// Toggles all debug traces for turret
+	// Toggles all debug traces for turret. Is controlled in BP or in game.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Debug")
 	bool bShowDebugTracesForTurret;
 

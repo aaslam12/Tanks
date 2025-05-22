@@ -29,10 +29,15 @@ protected:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
+	const FHitResult* FindClosestTarget(const TArray<FHitResult>& HitResults) const;
+
+	// helps identify which actor we are locking on
+	void DebugSphereAboveActor(const AActor* Closest, const FColor& Color) const;
+
 public:
 	/** Call each tick after your cone trace; supply all hit results */
 	UFUNCTION(BlueprintCallable, Category="Target Locking")
-	void ProcessHitResults(const TArray<FHitResult>& HitResults);
+	AActor* ProcessHitResults(const TArray<FHitResult>& HitResults);
 
 	/** How long we need to see the same target before we call it “locked” */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking")
@@ -40,7 +45,7 @@ public:
 
 	/** How long we can lose sight before we drop the lock */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking")
-	float LockLoseTime = 1.0f;
+	float LockLoseTime = 0.5f;
 
 	/** Fired once when LockTarget is first reached */
 	UPROPERTY(BlueprintAssignable, Category="Target Locking")
@@ -52,18 +57,24 @@ public:
 
 	/** The actor we currently have locked (nullptr if none) */
 	UPROPERTY(BlueprintReadOnly, Category="Target Locking")
-	TObjectPtr<AActor> LockedTarget = nullptr;
+	AActor* LockedTarget;
 
 protected:
 	/** Candidate we’re currently tracking before fully locked */
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<AActor> PendingTarget;
+	UPROPERTY(BlueprintReadOnly, Category="Target Locking")
+	AActor* PendingTarget;
 
 	/** How long we’ve continuously seen PendingTarget */
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(AllowPrivateAccess="true"))
+	UPROPERTY(BlueprintReadOnly, Category="Target Locking", meta=(ClampMin=0))
 	float PendingTime = 0.f;
 
 	/** How long we’ve been without seeing LockedTarget */
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(AllowPrivateAccess="true"))
+	UPROPERTY(BlueprintReadOnly, Category="Target Locking", meta=(ClampMin=0))
 	float LostTime = 0.f;
+
+	float PendingLostTime = 0.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Target Locking")
+	float PendingLoseGrace = 0.2f;
+
 };
