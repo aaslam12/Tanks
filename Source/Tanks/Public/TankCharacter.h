@@ -36,6 +36,16 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
+FORCEINLINE uint32 GetTypeHash(const FHitResult& Hit)
+{
+	return FCrc::StrCrc32(*Hit.GetActor()->GetName());
+}
+
+FORCEINLINE bool operator==(const FHitResult& A, const FHitResult& B)
+{
+	return A.GetActor() == B.GetActor();
+}
+
 USTRUCT(BlueprintType)
 struct FConeTraceConfig
 {

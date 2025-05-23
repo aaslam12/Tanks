@@ -173,7 +173,6 @@ void ATankCharacter::Tick(float DeltaTime)
 		ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
-		CheckIfGunCanLowerElevationTick(DeltaTime);
 		UpdateCameraPitchLimits();
 
 		// UpdateIsInAir();
@@ -618,6 +617,8 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 	GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
 
 	SetGunElevation(GunElevation);
+
+	CheckIfGunCanLowerElevationTick(DeltaTime);
 
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) OutHit.ImpactPoint: %s"), *OutHit.ImpactPoint.ToString()),
 	// 								  true, true, FLinearColor::Yellow, 0);
