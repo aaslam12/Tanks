@@ -173,6 +173,7 @@ void ATankCharacter::Tick(float DeltaTime)
 		ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
 		UpdateTurretTurning(DeltaTime);
 		UpdateGunElevation(DeltaTime);
+		CheckIfGunCanLowerElevationTick(DeltaTime);
 		UpdateCameraPitchLimits();
 
 		// UpdateIsInAir();
@@ -531,12 +532,10 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 			
 			if (bBottomDetectTank == true && bTopDetectTank == true)
 			{
-				MinGunElevation = FMath::Clamp(MinGunElevation + 1, AbsoluteMinGunElevation, AbsoluteMaxGunElevation); // 17
+				MinGunElevation = FMath::Clamp(MinGunElevation + 1, MinGunElevation, AbsoluteMaxGunElevation); // 17
 				PlayerController->SetShootingBlocked(true);
-				return;
 			}
-
-			if (bBottomDetectTank == true && bTopDetectTank == false)
+			else if (bBottomDetectTank == true && bTopDetectTank == false)
 			{
 				MinGunElevation = GunElevation;
 				PlayerController->SetShootingBlocked(false);
@@ -548,24 +547,25 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 		{
 			if (bTopDetectTank == true) // if tank body physical material is detected and is the same actor
 			{
-				MinGunElevation = FMath::Clamp(MinGunElevation + 1, AbsoluteMinGunElevation, AbsoluteMaxGunElevation); // 17
+				MinGunElevation = FMath::Clamp(
+					FMath::Max(OldMinTurretElevation, MinGunElevation + (MaxTurretElevationAdjustSpeed * DeltaTime)),
+					MinGunElevation,
+					AbsoluteMaxGunElevation
+				);
+				
 				PlayerController->SetShootingBlocked(true);
 			}
 
 			if (bBottomDetectTank == true && bTopDetectTank == false)
 			{
 				MinGunElevation = GunElevation;
-				return;
 			}
 		}
-		
 	}
 	else
 	{
 		// Update the last free gun elevation
-		// if (bAimingIn)
-		// 	MinGunElevation = FMath::Max(FMath::Min(GunElevation, DesiredGunElevation), AbsoluteMinGunElevation);
-		MinGunElevation = FMath::Clamp(MinGunElevation - 0.2, AbsoluteMinGunElevation, GunElevation);
+		MinGunElevation = FMath::Clamp(MinGunElevation - (MaxTurretElevationAdjustSpeed * DeltaTime), AbsoluteMinGunElevation, GunElevation);
 
 		PlayerController->SetShootingBlocked(false);
 	}
@@ -617,8 +617,6 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 	GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
 
 	SetGunElevation(GunElevation);
-
-	CheckIfGunCanLowerElevationTick(DeltaTime);
 
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) OutHit.ImpactPoint: %s"), *OutHit.ImpactPoint.ToString()),
 	// 								  true, true, FLinearColor::Yellow, 0);

@@ -282,8 +282,12 @@ protected:
 	double AbsoluteMaxGunElevation;
 
 	// Should be greater than MaxZoomIn
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0, UIMax=180, MakeStructureDefaultValue=90))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0.01, UIMax=180, ClampMin=0.01, MakeStructureDefaultValue=90, SliderExponent=2))
 	double MaxTurretRotationSpeed;
+
+	// Should be greater than MaxZoomIn
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0.01, UIMax=50, ClampMin=0.01, MakeStructureDefaultValue=30, SliderExponent=2))
+	double MaxTurretElevationAdjustSpeed;
 
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Gun Elevation", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
