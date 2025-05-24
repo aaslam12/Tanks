@@ -177,6 +177,11 @@ void ATankCharacter::Tick(float DeltaTime)
 		UpdateCameraPitchLimits();
 
 		// UpdateIsInAir();
+
+		if (LockedTarget)
+		{
+			UpdateDesiredTurretAngle();
+		}
 	}
 }
 
@@ -388,7 +393,7 @@ void ATankCharacter::ConeTraceTick_Implementation()
 		// Process Hits as needed
 		if (Config.bIsUsedForTankTargeting)
 		{
-			AActor* const LockedTarget = TankTargetingSystem->ProcessHitResults(AllHits);
+			LockedTarget = TankTargetingSystem->ProcessHitResults(AllHits);
 			AllHits.Empty();
 
 			// passes work off to the actor component
@@ -426,7 +431,7 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 
 		SetTurretRotation(CurrentTurretAngle);
 	}
-	else
+	else if (LockedTarget == nullptr)
 	{
 		// 3rd person turret rotation
 		FVector PlayerViewPointLocation;
@@ -471,7 +476,35 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 
 		// Update the turret angle
 		SetTurretRotation(AnimInstance->TurretAngle + DeltaAngle);
+
+		// UKismetSystemLibrary::PrintString(
+		// 	  GetWorld(), 
+		// 	  FString::Printf(TEXT("(ATankCharacter::UpdateTurretTurning) DeltaAngle: %.3f"), DeltaAngle), 
+		// 	  true, 
+		// 	  true, 
+		// 	  FLinearColor::Green, 
+		// 	  0
+		// );
+		//
+		// UKismetSystemLibrary::PrintString(
+		// 	  GetWorld(), 
+		// 	  FString::Printf(TEXT("(ATankCharacter::UpdateTurretTurning) MaxDeltaAngle: %.3f"), MaxDeltaAngle), 
+		// 	  true, 
+		// 	  true, 
+		// 	  FLinearColor::Green, 
+		// 	  0
+		// );
 	}
+}
+
+void ATankCharacter::UpdateDesiredTurretAngle()
+{
+	SetDesiredTurretAngle(FMath::FInterpTo(CurrentTurretAngle, DesiredTurretAngle_C, GetWorld()->GetDeltaSeconds(), 10));
+}
+
+void ATankCharacter::SetDesiredTurretAngle(float TurretAngle)
+{
+	DesiredTurretAngle_C = TurretAngle;
 }
 
 void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaTime)
@@ -570,11 +603,17 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 
 		PlayerController->SetShootingBlocked(false);
 	}
+
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(CheckIfGunCanLowerElevationTick) OldTurretElevation: (%.3f/%.3f)"), OldMinTurretElevation, AbsoluteMinGunElevation),
+	// 									  true, true, FLinearColor::Yellow, 0);
+	//
+	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(CheckIfGunCanLowerElevationTick) MinGunElevation: (%.3f/%.3f)"), MinGunElevation, AbsoluteMinGunElevation),
+	// 									  true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 {
-	if (!BackCameraComp)
+	if (!BackCameraComp && LockedTarget == nullptr)
 		return;
 
 	if (bAimingIn)
@@ -628,11 +667,11 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) TurretImpactPoint: %s"), *TurretImpactPoint.ToString()),
 	// 								  true, true, FLinearColor::Yellow, 0);
 	//
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) DesiredGunElevation: %f"), DesiredGunElevation),
-	// 								  true, true, FLinearColor::Yellow, 0);
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) DesiredGunElevation: %f"), DesiredGunElevation),
+									  true, true, FLinearColor::Yellow, 0);
 	//
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunElevation: %f"), GunElevation),
-	// 								  true, true, FLinearColor::Yellow, 0);
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunElevation: %f"), GunElevation),
+									  true, true, FLinearColor::Yellow, 0);
 }
 
 void ATankCharacter::UpdateIsInAir_Implementation()

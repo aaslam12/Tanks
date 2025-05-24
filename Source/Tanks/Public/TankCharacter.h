@@ -170,6 +170,15 @@ protected:
 	UFUNCTION(BlueprintNativeEvent)
 	void UpdateTurretTurning(float DeltaTime);
 
+	void UpdateDesiredTurretAngle();
+public:
+	void SetDesiredTurretAngle(float TurretAngle);
+private:
+	double DesiredTurretAngle_C;
+protected:
+	UPROPERTY(BlueprintReadOnly)
+	AActor* LockedTarget;
+
 	/** Checks on tick if the gun can lower elevation. */
 	UFUNCTION(BlueprintNativeEvent)
 	void CheckIfGunCanLowerElevationTick(float DeltaTime);
@@ -563,25 +572,82 @@ protected:
 	UFUNCTION(BlueprintCallable, DisplayName="MC_SetWheelSmokeIntensity", NetMulticast, Reliable)
 	void MC_SetWheelSmoke(float Intensity);
 
-	//////////////////////////////////////////////////////////////////
-	/// Pure C++ Getters and Setters
 public:
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE double GetMaxZoomIn() const { return MaxZoomIn; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE double GetMaxZoomOut() const { return MaxZoomOut; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE USceneComponent* GetShootSocket() const { return ShootSocket; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UCameraComponent* GetFrontCameraComp() const { return FrontCameraComp; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE TArray<UParticleSystem*> GetShootEmitterSystems() const { return ShootEmitterSystems; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UNiagaraSystem* GetShootHitParticleSystem() const { return ShootHitParticleSystem; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE bool IsInAir() const { return bIsInAir; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE double GetAbsoluteMinGunElevation() const { return AbsoluteMinGunElevation; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE double GetAbsoluteMaxGunElevation() const { return AbsoluteMaxGunElevation; }
+
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE void SetMinGunElevation(double NewMinGunElevation) { MinGunElevation = NewMinGunElevation; }
+
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE void SetMaxGunElevation(double NewMaxGunElevation) { MaxGunElevation = NewMaxGunElevation; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UPostProcessComponent* GetTankPostProcessVolume() const { return TankPostProcessVolume; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UTankHealthComponent* GetHealthComponent() const { return HealthComponent; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UTankHighlightingComponent* GetTankHighlightingComponent() const { return TankHighlightingComponent; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE URadialForceComponent* GetRadialForceComponent() const { return RadialForceComponent; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE double GetAbsoluteMinGunElevation1() const { return AbsoluteMinGunElevation; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE double GetAbsoluteMaxGunElevation1() const { return AbsoluteMaxGunElevation; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE double GetMaxTurretRotationSpeed() const { return MaxTurretRotationSpeed; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE double GetBaseDamage() const { return BaseDamage; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE double GetGunElevation() const { return GunElevation; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE double GetCurrentTurretAngle() const { return CurrentTurretAngle; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE double GetGunElevationInterpSpeed() const { return GunElevationInterpSpeed; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE UTankAnimInstance* GetAnimInstance() const { return AnimInstance; }
 };

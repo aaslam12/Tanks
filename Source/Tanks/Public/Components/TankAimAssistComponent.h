@@ -19,7 +19,7 @@ class TANKS_API UTankAimAssistComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadOnly, Category=Tank_References)
+	UPROPERTY(BlueprintReadOnly, Category="Tank References", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<ATankCharacter> TankCharacter;
 
 	virtual void BeginPlay() override;
@@ -29,6 +29,26 @@ public:
 	UTankAimAssistComponent();
 
 public:
-	UFUNCTION(BlueprintNativeEvent)
-	void AimAssist(AActor* const LockedTarget);
+	UFUNCTION(BlueprintCallable)
+	void AimAssist(AActor* const LockedTarget) const;
+	
+	/** Enables or disables the aim assist functionality */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Aim Assist")
+	bool bEnableAimAssist = true;
+	
+	/** Enables or disables horizontal (turret rotation) aim assist */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Aim Assist")
+	bool bEnableHorizontalAssist = true;
+	
+	/** Enables or disables vertical (gun elevation) aim assist */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Aim Assist")
+	bool bEnableVerticalAssist = true;
+	
+	/** Strength of the horizontal aim assist (0.0 = no assist, 1.0 = full assist) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Aim Assist", meta = (UIMin = "0.0", UIMax = "1.0", ClampMin = "0.0", ClampMax = "1.0"))
+	float HorizontalAssistStrength = 0.5f;
+	
+	/** Strength of the vertical aim assist (0.0 = no assist, 1.0 = full assist) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Aim Assist", meta = (UIMin = "0.0", UIMax = "1.0", ClampMin = "0.0", ClampMax = "1.0"))
+	float VerticalAssistStrength = 0.5f;
 };
