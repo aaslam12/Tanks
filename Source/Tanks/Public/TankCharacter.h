@@ -208,6 +208,9 @@ protected:
 	// Scales with distance from the hit point exponentially.
 	UFUNCTION(BlueprintNativeEvent)
 	void ApplyRadialImpulseToObjects(const FHitResult& Hit);
+
+	UFUNCTION(BlueprintNativeEvent)
+	void ApplyTankShootImpulse() const;
 	
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SR_ApplyRadialDamage(const FHitResult& Hit);
@@ -354,7 +357,7 @@ protected:
 	double MaxGunElevation;
 	
 	/** Turret Up/Down Rotation */
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	UPROPERTY(BlueprintReadWrite, Category = "Default")
 	double GunElevation;
 
 	/** Turret Left/Right Rotation */
@@ -378,7 +381,7 @@ protected:
 	TObjectPtr<ATankController> PlayerController;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	UPROPERTY(BlueprintReadWrite, Category = "Default")
 	FVector TurretImpactPoint;
 
 	/** Please add a variable description */
@@ -394,11 +397,11 @@ protected:
 	bool bIsInAir;
 	
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	UPROPERTY(BlueprintReadWrite, Category = "Default")
 	double DesiredGunElevation;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	UPROPERTY(BlueprintReadWrite, Category = "Default")
 	FRotator GunRotation;
 
 	/** Please add a variable description */
@@ -456,6 +459,7 @@ public:
 	TObjectPtr<UMaterialInstanceDynamic> TracksMaterial;
 
 public:
+	void SpawnProjectileFromPool();
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetGunElevation(double NewGunElevation) const;

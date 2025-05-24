@@ -371,12 +371,12 @@ void ATankCharacter::ConeTraceTick_Implementation()
 			float Radius = FMath::Lerp(Config.StartRadius, Config.EndRadius, Alpha);
 
 			TArray<FHitResult> Hits;
-			UKismetSystemLibrary::SphereTraceMultiForObjects(
+			const auto bHit = UKismetSystemLibrary::SphereTraceMulti(
 				GetWorld(),
 				SweepCenter,
 				SweepCenter,
 				Radius,
-				{ ObjectTypeQuery5 },
+				TraceTypeQuery1,
 				false,
 				{},
 				bShowDebugTracesForTurret ? Config.DrawDebugTrace.GetValue() : EDrawDebugTrace::None,
@@ -387,8 +387,26 @@ void ATankCharacter::ConeTraceTick_Implementation()
 			);
 
 			if (Config.bIsUsedForTankTargeting)
-				for (const FHitResult& Hit : Hits)
-					AllHits.Add(Hit);
+                for (const FHitResult& Hit : Hits)
+                    if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() == ECC_Vehicle)
+                        AllHits.Add(Hit);
+            
+            if (bHit)
+            {
+                bool e = false;
+                // if is not a vehicle, stop following traces.
+                for (const FHitResult& Hit : Hits)
+                {
+                    if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() != ECC_Vehicle)
+                    {
+                        e = true;
+                        break;
+                    }
+                }
+            
+                if (e)
+                    break;
+            }
 		}
 
 		// Process Hits as needed
