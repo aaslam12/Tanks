@@ -102,31 +102,31 @@ void UTankAimAssistComponent::AimAssist(AActor* const LockedTarget) const
 	DirectionToTarget.Normalize();
 	
 	// Handle vertical aim assist (gun elevation)
-	// if (bEnableVerticalAssist && VerticalAssistStrength > 0.0f)
-	// {
-	// 	// Calculate the desired gun elevation angle
-	// 	// Note: We need to convert from world space to local space for elevation
-	// 	FVector LocalDirection = TankCharacter->GetActorTransform().InverseTransformVector(DirectionToTarget);
-	// 	double DesiredElevation = FMath::RadiansToDegrees(FMath::Atan2(LocalDirection.Z, FMath::Sqrt(LocalDirection.X * LocalDirection.X + LocalDirection.Y * LocalDirection.Y)));
-	// 	
-	// 	// Clamp the elevation within the tank's allowed limits
-	// 	DesiredElevation = FMath::Clamp(DesiredElevation, TankCharacter->GetAbsoluteMinGunElevation(), TankCharacter->GetAbsoluteMaxGunElevation());
-	// 	
-	// 	// Interpolate between current and desired elevation based on strength
-	// 	double NewGunElevation = FMath::Lerp(
-	// 		TankCharacter->GetGunElevation(), 
-	// 		DesiredElevation, 
-	// 		VerticalAssistStrength
-	// 	);
-	// 	
-	// 	// Apply the gun elevation speed limits (using GunElevationInterpSpeed from tank)
-	// 	const double ElevationDelta = NewGunElevation - TankCharacter->GetGunElevation();
-	// 	const double MaxElevationDelta = TankCharacter->GetWorld()->GetDeltaSeconds() * TankCharacter->GetGunElevationInterpSpeed();
-	// 	
-	// 	// Clamp the elevation change to respect the tank's elevation speed
-	// 	NewGunElevation = TankCharacter->GetGunElevation() + FMath::Clamp(ElevationDelta, -MaxElevationDelta, MaxElevationDelta);
-	// 	
-	// 	// Set the new gun elevation
-	// 	TankCharacter->SetGunElevation(NewGunElevation);
-	// }
+	if (bEnableVerticalAssist && VerticalAssistStrength > 0.0f)
+	{
+		// Calculate the desired gun elevation angle
+		// Note: We need to convert from world space to local space for elevation
+		FVector LocalDirection = TankCharacter->GetActorTransform().InverseTransformVector(DirectionToTarget);
+		double DesiredElevation = FMath::RadiansToDegrees(FMath::Atan2(LocalDirection.Z, FMath::Sqrt(LocalDirection.X * LocalDirection.X + LocalDirection.Y * LocalDirection.Y)));
+		
+		// Clamp the elevation within the tank's allowed limits
+		DesiredElevation = FMath::Clamp(DesiredElevation, TankCharacter->GetAbsoluteMinGunElevation(), TankCharacter->GetAbsoluteMaxGunElevation());
+		
+		// Interpolate between current and desired elevation based on strength
+		double NewGunElevation = FMath::Lerp(
+			TankCharacter->GetGunElevation(), 
+			DesiredElevation, 
+			VerticalAssistStrength
+		);
+		
+		// Apply the gun elevation speed limits (using GunElevationInterpSpeed from tank)
+		const double ElevationDelta = NewGunElevation - TankCharacter->GetGunElevation();
+		const double MaxElevationDelta = TankCharacter->GetWorld()->GetDeltaSeconds() * TankCharacter->GetGunElevationInterpSpeed();
+		
+		// Clamp the elevation change to respect the tank's elevation speed
+		NewGunElevation = TankCharacter->GetGunElevation() + FMath::Clamp(ElevationDelta, -MaxElevationDelta, MaxElevationDelta);
+
+		// Set the new gun elevation
+		TankCharacter->SetGunElevation(Look.Pitch);
+	}
 }
