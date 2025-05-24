@@ -431,14 +431,38 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 	}
 	else if (LockedTarget == nullptr)
 	{
-		FVector Start = BackCameraComp->GetComponentLocation();
-		auto TurretRotation = UKismetMathLibrary::FindLookAtRotation(
-			Start,
-			Start + BackCameraComp->GetForwardVector() * 15000.0
-		);
+		// 3rd person turret rotation
+		FVector PlayerViewPointLocation;
+		FRotator PlayerViewPointRotation;
+		Controller->GetPlayerViewPoint(PlayerViewPointLocation, PlayerViewPointRotation);
 
-		double TargetAngle = TurretRotation.Yaw;
-		if (FMath::IsNearlyEqual(TargetAngle, 1.0, 0.01))
+		// Calculate the target direction
+		FVector TurretToLookDir = PlayerViewPointRotation.Vector();
+		TurretToLookDir.Z = 0.f;
+		if (!TurretToLookDir.IsNearlyZero())
+			TurretToLookDir.Normalize();
+
+		FVector TurretForwardVector = GetMesh()->GetSocketQuaternion("turret_jntSocket").GetForwardVector();
+		TurretForwardVector.Z = 0.f;
+		if (!TurretForwardVector.IsNearlyZero())
+			TurretForwardVector.Normalize();
+
+		// Calculate the target angle
+		double DotProduct = FVector::DotProduct(TurretForwardVector, TurretToLookDir);
+
+		// DO NOT CHANGE TOLERANCE (0.008 also works ig. idk which value is better)
+		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasnt working before. DO NOT CHANGE
+		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
+			DotProduct = 1.f; // Prevent any small rounding errors
+		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
+			DotProduct = -1.f; // Handle opposite direction
+
+		double Det = FVector::CrossProduct(TurretForwardVector, TurretToLookDir).Z;
+		if (FMath::IsNearlyZero(Det, Tolerance))
+			Det = 0.f;
+
+		double TargetAngle = FMath::RadiansToDegrees(FMath::Atan2(Det, DotProduct));
+		if (FMath::IsNearlyEqual(TargetAngle, 1.0, Tolerance))
 			TargetAngle = 1;
 
 		// Calculate the *difference* in angle, but now wrap it to the shortest path
@@ -883,7 +907,7 @@ void ATankCharacter::OnShoot_Implementation()
 		}
 	}
 
-	FVector TurretDirection = GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector();
+	FVector TurretDirection = GetMesh()->GetSocketQuaternion("GunShootSocket").GetRightVector();
 	TurretDirection.Normalize();
 	FVector AngularImpulse = TurretDirection * -FMath::Abs(OnShootImpulseStrength); // Adjust multiplier for desired strength
 	
