@@ -478,6 +478,8 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 {
 	if (!PlayerController)
 		return;
+
+	double OldMinTurretElevation = MinGunElevation;
 	
 	FVector TopTraceStart = GetMesh()->GetSocketLocation("BarrelTraceStart");
 	FVector TopTraceEnd = GetMesh()->GetSocketLocation("BarrelTraceEnd");
@@ -539,7 +541,6 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 			{
 				MinGunElevation = GunElevation;
 				PlayerController->SetShootingBlocked(false);
-				return;
 			}
 			
 		}
@@ -868,6 +869,12 @@ void ATankCharacter::OnShoot_Implementation()
 			}
 		}
 	}
+
+	FVector TurretDirection = GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector();
+	TurretDirection.Normalize();
+	FVector AngularImpulse = TurretDirection * OnShootImpulseStrength; // Adjust multiplier for desired strength
+	
+	GetMesh()->AddAngularImpulseInDegrees(AngularImpulse, NAME_None, true);
 }
 
 void ATankCharacter::UpdateCameraPitchLimits_Implementation() const

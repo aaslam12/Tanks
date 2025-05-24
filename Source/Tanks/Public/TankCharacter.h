@@ -289,6 +289,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0.01, UIMax=50, ClampMin=0.01, MakeStructureDefaultValue=30, SliderExponent=2))
 	double MaxTurretElevationAdjustSpeed;
 
+	/** Please add a variable description */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Gameplay|Turret", meta=(UIMin=0.01, UIMax=150, ClampMin=0.01, MakeStructureDefaultValue=30, SliderExponent=2))
+	double OnShootImpulseStrength;
+
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Gun Elevation", meta=(UIMin=2, UIMax=20, MakeStructureDefaultValue=10))
 	double GunElevationInterpSpeed;
@@ -350,10 +354,6 @@ protected:
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
-	FHitResult TurretTraceHit;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<UTankAnimInstance> AnimInstance;
 
 	/** Please add a variable description */
@@ -375,6 +375,10 @@ protected:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	FVector TurretEnd;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FHitResult TurretTraceHit;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
