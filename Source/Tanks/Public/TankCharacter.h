@@ -55,37 +55,35 @@ struct FConeTraceConfig
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, DisplayName="Is Used For Tank Targeting?", Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
 	bool bIsUsedForTankTargeting;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
-	int32 Steps = 5;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(ClampMin=1, SliderExponent=1.5))
+	int32 Steps;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.01, UIMax=2, ClampMin=0.01, SliderExponent=0.1))
+	float CenterExponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(SliderExponent=1.3))
-	float StartRadius = 45;
+	float StartRadius;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
-	float DistanceExponent = 1.5;
-
-	// calculated
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.01, UIMax=1500, ClampMin=0.01, SliderExponent=0.1))
 	float EndRadius;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
-	float EndRadiusExponent = 1;
-
-	// calculated
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.01, UIMax=3, ClampMin=0.01, SliderExponent=0.1))
 	float ConeLength;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace", meta=(UIMin=0.1, UIMax=3, SliderExponent=0.1))
-	float ConeLengthExponent = 1.320883;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace")
+	FLinearColor ConeTraceColor;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace")
-	FLinearColor ConeTraceColor = FLinearColor::Black;
+	FLinearColor ConeTraceHitColor;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace")
-	FLinearColor ConeTraceHitColor = FColor::Emerald;
+	TEnumAsByte<EDrawDebugTrace::Type> DrawDebugTrace;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Cone Trace")
-	TEnumAsByte<EDrawDebugTrace::Type> DrawDebugTrace = EDrawDebugTrace::ForOneFrame;
+	FConeTraceConfig() : bIsUsedForTankTargeting(false), Steps(5), CenterExponent(1.258234), StartRadius(45),
+	                     EndRadius(500), ConeLength(1500), ConeTraceColor(FLinearColor::Black),
+	                     ConeTraceHitColor(FColor::Emerald), DrawDebugTrace(EDrawDebugTrace::ForOneFrame)
+	{
+	}
 };
 
 UCLASS(Abstract)
@@ -160,7 +158,8 @@ protected:
 	// only used for cone trace.
 	// is a member variable to improve performance from constant adding and
 	// removing every frame.
-	TArray<FHitResult> AllHits;
+	UPROPERTY()
+	TArray<AActor*> AllHits;
 
 	/** Traces from the muzzle to the point where it is looking at ahead. */
 	UFUNCTION(BlueprintNativeEvent)
@@ -172,6 +171,7 @@ protected:
 
 	void UpdateDesiredTurretAngle();
 public:
+	UFUNCTION(BlueprintCallable)
 	void SetDesiredTurretAngle(float TurretAngle);
 private:
 	double DesiredTurretAngle_C;
@@ -550,23 +550,23 @@ public:
 protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent, DisplayName="GetShootSocket")
-	USceneComponent* GetShootSocke() const;
+	USceneComponent* GetShootSocketFromBP() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintImplementableEvent)
-	UCameraComponent* GetFrontCamera() const;
+	UCameraComponent* GetFrontCameraFromBP() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintImplementableEvent)
-	UCameraComponent* GetBackCamera() const;
+	UCameraComponent* GetBackCameraFromBP() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintImplementableEvent)
-	USpringArmComponent* GetBackSpringArm() const;
+	USpringArmComponent* GetBackSpringArmFromBP() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintImplementableEvent)
-	USpringArmComponent* GetFrontSpringArm() const;
+	USpringArmComponent* GetFrontSpringArmFromBP() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="SetWheelSmokeIntensity")

@@ -87,13 +87,13 @@ void ATankCharacter::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	ShootSocket = GetShootSocke();
+	ShootSocket = GetShootSocketFromBP();
 
-	FrontCameraComp = GetFrontCamera();
-	FrontSpringArmComp = GetFrontSpringArm();
+	FrontCameraComp = GetFrontCameraFromBP();
+	FrontSpringArmComp = GetFrontSpringArmFromBP();
 
-	BackCameraComp = GetBackCamera();
-	BackSpringArmComp = GetBackSpringArm();
+	BackCameraComp = GetBackCameraFromBP();
+	BackSpringArmComp = GetBackSpringArmFromBP();
 
 	if (BackSpringArmComp)
 		BackSpringArmComp->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("CameraSocket"));
@@ -178,11 +178,6 @@ void ATankCharacter::Tick(float DeltaTime)
 		TankAimAssistComponent->AimAssist(LockedTarget);
 
 		// UpdateIsInAir();
-
-		if (LockedTarget)
-		{
-			UpdateDesiredTurretAngle();
-		}
 	}
 }
 
@@ -356,18 +351,27 @@ void ATankCharacter::ConeTraceTick_Implementation()
 	const FVector StartLocation = GetMesh()->GetSocketLocation("Muzzle");
 	const FVector Direction = GetMesh()->GetSocketQuaternion("Muzzle").GetForwardVector();
 
+	// Clear all previous hits before starting a new trace sequence
+	AllHits.Empty();
+
 	for (int i = 0; i < ConeTraceConfigs.Num(); ++i)
 	{
 		FConeTraceConfig& Config = ConeTraceConfigs[i];
-		
-		Config.EndRadius = FMath::Pow(Config.StartRadius * Config.Steps, Config.EndRadiusExponent);
-		Config.ConeLength = FMath::Pow(FMath::Pow(Config.StartRadius * Config.Steps, Config.ConeLengthExponent), Config.EndRadiusExponent);
-		
+
+		bool bTraceBlockedByNonVehicle = false;
+
 		for (int32 k = 0; k < Config.Steps; ++k)
 		{
-			float Alpha = (float)k / (float)(Config.Steps - 1);
-			float Distance = FMath::Pow(Alpha, Config.DistanceExponent) * Config.ConeLength;
-			FVector SweepCenter = StartLocation + Direction * Distance;
+			auto End = StartLocation + Direction * Config.ConeLength;
+			
+			// Prevent division by zero when Config.Steps is 1
+			float Alpha = Config.Steps > 1 ? (float) k / (Config.Steps - 1) : 0;
+			
+			FVector SweepCenter = FMath::Lerp(
+				StartLocation,
+				End, Alpha == 1 || Alpha == 0 ? Alpha : FMath::Pow(Alpha, Config.CenterExponent)
+			);
+			
 			float Radius = FMath::Lerp(Config.StartRadius, Config.EndRadius, Alpha);
 
 			TArray<FHitResult> Hits;
@@ -376,9 +380,9 @@ void ATankCharacter::ConeTraceTick_Implementation()
 				SweepCenter,
 				SweepCenter,
 				Radius,
-				TraceTypeQuery1,
+				UEngineTypes::ConvertToTraceType(ECC_Visibility),
 				false,
-				{},
+				{this},
 				bShowDebugTracesForTurret ? Config.DrawDebugTrace.GetValue() : EDrawDebugTrace::None,
 				Hits,
 				true,
@@ -386,34 +390,36 @@ void ATankCharacter::ConeTraceTick_Implementation()
 				Config.ConeTraceHitColor
 			);
 
+			// Process hits for tank targeting if this config is used for targeting
 			if (Config.bIsUsedForTankTargeting)
-                for (const FHitResult& Hit : Hits)
-                    if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() == ECC_Vehicle)
-                        AllHits.Add(Hit);
-            
-            if (bHit)
-            {
-                bool e = false;
-                // if is not a vehicle, stop following traces.
-                for (const FHitResult& Hit : Hits)
-                {
-                    if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() != ECC_Vehicle)
-                    {
-                        e = true;
-                        break;
-                    }
-                }
-            
-                if (e)
-                    break;
-            }
+				if (Hits.IsEmpty() == false)
+					for (const FHitResult& Hit : Hits)
+						if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() == ECC_Vehicle)
+							AllHits.Add(Hit.GetActor());
+
+			// If we hit anything, check if we should break the trace sequence
+			if (bHit)
+			{
+				// Check for non-vehicle objects that would block the trace
+				for (const FHitResult& Hit : Hits)
+				{
+					if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() != ECC_Vehicle)
+					{
+						bTraceBlockedByNonVehicle = true;
+						break;
+					}
+				}
+
+				if (bTraceBlockedByNonVehicle)
+					break; // Stop doing traces for this config as something non-vehicle is blocking
+			}
 		}
 
-		// Process Hits as needed
-		if (Config.bIsUsedForTankTargeting)
+		// Process Hits as needed for this config
+		if (Config.bIsUsedForTankTargeting && TankTargetingSystem)
 		{
 			LockedTarget = TankTargetingSystem->ProcessHitResults(AllHits);
-			AllHits.Empty();
+			AllHits.Empty(); // Clear hits after processing for this config
 		}
 	}
 }
@@ -469,7 +475,7 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		double DotProduct = FVector::DotProduct(TurretForwardVector, TurretToLookDir);
 
 		// DO NOT CHANGE TOLERANCE (0.008 also works ig. idk which value is better)
-		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasnt working before. DO NOT CHANGE
+		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasn't working before. DO NOT CHANGE
 		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
 			DotProduct = 1.f; // Prevent any small rounding errors
 		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
@@ -641,27 +647,28 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 	}
 
 	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 15000.0);
-
+	
 	FHitResult OutHit;
-	auto bHit = UKismetSystemLibrary::LineTraceSingleForObjects(
+	auto bHit = UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
 		BackCameraComp->GetComponentLocation(),
 		GunLocation,
-		{ObjectTypeQuery1, ObjectTypeQuery6}, // should be worldstatic and destructible
+		TraceTypeQuery1, // should be visisbility
 		false,
 		{this},
 		bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 		OutHit,
 		true
 	);
-
-	TurretImpactPoint = bHit ? OutHit.ImpactPoint : GunLocation;
-
+	
+	const auto DesiredTurretImpactPoint = bHit ? OutHit.ImpactPoint : GunLocation;
+	TurretImpactPoint = FMath::VInterpTo(TurretImpactPoint, DesiredTurretImpactPoint, DeltaTime, 30);
+	
 	GunRotation = UKismetMathLibrary::FindLookAtRotation(
 		GetMesh()->GetSocketLocation("gun_jnt"),
 		TurretImpactPoint
 	);
-
+	
 	DesiredGunElevation = GunRotation.Pitch;
 	
 	GunElevation = FMath::Clamp(
@@ -669,24 +676,31 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 		MinGunElevation,
 		MaxGunElevation
 	);
-
-	GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
-
+	
 	SetGunElevation(GunElevation);
 
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) OutHit.ImpactPoint: %s"), *OutHit.ImpactPoint.ToString()),
-	// 								  true, true, FLinearColor::Yellow, 0);
-	//
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunLocation: %s"), *GunLocation.ToString()),
-	// 								  true, true, FLinearColor::Yellow, 0);
-	//
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) TurretImpactPoint: %s"), *TurretImpactPoint.ToString()),
-	// 								  true, true, FLinearColor::Yellow, 0);
-	//
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) DesiredGunElevation: %f"), DesiredGunElevation),
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Start: [%s]"), *BackCameraComp->GetComponentLocation().ToString()),
+									  true, true, FLinearColor::White, 0);
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) End: [%s]"), *GunLocation.ToString()),
+									  true, true, FLinearColor::White, 0);
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Looking Impact Point: [%s]"), *OutHit.ImpactPoint.ToString()),
 									  true, true, FLinearColor::Yellow, 0);
-	//
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunElevation: %f"), GunElevation),
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Turret Impact Point: [%s]"), *TurretImpactPoint.ToString()),
+									  true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunRotation: [%s]"), *GunRotation.ToString()),
+									  true, true, FLinearColor::Yellow, 0);
+
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) TankRotation: [%s]"), *GetActorRotation().ToString()),
+									  true, true, FLinearColor::Yellow, 0);
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) DesiredGunElevation: [%.3f]"), DesiredGunElevation),
+									  true, true, FLinearColor::Yellow, 0);
+	
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunElevation: [%.3f]"), GunElevation),
 									  true, true, FLinearColor::Yellow, 0);
 }
 
@@ -708,6 +722,28 @@ void ATankCharacter::UpdateIsInAir_Implementation()
 	// );
 
 	bIsInAir = false;
+}
+
+void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
+{
+	if (!PlayerController)
+		return;
+
+	const FVector Forward = GetActorForwardVector();
+	const FVector WorldUp = FVector(0.0f, 0.0f, 1.0f);
+	
+	// Calculate pitch angle offset based on forward slope
+	float ForwardPitchOffset = FMath::RadiansToDegrees(FMath::Asin(FVector::DotProduct(Forward, WorldUp)));
+	// float RollAngle = FMath::RadiansToDegrees(FMath::Asin(FVector::DotProduct(Right, WorldUp)));
+
+	
+	// Adjust pitch limits based on the tank's orientation on slopes
+	float AdjustedMinPitch = BasePitchMin - ForwardPitchOffset;
+	float AdjustedMaxPitch = BasePitchMax + ForwardPitchOffset;
+	
+	// Apply the adjusted limits
+	PlayerController->PlayerCameraManager->ViewPitchMin = AdjustedMinPitch;
+	PlayerController->PlayerCameraManager->ViewPitchMax = AdjustedMaxPitch;
 }
 
 void ATankCharacter::OutlineTank_Implementation(const bool bActivate, const bool bIsFriend)
@@ -775,12 +811,11 @@ void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult
 		FCollisionShape::MakeSphere(TraceRadius)
 	);
 	
-	// DrawDebugSphere(GetWorld(), Hit.ImpactPoint, TraceRadius, 16, FColor::White, false, 5.0f);
-
 	if (bHit)
 	{
 		for (auto OutHit : OutHits)
 		{
+			// dont apply impulse to self here. will do this elsewhere.
 			if (OutHit.GetActor() == this)
 				continue;
 			
@@ -796,11 +831,10 @@ void ATankCharacter::ApplyRadialImpulseToObjects_Implementation(const FHitResult
 					ImpulseOrigin,
 					ImpulseRadius,
 					ImpulseStrength,
-					RIF_Constant,
+					RIF_Linear,
 					false // velocity change
 				);
 			}
-
 		}
 	}
 }
@@ -894,37 +928,8 @@ void ATankCharacter::OnHealthChanged_Implementation(float NewHealth, bool bIsReg
 {
 }
 
-void ATankCharacter::OnShoot_Implementation()
+void ATankCharacter::ApplyTankShootImpulse_Implementation() const
 {
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation)")),
-	// 		true, true, FLinearColor::Yellow, 0);
-
-	// Spawning muzzle fire and dust around the tank 
-	SR_SpawnShootEmitters();
-
-	// check if trace hit something. the trace is running on tick in another function
-	if (TurretTraceHit.IsValidBlockingHit())
-	{
-		SpawnHitParticleSystem(TurretTraceHit);
-		// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::OnShoot_Implementation) trace hit something")),
-		// 		true, true, FLinearColor::Black, 5);
-		SR_ApplyRadialDamage(TurretTraceHit);
-	}
-	else
-	{
-		// spawn projectile for the rest of the way.
-		auto GameMode = Cast<ATankGameState>(UGameplayStatics::GetGameState(GetWorld()));
-		
-		if (GameMode != nullptr)
-		{
-			if (GameMode->ProjectilePool != nullptr)
-			{
-				auto Rot = UKismetMathLibrary::FindLookAtRotation(TurretTraceHit.TraceStart, TurretTraceHit.TraceEnd);
-				GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, TurretTraceHit.TraceEnd), this);
-			}
-		}
-	}
-
 	FVector TurretDirection = GetMesh()->GetSocketQuaternion("GunShootSocket").GetRightVector();
 	TurretDirection.Normalize();
 	FVector AngularImpulse = TurretDirection * -FMath::Abs(OnShootImpulseStrength); // Adjust multiplier for desired strength
@@ -932,28 +937,38 @@ void ATankCharacter::OnShoot_Implementation()
 	GetMesh()->AddAngularImpulseInDegrees(AngularImpulse, NAME_None, true);
 }
 
-void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
+void ATankCharacter::SpawnProjectileFromPool()
 {
-	if (!PlayerController)
-		return;
+	auto GameMode = Cast<ATankGameState>(UGameplayStatics::GetGameState(GetWorld()));
+		
+	if (GameMode != nullptr)
+	{
+		if (GameMode->ProjectilePool != nullptr)
+		{
+			auto Rot = UKismetMathLibrary::FindLookAtRotation(TurretTraceHit.TraceStart, TurretTraceHit.TraceEnd);
+			GameMode->ProjectilePool->SpawnFromPool(FTransform(Rot, TurretTraceHit.TraceEnd), this);
+		}
+	}
+}
 
-	// Adjust the pitch limits based on the tank's current pitch
-	// double AdjustedPitchMin = BasePitchMin + GetActorRotation().Pitch;
-	// double AdjustedPitchMax = BasePitchMax + GetActorRotation().Pitch;
+void ATankCharacter::OnShoot_Implementation()
+{
+	// Spawning muzzle fire and dust around the tank 
+	SR_SpawnShootEmitters();
 
-	// AdjustedPitchMin = FMath::Fmod(AdjustedPitchMin + 180.0, 360.0) - 180.0;
-	// AdjustedPitchMax = FMath::Fmod(AdjustedPitchMax + 180.0, 360.0) - 180.0;
+	// check if trace hit something. the trace is running on tick in another function
+	if (TurretTraceHit.IsValidBlockingHit())
+	{
+		SpawnHitParticleSystem(TurretTraceHit);
+		SR_ApplyRadialDamage(TurretTraceHit);
+	}
+	else
+	{
+		// spawn projectile for the rest of the way.
+		SpawnProjectileFromPool();
+	}
 
-	// Apply the adjusted limits
-	PlayerController->PlayerCameraManager->ViewPitchMin = BasePitchMin;
-	PlayerController->PlayerCameraManager->ViewPitchMax = BasePitchMax;
-
-	
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMin: %.5f"), AdjustedPitchMin),
-	// 		true, true, FLinearColor::Yellow, 0);
-	//
-	// UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateCameraPitchLimits) AdjustedPitchMax: %.5f"), AdjustedPitchMax),
-	// 		true, true, FLinearColor::Yellow, 0);
+	ApplyTankShootImpulse();
 }
 
 void ATankCharacter::SetGunElevation(const double NewGunElevation) const

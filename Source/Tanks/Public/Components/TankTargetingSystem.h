@@ -29,7 +29,7 @@ protected:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
-	const FHitResult* FindClosestTarget(const TArray<FHitResult>& HitResults) const;
+	AActor* FindClosestTarget(const TArray<AActor*>& HitResults) const;
 	void LosingLock(double Delta);
 	void GainingLock(double Delta);
 
@@ -39,7 +39,7 @@ protected:
 public:
 	/** Call each tick after your cone trace; supply all hit results */
 	UFUNCTION(BlueprintCallable, Category="Target Locking")
-	AActor* ProcessHitResults(const TArray<FHitResult>& HitResults);
+	AActor* ProcessHitResults(const TArray<AActor*>& HitResults);
 
 	/** How long we need to see the same target before we call it “locked” */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(UIMin=0.01, ClampMin=0.01))

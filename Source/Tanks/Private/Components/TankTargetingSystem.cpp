@@ -41,26 +41,25 @@ void UTankTargetingSystem::DebugSphereAboveActor(const AActor* Actor, const FCol
 	);
 }
 
-const FHitResult* UTankTargetingSystem::FindClosestTarget(const TArray<FHitResult>& HitResults) const
+AActor* UTankTargetingSystem::FindClosestTarget(const TArray<AActor*>& HitResults) const
 {
 	const FVector OwnerLocation = GetOwner()->GetActorLocation();
 	double MinDistance = DOUBLE_BIG_NUMBER;
-	const FHitResult* MinHit = nullptr;
+	AActor* MinHit = nullptr;
 	int Index = -1;
 
 	if (HitResults.IsEmpty())
 		return nullptr;
 	
-	for (const FHitResult& Hit : HitResults)
+	for (const auto Actor : HitResults)
 	{
 		// TODO: add a team check here
-		auto Actor = Hit.GetActor();
-		auto Dist = FVector::Distance(OwnerLocation, Actor->GetActorLocation());
+		const double Dist = FVector::Distance(OwnerLocation, Actor->GetActorLocation());
 		
 		if (Dist < MinDistance)
 		{
 			MinDistance = Dist;
-			MinHit = &Hit;
+			MinHit = Actor;
 			Index == -1 ? Index = 0 : Index++;
 
 			
@@ -88,18 +87,13 @@ void UTankTargetingSystem::GainingLock(const double Delta)
 	bIsGainingLock = true;
 }
 
-AActor* UTankTargetingSystem::ProcessHitResults(const TArray<FHitResult>& HitResults)
+AActor* UTankTargetingSystem::ProcessHitResults(const TArray<AActor*>& HitResults)
 {
 	const double Delta = GetWorld()->GetDeltaSeconds();
 
 	// Keep the old target around so we can detect transitions
 	AActor* OldLockedTarget = LockedTarget;
-	
-	const FHitResult* Closest = FindClosestTarget(HitResults);
-	AActor* ClosestActor = nullptr;
-
-	if (Closest)
-		ClosestActor = Closest->GetActor();
+	AActor* ClosestActor = FindClosestTarget(HitResults);
 
 	if (ClosestActor)
 	{
