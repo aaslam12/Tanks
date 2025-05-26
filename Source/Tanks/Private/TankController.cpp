@@ -36,14 +36,12 @@ void ATankController::OnConstruction(const FTransform& Transform)
 
 void ATankController::ClampVehicleSpeed() const
 {
-	constexpr float MaxSpeedCmPerSec = 1000.0f;  
-
 	if (!ChaosWheeledVehicleMovementComponent && !GetPawn())
 		return;
 
 	float ForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();  
 
-	if (FMath::Abs(ForwardSpeed) <= MaxSpeedCmPerSec)
+	if (FMath::Abs(ForwardSpeed) <= BaseMaxSpeed)
 		return;
 
 	UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(GetPawn()->GetRootComponent());
@@ -54,7 +52,7 @@ void ATankController::ClampVehicleSpeed() const
 	FVector ForwardDir = GetPawn()->GetActorForwardVector().GetSafeNormal();
 
 	// Preserve sign (forward or reverse)
-	float ClampedSpeed = FMath::Sign(ForwardSpeed) * MaxSpeedCmPerSec;
+	float ClampedSpeed = FMath::Sign(ForwardSpeed) * BaseMaxSpeed;
 
 	FVector NewVel = ForwardDir * ClampedSpeed;
 
@@ -79,29 +77,50 @@ void ATankController::SetDriveTorque(const float LeftDecelerationTorque, const f
 		ChaosWheeledVehicleMovementComponent->SetDriveTorque(RightDecelerationTorque, Idx);
 }
 
-void ATankController::HandleVehicleDeceleration() const
+void ATankController::HandleVehicleDeceleration()
 {
-	if (ChaosWheeledVehicleMovementComponent && TankPlayer
-		&& MoveValues.Y == 0 && MoveValues.X == 0 && bDecelerateWhenIdle)
+	if (!ChaosWheeledVehicleMovementComponent || !TankPlayer)
+		return;
+
+	// Only apply deceleration when idle and the feature is enabled
+	if ((MoveValues.Y == 0 && MoveValues.X == 0 && bDecelerateWhenIdle) || !bInputMasterSwitch)
 	{
-		constexpr float DecelerationRate = 1250.0f;
 		const float CurrentForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();
-		const float CurrentTurnInput = MoveValues.X;
+
+		// Gradually decrease the max speed limit
+		CurrentMaxSpeedLimit = FMath::Max(CurrentMaxSpeedLimit - DecelerationRate * GetWorld()->GetDeltaSeconds(),
+		                                  0.0f);
 
 		if (FMath::Abs(CurrentForwardSpeed) > KINDA_SMALL_NUMBER)
 		{
-			float DecelerationTorque = -FMath::Sign(CurrentForwardSpeed) * DecelerationRate;
+			UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(GetPawn()->GetRootComponent());
 
-			SetDriveTorque(DecelerationTorque);
+			if (!Root || !Root->IsSimulatingPhysics())
+				return;
+
+			// Only modify velocity if we're above our new speed limit
+			if (FMath::Abs(CurrentForwardSpeed) > CurrentMaxSpeedLimit)
+			{
+				FVector ForwardDir = GetPawn()->GetActorForwardVector().GetSafeNormal();
+
+				// Preserve sign (forward or reverse)
+				float ClampedSpeed = FMath::Sign(CurrentForwardSpeed) * CurrentMaxSpeedLimit;
+
+				FVector NewVel = ForwardDir * ClampedSpeed;
+
+				// Preserves vertical velocity
+				FVector CurrentVel = Root->GetPhysicsLinearVelocity();
+				NewVel.Z = CurrentVel.Z;
+
+				// Apply the reduced velocity
+				Root->SetPhysicsLinearVelocity(NewVel, false);
+			}
 		}
-
-		if (FMath::Abs(CurrentTurnInput) > KINDA_SMALL_NUMBER)
-		{
-			constexpr float TurnDecelerationRate = 500.0f;
-			float ReducedTurnTorque = -FMath::Sign(CurrentTurnInput) * TurnDecelerationRate;
-
-			SetDriveTorque(ReducedTurnTorque, -ReducedTurnTorque);
-		}
+	}
+	else
+	{
+		// When input is detected, reset the current max speed limit to the base value
+		CurrentMaxSpeedLimit = BaseMaxSpeed;
 	}
 }
 

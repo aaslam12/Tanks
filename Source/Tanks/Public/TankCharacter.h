@@ -549,7 +549,7 @@ public:
 	
 protected:
 	/** Please add a function description */
-	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent, DisplayName="GetShootSocket")
+	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintImplementableEvent)
 	USceneComponent* GetShootSocketFromBP() const;
 
 	/** Please add a function description */

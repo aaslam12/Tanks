@@ -33,7 +33,7 @@ class TANKS_API ATankController : public APlayerController
 	void ClampVehicleSpeed() const;
 	void SetDriveTorque(float DecelerationTorque) const;
 	void SetDriveTorque(float LeftDecelerationTorque, float RightDecelerationTorque) const;
-	void HandleVehicleDeceleration() const;
+	void HandleVehicleDeceleration();
 	void RefreshTankPlayerState();
 	virtual void Tick(float DeltaSeconds) override;
 	UFUNCTION(BlueprintCallable)
@@ -123,6 +123,17 @@ private:
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Setup
 protected:
+    // Base maximum speed of the tank
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Vehicle")
+    float BaseMaxSpeed/* = 1000.0f*/;
+    
+    // Current maximum speed limit for deceleration
+    UPROPERTY(BlueprintReadOnly, Category = "Default")
+    float CurrentMaxSpeedLimit;
+    
+    // How quickly the speed should decrease during deceleration
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Vehicle")
+    float DecelerationRate/* = 100.0f*/;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ATankCameraManager> TankCameraManagerClass;
