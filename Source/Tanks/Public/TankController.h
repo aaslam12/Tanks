@@ -124,16 +124,21 @@ private:
 	/// Setup
 protected:
     // Base maximum speed of the tank
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Vehicle")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Controls|Deceleration")
     float BaseMaxSpeed/* = 1000.0f*/;
     
     // Current maximum speed limit for deceleration
-    UPROPERTY(BlueprintReadOnly, Category = "Default")
+    UPROPERTY(BlueprintReadOnly, Category = "Setup|Controls|Deceleration")
     float CurrentMaxSpeedLimit;
     
     // How quickly the speed should decrease during deceleration
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Vehicle")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Controls|Deceleration")
     float DecelerationRate/* = 100.0f*/;
+
+	// Curve that defines how deceleration is applied based on current speed
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Controls|Deceleration")
+	TObjectPtr<UCurveFloat> DecelerationCurve;
+
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ATankCameraManager> TankCameraManagerClass;

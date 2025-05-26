@@ -86,12 +86,31 @@ void ATankController::HandleVehicleDeceleration()
 	if ((MoveValues.Y == 0 && MoveValues.X == 0 && bDecelerateWhenIdle) || !bInputMasterSwitch)
 	{
 		const float CurrentForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();
+		const float AbsSpeed = FMath::Abs(CurrentForwardSpeed);
+
+		// Calculate base deceleration rate
+		float ActualDecelerationRate = DecelerationRate;
+
+		// Apply curve-based deceleration if available
+		if (DecelerationCurve)
+		{
+			// Normalize the current speed to get a 0-1 value for the curve
+			const float NormalizedSpeed = FMath::Clamp(AbsSpeed / BaseMaxSpeed, 0.0f, 1.0f);
+
+			// Evaluate the curve to get the multiplier
+			const float CurveMultiplier = DecelerationCurve->GetFloatValue(NormalizedSpeed);
+
+			// Apply the multiplier to the deceleration rate
+			ActualDecelerationRate *= CurveMultiplier;
+		}
 
 		// Gradually decrease the max speed limit
-		CurrentMaxSpeedLimit = FMath::Max(CurrentMaxSpeedLimit - DecelerationRate * GetWorld()->GetDeltaSeconds(),
-		                                  0.0f);
+		CurrentMaxSpeedLimit = FMath::Max(
+			CurrentMaxSpeedLimit - ActualDecelerationRate * GetWorld()->GetDeltaSeconds(),
+			0.0f
+		);
 
-		if (FMath::Abs(CurrentForwardSpeed) > KINDA_SMALL_NUMBER)
+		if (AbsSpeed > KINDA_SMALL_NUMBER)
 		{
 			UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(GetPawn()->GetRootComponent());
 
@@ -99,7 +118,7 @@ void ATankController::HandleVehicleDeceleration()
 				return;
 
 			// Only modify velocity if we're above our new speed limit
-			if (FMath::Abs(CurrentForwardSpeed) > CurrentMaxSpeedLimit)
+			if (AbsSpeed > CurrentMaxSpeedLimit)
 			{
 				FVector ForwardDir = GetPawn()->GetActorForwardVector().GetSafeNormal();
 
