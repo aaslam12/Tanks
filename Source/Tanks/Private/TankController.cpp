@@ -87,20 +87,13 @@ void ATankController::HandleVehicleDeceleration()
 	{
 		const float CurrentForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();
 		const float AbsSpeed = FMath::Abs(CurrentForwardSpeed);
-
-		// Calculate base deceleration rate
 		float ActualDecelerationRate = DecelerationRate;
 
-		// Apply curve-based deceleration if available
 		if (DecelerationCurve)
 		{
-			// Normalize the current speed to get a 0-1 value for the curve
+			// Normalize speed to get a 0-1 value for the curve
 			const float NormalizedSpeed = FMath::Clamp(AbsSpeed / BaseMaxSpeed, 0.0f, 1.0f);
-
-			// Evaluate the curve to get the multiplier
 			const float CurveMultiplier = DecelerationCurve->GetFloatValue(NormalizedSpeed);
-
-			// Apply the multiplier to the deceleration rate
 			ActualDecelerationRate *= CurveMultiplier;
 		}
 
@@ -131,7 +124,6 @@ void ATankController::HandleVehicleDeceleration()
 				FVector CurrentVel = Root->GetPhysicsLinearVelocity();
 				NewVel.Z = CurrentVel.Z;
 
-				// Apply the reduced velocity
 				Root->SetPhysicsLinearVelocity(NewVel, false);
 			}
 		}
