@@ -16,7 +16,10 @@
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
 ATankController::ATankController(): PrevTurnInput(0), LookValues(), MoveValues(), bIsInAir(true),
-                                    bInputMasterSwitch(false), bDecelerateWhenIdle(true), ShootTimerDuration(3),
+                                    bInputMasterSwitch(true), bDecelerateWhenIdle(true), BaseMaxSpeed(1000),
+                                    CurrentMaxSpeedLimit(0),
+                                    DecelerationRate(500),
+                                    ShootTimerDuration(3),
                                     MouseSensitivity(0.4),
                                     bIsAlive(true),
                                     bStopTurn(false),
@@ -77,13 +80,27 @@ void ATankController::SetDriveTorque(const float LeftDecelerationTorque, const f
 		ChaosWheeledVehicleMovementComponent->SetDriveTorque(RightDecelerationTorque, Idx);
 }
 
+double ATankController::CalculateDecelerationCurveMultiplier(const UCurveFloat* CurveFloat) const
+{
+	if (!ChaosWheeledVehicleMovementComponent || !CurveFloat)
+		return DOUBLE_BIG_NUMBER;
+
+	const auto AbsSpeed = FMath::Abs(ChaosWheeledVehicleMovementComponent->GetForwardSpeed());
+
+	// Normalize speed to get a 0-1 value for the curve
+	const double NormalizedSpeed = FMath::Clamp(AbsSpeed / BaseMaxSpeed, 0.0f, 1.0f);
+	const double CurveMultiplier = DecelerationCurve->GetFloatValue(NormalizedSpeed);
+	
+	return CurveMultiplier;
+}
+
 void ATankController::HandleVehicleDeceleration()
 {
-	if (!ChaosWheeledVehicleMovementComponent || !TankPlayer)
+	if (!CanRegisterInput())
 		return;
 
 	// Only apply deceleration when idle and the feature is enabled
-	if ((MoveValues.Y == 0 && MoveValues.X == 0 && bDecelerateWhenIdle) || !bInputMasterSwitch)
+	if (MoveValues.Y == 0 && MoveValues.X == 0 && bDecelerateWhenIdle)
 	{
 		const float CurrentForwardSpeed = ChaosWheeledVehicleMovementComponent->GetForwardSpeed();
 		const float AbsSpeed = FMath::Abs(CurrentForwardSpeed);
@@ -91,10 +108,7 @@ void ATankController::HandleVehicleDeceleration()
 
 		if (DecelerationCurve)
 		{
-			// Normalize speed to get a 0-1 value for the curve
-			const float NormalizedSpeed = FMath::Clamp(AbsSpeed / BaseMaxSpeed, 0.0f, 1.0f);
-			const float CurveMultiplier = DecelerationCurve->GetFloatValue(NormalizedSpeed);
-			ActualDecelerationRate *= CurveMultiplier;
+			ActualDecelerationRate *= CalculateDecelerationCurveMultiplier(DecelerationCurve);
 		}
 
 		// Gradually decrease the max speed limit
@@ -260,7 +274,7 @@ void ATankController::BindControls()
 
 bool ATankController::CanRegisterInput() const
 {
-	return TankPlayer && bIsAlive && VehicleMovementComponent && bInputMasterSwitch;
+	return bInputMasterSwitch && bIsAlive && TankPlayer && VehicleMovementComponent && GetPawn();
 }
 
 void ATankController::MC_Move_Implementation(double Value)

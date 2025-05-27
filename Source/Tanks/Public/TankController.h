@@ -33,6 +33,7 @@ class TANKS_API ATankController : public APlayerController
 	void ClampVehicleSpeed() const;
 	void SetDriveTorque(float DecelerationTorque) const;
 	void SetDriveTorque(float LeftDecelerationTorque, float RightDecelerationTorque) const;
+	double CalculateDecelerationCurveMultiplier(const UCurveFloat* CurveFloat) const;
 	void HandleVehicleDeceleration();
 	void RefreshTankPlayerState();
 	virtual void Tick(float DeltaSeconds) override;
@@ -143,7 +144,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Setup", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ATankCameraManager> TankCameraManagerClass;
 
-	UPROPERTY(EditDefaultsOnly, Category="Setup", meta = (AllowPrivateAccess = "true", ClampMin = "0", UIMin = "0", UIMax="7", SliderExponent=0.1))
+	UPROPERTY(EditDefaultsOnly, Category="Setup", meta = (AllowPrivateAccess = "true", ClampMin = "0.01", UIMin = "0.01", UIMax="7", SliderExponent=0.1))
 	double ShootTimerDuration;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Setup|Controls")
