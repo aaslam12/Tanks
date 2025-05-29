@@ -52,6 +52,13 @@ ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobje
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
+	MiddleCameraComp = CreateDefaultSubobject<UCameraComponent>("MiddleCameraComp");
+	MiddleSpringArmComp = CreateDefaultSubobject<USpringArmComponent>("MiddleSpringArmComp");
+
+	MiddleSpringArmComp->SetupAttachment(GetMesh(), FName("TurretSocket"));
+	MiddleCameraComp->SetupAttachment(MiddleSpringArmComp);
+	MiddleCameraComp->SetActive(false);
+
 	// RadialForceComponent->SetupAttachment(RootComponent, "Muzzle");
 	DamagedStaticMesh->SetHiddenInGame(false);
 	DamagedStaticMesh->SetVisibility(true);
@@ -152,8 +159,6 @@ void ATankCharacter::BeginPlay()
 void ATankCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	double TickStartTime = FPlatformTime::Seconds();
-#define	Color (FLinearColor::White)
 
 	if (!GetWorld())
 		return;
@@ -161,8 +166,6 @@ void ATankCharacter::Tick(float DeltaTime)
 	// Only run trace logic for the local player or server, not unnecessary clients
 	if (HasAuthority() || IsLocallyControlled())
 	{
-		double StartTime, EndTime, Duration;
-
 		if (PlayerController)
 		{
 			MoveValues = PlayerController->GetMoveValues();
@@ -182,32 +185,10 @@ void ATankCharacter::Tick(float DeltaTime)
 			UpdateCameraPitchLimits();
 		}
 
-		// ConeTraceTick
-		StartTime = FPlatformTime::Seconds();
 		ConeTraceTick();
-		EndTime = FPlatformTime::Seconds();
-		Duration = (EndTime - StartTime) * 1000.0;
-		UKismetSystemLibrary::PrintString(
-			GetWorld(), FString::Printf(TEXT("ConeTraceTick: %.3f ms"), Duration), true, false, Color, 0);
-
-		// TankAimAssistComponent->AimAssist
-		StartTime = FPlatformTime::Seconds();
 		TankAimAssistComponent->AimAssist(LockedTarget);
-		EndTime = FPlatformTime::Seconds();
-		Duration = (EndTime - StartTime) * 1000.0;
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("AimAssist: %.3f ms"), Duration), true, false, Color, 0);
-
 		CL_UpdateGunSightPosition();
 	}
-
-	double TickEndTime = FPlatformTime::Seconds();
-	double TickDuration = (TickEndTime - TickStartTime) * 1000.0;
-	UKismetSystemLibrary::PrintString(
-		GetWorld(), FString::Printf(TEXT("ATankCharacter::Tick TickDuration: %.3f ms"), TickDuration), true, false, Color, 0);
-
-#undef Color
-
-	
 }
 
 void ATankCharacter::TurretTraceTick_Implementation()
@@ -382,7 +363,6 @@ void ATankCharacter::ConeTraceTick_Implementation()
 		return;
 
 	auto SkeletalMeshComponent = GetMesh();
-	FLinearColor Color = FLinearColor::Blue;
 	const FVector StartLocation = SkeletalMeshComponent->GetSocketLocation(FName("Muzzle"));
 	const FVector Direction = SkeletalMeshComponent->GetSocketQuaternion(FName("Muzzle")).GetForwardVector();
 
@@ -506,7 +486,7 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		if (!TurretToLookDir.IsNearlyZero())
 			TurretToLookDir.Normalize();
 
-		FVector TurretForwardVector = GetMesh()->GetSocketQuaternion("turret_jntSocket").GetForwardVector();
+		FVector TurretForwardVector = GetMesh()->GetSocketQuaternion("TurretSocket").GetForwardVector();
 		TurretForwardVector.Z = 0.f;
 		if (!TurretForwardVector.IsNearlyZero())
 			TurretForwardVector.Normalize();
@@ -514,9 +494,20 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		// Calculate the target angle
 		double DotProduct = FVector::DotProduct(TurretForwardVector, TurretToLookDir);
 
+		// DO NOT CHANGE TOLERANCE (0.008 also works ig. idk which value is better)
+		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasn't working before. DO NOT CHANGE
+		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
+			DotProduct = 1.f; // Prevent any small rounding errors
+		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
+			DotProduct = -1.f; // Handle opposite direction
+
 		double Det = FVector::CrossProduct(TurretForwardVector, TurretToLookDir).Z;
+		if (FMath::IsNearlyZero(Det, Tolerance))
+			Det = 0.f;
 
 		double TargetAngle = FMath::RadiansToDegrees(FMath::Atan2(Det, DotProduct));
+		if (FMath::IsNearlyEqual(TargetAngle, 1.0, Tolerance))
+			TargetAngle = 1;
 
 		// Calculate the *difference* in angle, but now wrap it to the shortest path
 		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);

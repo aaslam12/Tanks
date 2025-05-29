@@ -50,8 +50,10 @@ void UTankAimAssistComponent::AimAssist(AActor* const LockedTarget) const
 		auto TargetLocation = LookVector;
 		TargetLocation.Z = 0.f;
 
-		FVector TurretForwardVector = TankCharacter->GetMesh()->GetSocketQuaternion(FName("turret_jntSocket")).GetForwardVector();
+		FVector TurretForwardVector = TankCharacter->GetMesh()->GetSocketQuaternion(FName("TurretSocket")).GetForwardVector();
 		TurretForwardVector.Z = 0.f;
+		if (!TurretForwardVector.IsNearlyZero())
+			TurretForwardVector.Normalize();
 
 		// Calculate the target angle
 		float DotProduct = FMath::Clamp(
@@ -59,9 +61,20 @@ void UTankAimAssistComponent::AimAssist(AActor* const LockedTarget) const
 			-1, 1
 		);
 
+		// DO NOT CHANGE TOLERANCE (0.008 also works ig. idk which value is better)
+		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasn't working before. DO NOT CHANGE
+		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
+			DotProduct = 1.f; // Prevent any small rounding errors
+		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
+			DotProduct = -1.f; // Handle opposite direction
+
 		float Det = FVector::CrossProduct(TurretForwardVector, TargetLocation).Z;
+		if (FMath::IsNearlyZero(Det, Tolerance))
+			Det = 0.f;
 
 		float TargetAngle = FMath::RadiansToDegrees(FMath::Atan2(Det, DotProduct));
+		if (FMath::IsNearlyEqual(TargetAngle, 1.0, Tolerance))
+			TargetAngle = 1;
 
 		const auto TankTurretAngle = TankCharacter->GetAnimInstance()->TurretAngle;
 
@@ -77,26 +90,6 @@ void UTankAimAssistComponent::AimAssist(AActor* const LockedTarget) const
 
 		// Update the turret angle
 		TankCharacter->SetTurretRotation(TankTurretAngle + DeltaAngle);
-
-#if UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
-		UKismetSystemLibrary::PrintString(
-			  WorldContextObject, 
-			  FString::Printf(TEXT("(UTankAimAssistComponent::AimAssist) DeltaAngle: %.3f"), DeltaAngle), 
-			  true, 
-			  true, 
-			  FLinearColor::Red, 
-			  0
-		);
-
-		UKismetSystemLibrary::PrintString(
-			  WorldContextObject, 
-			  FString::Printf(TEXT("(UTankAimAssistComponent::AimAssist) MaxDeltaAngle: %.3f"), MaxDeltaAngle), 
-			  true, 
-			  true, 
-			  FLinearColor::Red, 
-			  0
-		);
-#endif
 	}
 
 	// FVector DirectionToTarget = LookVector;

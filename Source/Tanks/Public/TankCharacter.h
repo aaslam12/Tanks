@@ -435,23 +435,31 @@ public:
 
 protected:
 	/** Please add a variable description */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	TObjectPtr<USceneComponent> ShootSocket;
 
 	/** Please add a variable description */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	TObjectPtr<UCameraComponent> FrontCameraComp;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	TObjectPtr<UCameraComponent> MiddleCameraComp;
 	
 	/** Please add a variable description */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	TObjectPtr<UCameraComponent> BackCameraComp;
 
 	/** Please add a variable description */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	TObjectPtr<USpringArmComponent> BackSpringArmComp;
 
 	/** Please add a variable description */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	TObjectPtr<USpringArmComponent> MiddleSpringArmComp;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
 	TObjectPtr<USpringArmComponent> FrontSpringArmComp;
 
 public:
