@@ -43,11 +43,11 @@ public:
 
 	/** How long we need to see the same target before we call it “locked” */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(UIMin=0.01, ClampMin=0.01))
-	float LockAcquireTime = 0.5f;
+	float LockAcquireTime/* = 0.5f*/;
 
 	/** How long we can lose sight before we drop the lock */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category="Target Locking", meta=(UIMin=0.01, ClampMin=0.01))
-	float LockLoseTime = 0.5f;
+	float LockLoseTime/* = 0.5f*/;
 
 	/** Fired once when LockTarget is first reached */
 	UPROPERTY(BlueprintAssignable, Category="Target Locking")
@@ -81,6 +81,8 @@ private:
 	// is true when target is locked on or is gaining lock.
 	// will be false when either locked target or pending target is null 
 	bool bIsGainingLock;
+
+	bool bIsReseting;
 
 public:
 	UFUNCTION(BlueprintCallable, Category=Getters)

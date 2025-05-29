@@ -9,6 +9,8 @@
 #include "EnhancedInputComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TankController.h"
+#include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/TankAimAssistComponent.h"
@@ -28,6 +30,8 @@
 #include "Projectiles/TankDamageType.h"
 #include "Projectiles/TankProjectile.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
+#include "UI/WB_GunSight.h"
+#include "UI/WB_HealthBar.h"
 
 static int FriendStencilValue = 2;
 static int EnemyStencilValue = 1;
@@ -147,10 +151,11 @@ void ATankCharacter::BeginPlay()
 	DamagedStaticMesh->SetVisibility(false);
 }
 
-// Called every frame
 void ATankCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	double TickStartTime = FPlatformTime::Seconds();
+#define	Color (FLinearColor::White)
 
 	if (!GetWorld())
 		return;
@@ -158,7 +163,8 @@ void ATankCharacter::Tick(float DeltaTime)
 	// Only run trace logic for the local player or server, not unnecessary clients
 	if (HasAuthority() || IsLocallyControlled())
 	{
-		// If we're the server or the local player, run the traces and related logic
+		double StartTime, EndTime, Duration;
+
 		if (PlayerController)
 		{
 			MoveValues = PlayerController->GetMoveValues();
@@ -169,16 +175,41 @@ void ATankCharacter::Tick(float DeltaTime)
 			if (HealthComponent->IsDead())
 				return;
 
-		TurretTraceTick();
-		ConeTraceTick(); // can be used if turret requires a cone trace for some reason. eg a fire turret
-		UpdateTurretTurning(DeltaTime);
-		UpdateGunElevation(DeltaTime);
-		CheckIfGunCanLowerElevationTick(DeltaTime);
-		UpdateCameraPitchLimits();
-		TankAimAssistComponent->AimAssist(LockedTarget);
+		if (LockedTarget == nullptr)
+		{
+			TurretTraceTick();
+			UpdateTurretTurning(DeltaTime);
+			UpdateGunElevation(DeltaTime);
+			CheckIfGunCanLowerElevationTick(DeltaTime);
+			UpdateCameraPitchLimits();
+		}
 
-		// UpdateIsInAir();
+		// ConeTraceTick
+		StartTime = FPlatformTime::Seconds();
+		ConeTraceTick();
+		EndTime = FPlatformTime::Seconds();
+		Duration = (EndTime - StartTime) * 1000.0;
+		UKismetSystemLibrary::PrintString(
+			GetWorld(), FString::Printf(TEXT("ConeTraceTick: %.3f ms"), Duration), true, false, Color, 0);
+
+		// TankAimAssistComponent->AimAssist
+		StartTime = FPlatformTime::Seconds();
+		TankAimAssistComponent->AimAssist(LockedTarget);
+		EndTime = FPlatformTime::Seconds();
+		Duration = (EndTime - StartTime) * 1000.0;
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("AimAssist: %.3f ms"), Duration), true, false, Color, 0);
+
+		CL_UpdateGunSightPosition();
 	}
+
+	double TickEndTime = FPlatformTime::Seconds();
+	double TickDuration = (TickEndTime - TickStartTime) * 1000.0;
+	UKismetSystemLibrary::PrintString(
+		GetWorld(), FString::Printf(TEXT("ATankCharacter::Tick TickDuration: %.3f ms"), TickDuration), true, false, Color, 0);
+
+#undef Color
+
+	
 }
 
 void ATankCharacter::TurretTraceTick_Implementation()
@@ -276,6 +307,10 @@ void ATankCharacter::SetDefaults_Implementation()
 	ImpulseStrengthExponent = 1.2;
 
 	SetWheelIndices();
+
+	VisibilityTraceType = UEngineTypes::ConvertToTraceType(ECC_Visibility);
+
+	Hits.Empty(10);
 }
 
 void ATankCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -345,25 +380,29 @@ void ATankCharacter::ResetCameraRotation_Implementation()
 
 void ATankCharacter::ConeTraceTick_Implementation()
 {
-	if (ConeTraceConfigs.IsEmpty())
+	if (ConeTraceConfigs.IsEmpty() || bConeTraceDisabled)
 		return;
 
-	const FVector StartLocation = GetMesh()->GetSocketLocation("Muzzle");
-	const FVector Direction = GetMesh()->GetSocketQuaternion("Muzzle").GetForwardVector();
+	auto SkeletalMeshComponent = GetMesh();
+	FLinearColor Color = FLinearColor::Blue;
+	const FVector StartLocation = SkeletalMeshComponent->GetSocketLocation(FName("Muzzle"));
+	const FVector Direction = SkeletalMeshComponent->GetSocketQuaternion(FName("Muzzle")).GetForwardVector();
 
+	// this is how big we want the initial array to be.
+	constexpr int SlackSize = 20;
+	
 	// Clear all previous hits before starting a new trace sequence
-	AllHits.Empty();
+	AllHits.Empty(SlackSize);
 
 	for (int i = 0; i < ConeTraceConfigs.Num(); ++i)
 	{
 		FConeTraceConfig& Config = ConeTraceConfigs[i];
+		auto End = StartLocation + Direction * Config.ConeLength;
 
 		bool bTraceBlockedByNonVehicle = false;
 
 		for (int32 k = 0; k < Config.Steps; ++k)
 		{
-			auto End = StartLocation + Direction * Config.ConeLength;
-			
 			// Prevent division by zero when Config.Steps is 1
 			float Alpha = Config.Steps > 1 ? (float) k / (Config.Steps - 1) : 0;
 			
@@ -374,13 +413,12 @@ void ATankCharacter::ConeTraceTick_Implementation()
 			
 			float Radius = FMath::Lerp(Config.StartRadius, Config.EndRadius, Alpha);
 
-			TArray<FHitResult> Hits;
 			const auto bHit = UKismetSystemLibrary::SphereTraceMulti(
 				GetWorld(),
 				SweepCenter,
 				SweepCenter,
 				Radius,
-				UEngineTypes::ConvertToTraceType(ECC_Visibility),
+				VisibilityTraceType,
 				false,
 				{this},
 				bShowDebugTracesForTurret ? Config.DrawDebugTrace.GetValue() : EDrawDebugTrace::None,
@@ -390,12 +428,11 @@ void ATankCharacter::ConeTraceTick_Implementation()
 				Config.ConeTraceHitColor
 			);
 
-			// Process hits for tank targeting if this config is used for targeting
-			if (Config.bIsUsedForTankTargeting)
-				if (Hits.IsEmpty() == false)
-					for (const FHitResult& Hit : Hits)
-						if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() == ECC_Vehicle)
-							AllHits.Add(Hit.GetActor());
+			// Process hits for tank targeting if this config is used for targeting and if the array is not empty
+			if (Config.bIsUsedForTankTargeting && Hits.IsEmpty() == false)
+				for (const FHitResult& Hit : Hits)
+					if (Hit.GetActor()->GetRootComponent()->GetCollisionObjectType() == ECC_Vehicle)
+						AllHits.Add(Hit.GetActor());
 
 			// If we hit anything, check if we should break the trace sequence
 			if (bHit)
@@ -419,14 +456,19 @@ void ATankCharacter::ConeTraceTick_Implementation()
 		if (Config.bIsUsedForTankTargeting && TankTargetingSystem)
 		{
 			LockedTarget = TankTargetingSystem->ProcessHitResults(AllHits);
-			AllHits.Empty(); // Clear hits after processing for this config
+			AllHits.Empty(SlackSize); // Clear hits after processing for this config
 		}
 	}
 }
 
+bool ATankCharacter::IsEnemy(AActor* OtherActor) const
+{
+	return CurrentTeam != Execute_GetCurrentTeam(OtherActor);
+}
+
 void ATankCharacter::HandleTakeDamage_Implementation(float DamageAmount, class AController* EventInstigator, AActor* DamageCauser)
 {
-	if (Execute_GetCurrentTeam(this) != Execute_GetCurrentTeam(DamageCauser)) // add a IsFriendlyFireOn toggle here
+	if (IsEnemy(DamageCauser)) // add a IsFriendlyFireOn toggle here
 		HealthComponent->OnDamaged(this, DamageAmount, nullptr, EventInstigator, DamageCauser);
 }
 
@@ -474,20 +516,9 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		// Calculate the target angle
 		double DotProduct = FVector::DotProduct(TurretForwardVector, TurretToLookDir);
 
-		// DO NOT CHANGE TOLERANCE (0.008 also works ig. idk which value is better)
-		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasn't working before. DO NOT CHANGE
-		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
-			DotProduct = 1.f; // Prevent any small rounding errors
-		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
-			DotProduct = -1.f; // Handle opposite direction
-
 		double Det = FVector::CrossProduct(TurretForwardVector, TurretToLookDir).Z;
-		if (FMath::IsNearlyZero(Det, Tolerance))
-			Det = 0.f;
 
 		double TargetAngle = FMath::RadiansToDegrees(FMath::Atan2(Det, DotProduct));
-		if (FMath::IsNearlyEqual(TargetAngle, 1.0, Tolerance))
-			TargetAngle = 1;
 
 		// Calculate the *difference* in angle, but now wrap it to the shortest path
 		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);
@@ -522,6 +553,25 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 void ATankCharacter::UpdateDesiredTurretAngle()
 {
 	SetDesiredTurretAngle(FMath::FInterpTo(CurrentTurretAngle, DesiredTurretAngle_C, GetWorld()->GetDeltaSeconds(), 10));
+}
+
+void ATankCharacter::CL_UpdateGunSightPosition_Implementation()
+{
+	if (IsAimingIn())
+		return;
+
+	if (GunSightWidget)
+	{
+		FVector2D ScreenPosition;
+		UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(
+			PlayerController,
+			TurretTraceHit.bBlockingHit ? TurretTraceHit.ImpactPoint : TurretTraceHit.TraceEnd,
+			ScreenPosition,
+			true
+		);
+
+		GunSightWidget->ScreenPosition = ScreenPosition;
+	}
 }
 
 void ATankCharacter::SetDesiredTurretAngle(float TurretAngle)
@@ -903,6 +953,8 @@ void ATankCharacter::Restart__Internal()
 
 	if (HealthComponent)
 		HealthComponent->OnPlayerRespawn();
+
+	SetActorTickEnabled(true);
 }
 
 void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState, bool bSelfDestruct, bool bShouldRespawn)
@@ -922,6 +974,8 @@ void ATankCharacter::OnDie_Implementation(APlayerState* AffectedPlayerState, boo
 
 	if (PlayerController)
 		PlayerController->OnDie();
+
+	SetActorTickEnabled(false);
 }
 
 void ATankCharacter::OnHealthChanged_Implementation(float NewHealth, bool bIsRegenerating)

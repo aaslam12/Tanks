@@ -37,6 +37,7 @@ class TANKS_API ATankController : public APlayerController
 	void HandleVehicleDeceleration();
 	void RefreshTankPlayerState();
 	virtual void Tick(float DeltaSeconds) override;
+	FORCEINLINE void UpdateTickEnable(const bool bEnable);
 	UFUNCTION(BlueprintCallable)
 	void SetDefaults();
 	virtual void BeginPlay() override;
@@ -104,6 +105,10 @@ private:
 	/** Shoot Input Action */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> ShootAction;
+
+	/** Shoot Input Action */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> AimAction;
 
 	/** Shoot Input Action */
 	UPROPERTY(BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -221,6 +226,7 @@ protected:
 	void TurnCompleted(const FInputActionValue& InputActionValue);
 
 	void Shoot(const FInputActionValue& InputActionValue);
+	void Aim(const FInputActionValue& InputActionValue);
 
 	void SelfDestruct(const FInputActionValue& InputActionValue);
 

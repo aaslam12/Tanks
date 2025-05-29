@@ -5,8 +5,11 @@
 
 #include "Kismet/KismetSystemLibrary.h"
 
-UTankTargetingSystem::UTankTargetingSystem(): LockedTarget(nullptr), PendingTarget(nullptr), bIsLockedOn(false),
-                                              bIsGainingLock(false)
+UTankTargetingSystem::UTankTargetingSystem(): LockAcquireTime(0.5f), LockLoseTime(0.5f),
+                                              LockedTarget(nullptr),
+                                              PendingTarget(nullptr),
+                                              bIsLockedOn(false),
+                                              bIsGainingLock(false), bIsReseting(false)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
@@ -43,32 +46,31 @@ void UTankTargetingSystem::DebugSphereAboveActor(const AActor* Actor, const FCol
 
 AActor* UTankTargetingSystem::FindClosestTarget(const TArray<AActor*>& HitResults) const
 {
-	const FVector OwnerLocation = GetOwner()->GetActorLocation();
-	double MinDistance = DOUBLE_BIG_NUMBER;
-	AActor* MinHit = nullptr;
-	int Index = -1;
-
-	if (HitResults.IsEmpty())
-		return nullptr;
+	double StartTime = FPlatformTime::Seconds();
 	
-	for (const auto Actor : HitResults)
+	const FVector OwnerLocation = GetOwner()->GetActorLocation();
+	double MinDistSq = FLT_MAX;
+	AActor* ClosestActor = nullptr;
+
+	for (AActor* Actor : HitResults)
 	{
 		// TODO: add a team check here
-		const double Dist = FVector::Distance(OwnerLocation, Actor->GetActorLocation());
-		
-		if (Dist < MinDistance)
+		const float DistSq = FVector::DistSquared(OwnerLocation, Actor->GetActorLocation());
+		if (DistSq < MinDistSq)
 		{
-			MinDistance = Dist;
-			MinHit = Actor;
-			Index == -1 ? Index = 0 : Index++;
-
-			
-			UE_LOG(LogTemp, Log, TEXT("Dist < MinDistance %s"), *Actor->GetName())
+			MinDistSq = DistSq;
+			ClosestActor = Actor;
 		}
 	}
 
+	// Optionally print timing here if profiling
+	double EndTime = FPlatformTime::Seconds();
+	double Duration = (EndTime - StartTime) * 1000.0;
+	UKismetSystemLibrary::PrintString(
+		GetWorld(), FString::Printf(TEXT("FindClosestTarget: %.3f ms"), Duration), true, false, FLinearColor::Green, 0);
+
 	// will be null only if HitResults is empty
-	return Index == -1 ? nullptr : MinHit;
+	return ClosestActor;
 }
 
 void UTankTargetingSystem::LosingLock(const double Delta)
@@ -102,6 +104,7 @@ AActor* UTankTargetingSystem::ProcessHitResults(const TArray<AActor*>& HitResult
 		{
 			// locked on
 			LockedTarget = ClosestActor;
+			PendingTarget = LockedTarget;
 			bIsLockedOn = true;
 
 			PendingTime = LockAcquireTime;

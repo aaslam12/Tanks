@@ -11,6 +11,9 @@
 #include "Tanks/Template/MyProjectSportsCar.h"
 #include "TankCharacter.generated.h"
 
+class UWB_HealthBar;
+class UWB_GunSight;
+
 // forward declaring the enum
 namespace EDrawDebugTrace
 {
@@ -115,11 +118,18 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Components, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UPostProcessComponent> TankPostProcessVolume;
 
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = Widgets, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UWB_GunSight> GunSightWidget;
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = Widgets, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UWB_HealthBar> HealthBarWidget;
+
 	/**
 	 *  Set in BP.
 	 */
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UWB_PlayerInfo> PlayerNameWidget;
+	ETraceTypeQuery VisibilityTraceType;
 
 	ATankCharacter();
 	virtual ~ATankCharacter() override;
@@ -133,8 +143,9 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	void SetWheelIndices();
 	virtual void Tick(float DeltaTime) override;
-	
 
+
+	bool IsEnemy(AActor* OtherActor) const;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 protected:
@@ -154,12 +165,15 @@ protected:
 	/** Traces spheres increasing in radius in the shape of a cone. */
 	UFUNCTION(BlueprintNativeEvent)
 	void ConeTraceTick();
+	bool bConeTraceDisabled;
 
 	// only used for cone trace.
 	// is a member variable to improve performance from constant adding and
 	// removing every frame.
 	UPROPERTY()
 	TArray<AActor*> AllHits;
+	UPROPERTY()
+	TArray<FHitResult> Hits;
 
 	/** Traces from the muzzle to the point where it is looking at ahead. */
 	UFUNCTION(BlueprintNativeEvent)
@@ -170,6 +184,9 @@ protected:
 	void UpdateTurretTurning(float DeltaTime);
 
 	void UpdateDesiredTurretAngle();
+
+	UFUNCTION(BlueprintCallable, Client, Unreliable)
+	void CL_UpdateGunSightPosition();
 public:
 	UFUNCTION(BlueprintCallable)
 	void SetDesiredTurretAngle(float TurretAngle);

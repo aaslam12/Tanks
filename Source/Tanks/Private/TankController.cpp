@@ -173,8 +173,14 @@ void ATankController::Tick(float DeltaSeconds)
     HandleVehicleDeceleration();
 }
 
+void ATankController::UpdateTickEnable(const bool bEnable)
+{
+	SetActorTickEnabled(bEnable);
+}
+
 void ATankController::SetDefaults()
 {
+	UpdateTickEnable(true);
 	bCanShoot = true;
 	
 	if (GetPawn())
@@ -234,6 +240,7 @@ void ATankController::OnDie_Implementation()
 	SetCanShoot(false);
 	bIsAlive = false;
 	ShootTimerHandle.Invalidate();
+	UpdateTickEnable(false);
 }
 
 void ATankController::OnRespawn_Implementation()
@@ -259,6 +266,10 @@ void ATankController::BindControls()
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATankController::Look);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Completed, this, &ATankController::Look);
+
+		// Aiming
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ATankController::Aim);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ATankController::Aim);
 
 		// Shooting
 		EnhancedInputComponent->BindAction(ShootAction, ETriggerEvent::Started, this, &ATankController::Shoot);
@@ -412,6 +423,14 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	StartShootTimer();
 
 	OnShoot.Broadcast();
+}
+
+void ATankController::Aim(const FInputActionValue& InputActionValue)
+{
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Aim)")),
+										  true, true, FLinearColor::Yellow, 0);
+
+	// add logic that would reset the lock and give a few seconds of grace time
 }
 
 void ATankController::SelfDestruct(const FInputActionValue& InputActionValue)

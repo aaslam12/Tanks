@@ -31,56 +31,56 @@ void UTankAimAssistComponent::AimAssist(AActor* const LockedTarget) const
 	if (!TankCharacter || !LockedTarget || !bEnableAimAssist)
 		return;
 
+	if (!bEnableHorizontalAssist && !bEnableVerticalAssist)
+		return;
+
+	UWorld* WorldContextObject = GetWorld();
+
 	// Get the tank's location and the target's location
 	const FVector TankLocation = TankCharacter->GetActorLocation();
 	
 	// Calculate the direction vector from the tank to the target
 	auto Look = UKismetMathLibrary::FindLookAtRotation(TankLocation, LockedTarget->GetActorLocation());
+	auto LookVector = Look.Vector();
 	
 	// Handle horizontal aim assist (turret rotation)
 	if (bEnableHorizontalAssist && HorizontalAssistStrength > 0.0f)
 	{
 		// Calculate the target direction
-		auto TargetLocation = Look.Vector();
+		auto TargetLocation = LookVector;
 		TargetLocation.Z = 0.f;
-		if (!TargetLocation.IsNearlyZero())
-			TargetLocation.Normalize();
 
-		FVector TurretForwardVector = TankCharacter->GetMesh()->GetSocketQuaternion("turret_jntSocket").GetForwardVector();
+		FVector TurretForwardVector = TankCharacter->GetMesh()->GetSocketQuaternion(FName("turret_jntSocket")).GetForwardVector();
 		TurretForwardVector.Z = 0.f;
-		if (!TurretForwardVector.IsNearlyZero())
-			TurretForwardVector.Normalize();
 
 		// Calculate the target angle
-		double DotProduct = FVector::DotProduct(TurretForwardVector, TargetLocation);
+		float DotProduct = FMath::Clamp(
+			FVector::DotProduct(TurretForwardVector, TargetLocation),
+			-1, 1
+		);
 
-		// DO NOT CHANGE TOLERANCE (0.008 also works ig. idk which value is better)
-		constexpr double Tolerance = 0.008; // setting it to 0.01 fixed it now somehow when it wasnt working before. DO NOT CHANGE
-		if (FMath::IsNearlyEqual(DotProduct, 1.0f, Tolerance))
-			DotProduct = 1.f; // Prevent any small rounding errors
-		else if (FMath::IsNearlyEqual(DotProduct, -1.0f, Tolerance))
-			DotProduct = -1.f; // Handle opposite direction
+		float Det = FVector::CrossProduct(TurretForwardVector, TargetLocation).Z;
 
-		double Det = FVector::CrossProduct(TurretForwardVector, TargetLocation).Z;
-		if (FMath::IsNearlyZero(Det, Tolerance))
-			Det = 0.f;
+		float TargetAngle = FMath::RadiansToDegrees(FMath::Atan2(Det, DotProduct));
 
-		double TargetAngle = FMath::RadiansToDegrees(FMath::Atan2(Det, DotProduct));
-		if (FMath::IsNearlyEqual(TargetAngle, 1.0, Tolerance))
-			TargetAngle = 1;
-
-		// Calculate the *difference* in angle, but now wrap it to the shortest path
-		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - TankCharacter->GetAnimInstance()->TurretAngle);
+		const auto TankTurretAngle = TankCharacter->GetAnimInstance()->TurretAngle;
 
 		// Clamp the angle difference based on MaxTurretRotationSpeed
-		const double MaxDeltaAngle = TankCharacter->GetMaxTurretRotationSpeed() * GetWorld()->GetDeltaSeconds();
-		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
+		const float MaxDeltaAngle = TankCharacter->GetMaxTurretRotationSpeed() * WorldContextObject->GetDeltaSeconds();
+
+		// Calculate the *difference* in angle, but now wrap it to the shortest path
+		float DeltaAngle = FMath::Clamp(
+			TargetAngle - TankTurretAngle,
+			-MaxDeltaAngle,
+			MaxDeltaAngle
+		);
 
 		// Update the turret angle
-		TankCharacter->SetTurretRotation(TankCharacter->GetAnimInstance()->TurretAngle + DeltaAngle);
+		TankCharacter->SetTurretRotation(TankTurretAngle + DeltaAngle);
 
+#if UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
 		UKismetSystemLibrary::PrintString(
-			  GetWorld(), 
+			  WorldContextObject, 
 			  FString::Printf(TEXT("(UTankAimAssistComponent::AimAssist) DeltaAngle: %.3f"), DeltaAngle), 
 			  true, 
 			  true, 
@@ -89,17 +89,18 @@ void UTankAimAssistComponent::AimAssist(AActor* const LockedTarget) const
 		);
 
 		UKismetSystemLibrary::PrintString(
-			  GetWorld(), 
+			  WorldContextObject, 
 			  FString::Printf(TEXT("(UTankAimAssistComponent::AimAssist) MaxDeltaAngle: %.3f"), MaxDeltaAngle), 
 			  true, 
 			  true, 
 			  FLinearColor::Red, 
 			  0
 		);
+#endif
 	}
 
-	FVector DirectionToTarget = Look.Vector();
-	DirectionToTarget.Normalize();
+	// FVector DirectionToTarget = LookVector;
+	// DirectionToTarget.Normalize();
 	
 	// Handle vertical aim assist (gun elevation)
 	if (bEnableVerticalAssist && VerticalAssistStrength > 0.0f)
