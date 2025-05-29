@@ -2,7 +2,10 @@
 /Intermediate/
 /.idea/
 /.vs/
-/Content/VigilanteContent/
+/Content/VigilanteContent/Shared/Map
+/Content/VigilanteContent/Shared/Levels
+/Content/VigilanteContent/East_Tank_T72b/Level
+/Content/VigilanteContent/West_Tank_M1A1Abrams/Level
 Content/Military_Free
 Content/F_FreeFlameFx_Pack
 /Content/__ExternalActors__/
