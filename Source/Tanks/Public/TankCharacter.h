@@ -671,4 +671,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UTankAnimInstance* GetAnimInstance() const { return AnimInstance; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE bool CanLockOn() const;
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetCanLockOn(bool bCond) const;
 };

@@ -9,7 +9,7 @@ UTankTargetingSystem::UTankTargetingSystem(): LockAcquireTime(0.5f), LockLoseTim
                                               LockedTarget(nullptr),
                                               PendingTarget(nullptr),
                                               bIsLockedOn(false),
-                                              bIsGainingLock(false), bIsReseting(false)
+                                              bIsGainingLock(false), bIsReseting(false), bCanLockOn(true)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
@@ -89,8 +89,22 @@ void UTankTargetingSystem::GainingLock(const double Delta)
 	bIsGainingLock = true;
 }
 
+void UTankTargetingSystem::ResetLock()
+{
+	LockedTarget = nullptr;
+	PendingTarget = nullptr;
+	PendingTime = 0;
+	LostTime = 0;
+}
+
 AActor* UTankTargetingSystem::ProcessHitResults(const TArray<AActor*>& HitResults)
 {
+	if (bCanLockOn == false)
+	{
+		ResetLock();
+		return nullptr;
+	}
+	
 	const double Delta = GetWorld()->GetDeltaSeconds();
 
 	// Keep the old target around so we can detect transitions

@@ -32,6 +32,7 @@ protected:
 	AActor* FindClosestTarget(const TArray<AActor*>& HitResults) const;
 	void LosingLock(double Delta);
 	void GainingLock(double Delta);
+	void ResetLock();
 
 	// helps identify which actor we are locking on
 	void DebugSphereAboveActor(const AActor* Actor, const FColor& Color, const FVector& Offset = FVector::ZeroVector) const;
@@ -84,10 +85,18 @@ private:
 
 	bool bIsReseting;
 
+	bool bCanLockOn;
+
 public:
-	UFUNCTION(BlueprintCallable, Category=Getters)
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category=Getters)
 	bool IsLockedOn() const { return bIsLockedOn; }
 
-	UFUNCTION(BlueprintCallable, Category=Getters)
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category=Getters)
 	bool IsGainingLock() const { return bIsGainingLock; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category=Getters)
+	bool CanLockOn() const { return bCanLockOn; }
+
+	UFUNCTION(BlueprintCallable, Category=Setters)
+	void SetCanLockOn(bool bCond) { bCanLockOn = bCond; }
 };

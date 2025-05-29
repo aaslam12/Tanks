@@ -268,8 +268,7 @@ void ATankController::BindControls()
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Completed, this, &ATankController::Look);
 
 		// Aiming
-		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ATankController::Aim);
-		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ATankController::Aim);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Triggered, this, &ATankController::Aim);
 
 		// Shooting
 		EnhancedInputComponent->BindAction(ShootAction, ETriggerEvent::Started, this, &ATankController::Shoot);
@@ -427,10 +426,12 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 
 void ATankController::Aim(const FInputActionValue& InputActionValue)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Aim)")),
-										  true, true, FLinearColor::Yellow, 0);
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Aim) %f"), InputActionValue.GetMagnitude()),
+										  true, true, FLinearColor::Yellow, 3);
 
-	// add logic that would reset the lock and give a few seconds of grace time
+	TankPlayer->SetCanLockOn(InputActionValue.GetMagnitude() == 0);
+
+	// TODO: add an animation where the camera will move to another location closer to the turret which will aid in aiming.
 }
 
 void ATankController::SelfDestruct(const FInputActionValue& InputActionValue)

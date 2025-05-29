@@ -9,7 +9,6 @@
 #include "EnhancedInputComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TankController.h"
-#include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
@@ -31,7 +30,6 @@
 #include "Projectiles/TankProjectile.h"
 #include "Tanks/Public/Animation/TankAnimInstance.h"
 #include "UI/WB_GunSight.h"
-#include "UI/WB_HealthBar.h"
 
 static int FriendStencilValue = 2;
 static int EnemyStencilValue = 1;
@@ -1241,4 +1239,15 @@ void ATankCharacter::MC_SetWheelSmoke_Implementation(float Intensity)
 void ATankCharacter::MC_SetHatchesAngles_Implementation(double HatchAngle)
 {
 	SetHatchesAngles(HatchAngle);
+}
+
+bool ATankCharacter::CanLockOn() const
+{
+	return TankTargetingSystem ? TankTargetingSystem->CanLockOn() : false;
+}
+
+void ATankCharacter::SetCanLockOn(bool bCond) const
+{
+	if (TankTargetingSystem)
+		TankTargetingSystem->SetCanLockOn(bCond);
 }
