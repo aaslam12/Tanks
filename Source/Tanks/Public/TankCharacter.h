@@ -140,6 +140,7 @@ class TANKS_API ATankCharacter : public AMyProjectSportsCar, public ITankInterfa
 	void BindDelegates();
 	
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	void SetWheelIndices();
 	virtual void Tick(float DeltaTime) override;
@@ -312,7 +313,10 @@ protected:
 
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0.01, UIMax=180, ClampMin=0.01, MakeStructureDefaultValue=90, SliderExponent=2))
-	double MaxTurretRotationSpeed;
+	double TurretRotationSpeed;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0.01, UIMax=180, ClampMin=0.01, MakeStructureDefaultValue=90, SliderExponent=2))
+	double AimingTurretRotationSpeed;
 
 	// Should be greater than MaxZoomIn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Setup|Gameplay|Turret", meta=(UIMin=0.01, UIMax=50, ClampMin=0.01, MakeStructureDefaultValue=30, SliderExponent=2))
@@ -397,17 +401,44 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	TObjectPtr<ATankController> PlayerController;
 
-	/** Please add a variable description */
+	/** The camera trace hit location. if there is no hit, this will be the same as the 'ActiveCameraEnd' */
 	UPROPERTY(BlueprintReadWrite, Category = "Default")
-	FVector TurretImpactPoint;
+	FVector DesiredCameraImpactPoint;
+
+	/** The interpolated camera impact point. see 'ATankCharacter::UpdateGunElevation' for more information */
+	UPROPERTY(BlueprintReadWrite, Category = "Default")
+	FVector CameraImpactPoint;
+
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UCameraComponent> PrevCameraComp;
 
 	/** Please add a variable description */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FRotator DesiredTurretTurn;
+	
+	/** The location of the turret muzzle */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FVector TurretStart;
+
+	/** The location of the end of the turret muzzle forward trace. (does not change if there are hits) */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	FVector TurretEnd;
 
-	/** Please add a variable description */
+	/** The Hit Result of the turret muzzle forward trace */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
 	FHitResult TurretTraceHit;
+
+	/** The location of the active camera trace start */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FVector ActiveCameraStart;
+
+	/** The location of the active camera trace end (does not change if there are hits) */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FVector ActiveCameraEnd;
+
+	/** The Hit Result of the camera forward trace */
+	UPROPERTY(BlueprintReadOnly, Category = "Default")
+	FHitResult CameraTraceHit;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadOnly, Category = "Default")
@@ -472,7 +503,7 @@ public:
 	FVector2D MoveValues;
 
 	/** Is the player in first person mode? */
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	bool bAimingIn;
 
 	/** Please add a variable description */
@@ -592,7 +623,11 @@ protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintImplementableEvent)
 	USpringArmComponent* GetFrontSpringArmFromBP() const;
-
+public:
+	/** Please add a function description */
+	UFUNCTION(BlueprintImplementableEvent)
+	void ToggleMiddleCamera();
+protected:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="SetWheelSmokeIntensity")
 	void SetWheelSmoke(float Intensity);
@@ -615,10 +650,16 @@ public:
 	FORCEINLINE UCameraComponent* GetFrontCameraComp() const { return FrontCameraComp; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE UCameraComponent* GetMiddleCameraComp() const { return MiddleCameraComp; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE UCameraComponent* GetBackCameraComp() const { return BackCameraComp; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE USpringArmComponent* GetFrontSpringArmComp() const { return FrontSpringArmComp; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE USpringArmComponent* GetMiddleSpringArmComp() const { return MiddleSpringArmComp; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE USpringArmComponent* GetBackSpringArmComp() const { return BackSpringArmComp; }
@@ -663,7 +704,7 @@ public:
 	FORCEINLINE double GetAbsoluteMaxGunElevation1() const { return AbsoluteMaxGunElevation; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FORCEINLINE double GetMaxTurretRotationSpeed() const { return MaxTurretRotationSpeed; }
+	FORCEINLINE double GetMaxTurretRotationSpeed() const { return TurretRotationSpeed; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE double GetBaseDamage() const { return BaseDamage; }

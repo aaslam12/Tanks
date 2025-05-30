@@ -50,7 +50,7 @@ void UTankAimAssistComponent::AimAssist(AActor* const LockedTarget) const
 		auto TargetLocation = LookVector;
 		TargetLocation.Z = 0.f;
 
-		FVector TurretForwardVector = TankCharacter->GetMesh()->GetSocketQuaternion(FName("TurretSocket")).GetForwardVector();
+		FVector TurretForwardVector = TankCharacter->GetMesh()->GetSocketQuaternion(FName("")).GetForwardVector(); // only works if we do not have a socket for some reason
 		TurretForwardVector.Z = 0.f;
 		if (!TurretForwardVector.IsNearlyZero())
 			TurretForwardVector.Normalize();

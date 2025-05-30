@@ -16,7 +16,8 @@
 const FName FirstPersonSocket = FName("FirstPersonSocket");
 
 ATankController::ATankController(): PrevTurnInput(0), LookValues(), MoveValues(), bIsInAir(true),
-                                    bInputMasterSwitch(true), bDecelerateWhenIdle(true), BaseMaxSpeed(1000),
+                                    bInputMasterSwitch(true), bDecelerateWhenIdle(true),
+                                    bShouldLockOnIfHoldingAim(true), BaseMaxSpeed(1000),
                                     CurrentMaxSpeedLimit(0),
                                     DecelerationRate(500),
                                     ShootTimerDuration(3),
@@ -226,6 +227,11 @@ void ATankController::SetupInput()
 void ATankController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (TankPlayer)
+	{
+		TankPlayer->SetCanLockOn(!bShouldLockOnIfHoldingAim);
+	}
 }
 
 void ATankController::SetupInputComponent()
@@ -424,12 +430,22 @@ void ATankController::Shoot(const FInputActionValue& InputActionValue)
 	OnShoot.Broadcast();
 }
 
+void ATankController::UpdateLockOnCondition(float Value) const
+{
+	if (TankPlayer)
+	{
+		TankPlayer->SetCanLockOn(bShouldLockOnIfHoldingAim ? Value != 0 : Value == 0);
+	}
+}
+
 void ATankController::Aim(const FInputActionValue& InputActionValue)
 {
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankController::Aim) %f"), InputActionValue.GetMagnitude()),
 										  true, true, FLinearColor::Yellow, 3);
 
-	TankPlayer->SetCanLockOn(InputActionValue.GetMagnitude() == 0);
+	UpdateLockOnCondition(InputActionValue.GetMagnitude());
+	if (TankPlayer)
+		TankPlayer->ToggleMiddleCamera();
 
 	// TODO: add an animation where the camera will move to another location closer to the turret which will aid in aiming.
 }
@@ -504,4 +520,29 @@ void ATankController::MouseWheelDown(const FInputActionValue& InputActionValue)
 			TankPlayer->bAimingIn = false;
 		}
 	}
+}
+
+void ATankController::ResetCamera() const
+{
+	if (!TankPlayer)
+		return;
+
+	const auto front = TankPlayer->GetFrontCameraComp();
+	const auto middle = TankPlayer->GetMiddleCameraComp();
+	const auto back = TankPlayer->GetBackCameraComp();
+
+	if (!front || !middle || !back)
+		return;
+
+	USpringArmComponent* BackSpringArmComp = TankPlayer->GetBackSpringArmComp();
+
+	if (BackSpringArmComp->TargetArmLength == TankPlayer->GetMaxZoomOut())
+		return;
+	
+	// BackSpringArmComp->TargetArmLength = FMath::Min(BackSpringArmComp->TargetArmLength + 200.0, TankPlayer->GetMaxZoomOut());
+	TankPlayer->bAimingIn = false;
+
+	front->Activate(false);
+	middle->Activate(false);
+	back->Activate(false);
 }

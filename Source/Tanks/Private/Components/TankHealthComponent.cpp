@@ -28,6 +28,28 @@ void UTankHealthComponent::BeginPlay()
 	
 }
 
+void UTankHealthComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (OnTakeDamage.IsBound())
+		OnTakeDamage.Clear();
+
+	if (OnHealthChanged.IsBound())
+		OnHealthChanged.Clear();
+
+	if (OnDie.IsBound())
+		OnDie.Clear();
+
+	if (OnSelfDestructStarted.IsBound())
+		OnSelfDestructStarted.Clear();
+
+	if (OnSelfDestructCancelled.IsBound())
+		OnSelfDestructCancelled.Clear();
+	
+	if (OnDieUnreplicated.IsBound())
+		OnDieUnreplicated.Clear();
+}
 
 // Called every frame
 void UTankHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,

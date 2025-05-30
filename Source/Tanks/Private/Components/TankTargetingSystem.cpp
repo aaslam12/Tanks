@@ -19,6 +19,17 @@ void UTankTargetingSystem::BeginPlay()
 	Super::BeginPlay();
 }
 
+void UTankTargetingSystem::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (OnTargetLocked.IsBound())
+		OnTargetLocked.Clear();
+
+	if (OnTargetLost.IsBound())
+		OnTargetLost.Clear();
+}
+
 void UTankTargetingSystem::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);

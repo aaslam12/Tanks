@@ -41,8 +41,8 @@ ATankCharacter::ATankCharacter(): TankHighlightingComponent(CreateDefaultSubobje
 								  RadialForceComponent(CreateDefaultSubobject<URadialForceComponent>("RadialForceComponent")),
 								  DamagedStaticMesh(CreateDefaultSubobject<UStaticMeshComponent>("Damaged Tank Mesh")),
 								  MaxZoomIn(500), MaxZoomOut(2500), BasePitchMin(-20.0), BasePitchMax(10.0),
-                                  AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), MaxTurretRotationSpeed(90),
-                                  GunElevationInterpSpeed(10), BaseDamage(500),
+                                  AbsoluteMinGunElevation(-5), AbsoluteMaxGunElevation(30), TurretRotationSpeed(200),
+                                  AimingTurretRotationSpeed(90), GunElevationInterpSpeed(10), BaseDamage(500),
                                   MinGunElevation(-15), MaxGunElevation(20), GunElevation(0), CurrentTurretAngle(0),
                                   bIsInAir(false), 
                                   DesiredGunElevation(0), 
@@ -156,6 +156,26 @@ void ATankCharacter::BeginPlay()
 	DamagedStaticMesh->SetVisibility(false);
 }
 
+void ATankCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (PlayerController)
+	{
+		if (!PlayerController->OnShoot.IsBound())
+			PlayerController->OnShoot.Clear();
+	}
+
+	if (HealthComponent)
+	{
+		if (!HealthComponent->OnHealthChanged.IsBound())
+			HealthComponent->OnHealthChanged.Clear();
+		
+		if (!HealthComponent->OnDie.IsBound())
+			HealthComponent->OnDie.Clear();
+	}
+}
+
 void ATankCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -195,9 +215,9 @@ void ATankCharacter::TurretTraceTick_Implementation()
 {
 	constexpr double ShootTraceDistance = 15000.0;
 
-	const FVector TurretStart = GetMesh()->GetSocketLocation("GunShootSocket");
+	TurretStart = GetMesh()->GetSocketLocation("GunShootSocket");
 	TurretEnd = TurretStart + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * ShootTraceDistance;
-
+	
 	UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
 		TurretStart,
@@ -468,8 +488,13 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 	if (bAimingIn)
 	{
 		// First person turret rotation
-		float DeltaTurretAngle = FMath::Clamp(LookValues.X, -MaxTurretRotationSpeed / 2, MaxTurretRotationSpeed / 2);
-		CurrentTurretAngle += DeltaTurretAngle;
+		float DeltaAngle = FMath::Clamp(LookValues.X, -AimingTurretRotationSpeed / 2, AimingTurretRotationSpeed / 2);
+
+		// Clamp the angle difference based on MaxTurretRotationSpeed
+		const double MaxDeltaAngle = TurretRotationSpeed * DeltaTime;
+		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
+		
+		CurrentTurretAngle += DeltaAngle;
 
 		SetTurretRotation(CurrentTurretAngle);
 	}
@@ -486,7 +511,7 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		if (!TurretToLookDir.IsNearlyZero())
 			TurretToLookDir.Normalize();
 
-		FVector TurretForwardVector = GetMesh()->GetSocketQuaternion("TurretSocket").GetForwardVector();
+		FVector TurretForwardVector = GetMesh()->GetSocketQuaternion("t").GetForwardVector();
 		TurretForwardVector.Z = 0.f;
 		if (!TurretForwardVector.IsNearlyZero())
 			TurretForwardVector.Normalize();
@@ -513,7 +538,7 @@ void ATankCharacter::UpdateTurretTurning_Implementation(float DeltaTime)
 		double DeltaAngle = UKismetMathLibrary::NormalizeAxis(TargetAngle - AnimInstance->TurretAngle);
 
 		// Clamp the angle difference based on MaxTurretRotationSpeed
-		const double MaxDeltaAngle = MaxTurretRotationSpeed * DeltaTime;
+		const double MaxDeltaAngle = TurretRotationSpeed * DeltaTime;
 		DeltaAngle = FMath::Clamp(DeltaAngle, -MaxDeltaAngle, MaxDeltaAngle);
 
 		// Update the turret angle
@@ -685,27 +710,31 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 		return;
 	}
 
-	FVector GunLocation = BackCameraComp->GetComponentLocation() + (BackCameraComp->GetForwardVector() * 15000.0);
+	auto ActiveCamera = GetActiveCamera();
+	if (ActiveCamera == nullptr)
+		return;
 	
-	FHitResult OutHit;
+	ActiveCameraStart = ActiveCamera->GetComponentLocation();
+	ActiveCameraEnd = ActiveCameraStart + (ActiveCamera->GetForwardVector() * 15000.0);
+	
 	auto bHit = UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
-		BackCameraComp->GetComponentLocation(),
-		GunLocation,
-		TraceTypeQuery1, // should be visisbility
+		ActiveCameraStart,
+		ActiveCameraEnd,
+		TraceTypeQuery1, // should be visibility
 		false,
 		{this},
 		bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
-		OutHit,
+		CameraTraceHit,
 		true
 	);
 	
-	const auto DesiredTurretImpactPoint = bHit ? OutHit.ImpactPoint : GunLocation;
-	TurretImpactPoint = FMath::VInterpTo(TurretImpactPoint, DesiredTurretImpactPoint, DeltaTime, 30);
+	DesiredCameraImpactPoint = bHit ? CameraTraceHit.ImpactPoint : ActiveCameraEnd;
+	CameraImpactPoint = FMath::VInterpTo(CameraImpactPoint, DesiredCameraImpactPoint, DeltaTime, 30);
 	
 	GunRotation = UKismetMathLibrary::FindLookAtRotation(
-		GetMesh()->GetSocketLocation("gun_jnt"),
-		TurretImpactPoint
+		TurretStart,
+		CameraImpactPoint
 	);
 	
 	DesiredGunElevation = GunRotation.Pitch;
@@ -718,16 +747,16 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 	
 	SetGunElevation(GunElevation);
 
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Start: [%s]"), *BackCameraComp->GetComponentLocation().ToString()),
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Start: [%s]"), *ActiveCameraStart.ToString()),
 									  true, true, FLinearColor::White, 0);
 	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) End: [%s]"), *GunLocation.ToString()),
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) End: [%s]"), *ActiveCameraEnd.ToString()),
 									  true, true, FLinearColor::White, 0);
 	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Looking Impact Point: [%s]"), *OutHit.ImpactPoint.ToString()),
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Looking Impact Point: [%s]"), *CameraTraceHit.ImpactPoint.ToString()),
 									  true, true, FLinearColor::Yellow, 0);
 	
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Turret Impact Point: [%s]"), *TurretImpactPoint.ToString()),
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) Turret Impact Point: [%s]"), *CameraImpactPoint.ToString()),
 									  true, true, FLinearColor::Yellow, 0);
 
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("(ATankCharacter::UpdateGunElevation) GunRotation: [%s]"), *GunRotation.ToString()),
@@ -773,7 +802,6 @@ void ATankCharacter::UpdateCameraPitchLimits_Implementation() const
 	
 	// Calculate pitch angle offset based on forward slope
 	float ForwardPitchOffset = FMath::RadiansToDegrees(FMath::Asin(FVector::DotProduct(Forward, WorldUp)));
-	// float RollAngle = FMath::RadiansToDegrees(FMath::Asin(FVector::DotProduct(Right, WorldUp)));
 
 	
 	// Adjust pitch limits based on the tank's orientation on slopes
@@ -1198,11 +1226,14 @@ bool ATankCharacter::IsAimingIn() const
 
 const UCameraComponent* ATankCharacter::GetActiveCamera() const
 {
-	if (IsAimingIn() && FrontCameraComp)
+	if (FrontCameraComp && FrontCameraComp->IsActive() && IsAimingIn())
 		return FrontCameraComp;
 
-	if (BackCameraComp)
+	if (BackCameraComp && BackCameraComp->IsActive())
 		return BackCameraComp;
+
+	if (MiddleCameraComp && MiddleCameraComp->IsActive())
+		return MiddleCameraComp;
 	
 	return nullptr;
 }

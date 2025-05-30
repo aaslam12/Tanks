@@ -78,9 +78,13 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Setup|Controls")
 	bool bInputMasterSwitch;
 
-	/// If true, the tank will decelerate when idle.
+	// If true, the tank will decelerate when idle.
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Setup|Controls")
 	bool bDecelerateWhenIdle;
+
+	// If true, the player will need to have the aim event on to start locking on
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Setup|Controls")
+	bool bShouldLockOnIfHoldingAim;
 
 private:
 	///////////////////////////////////////////////////////////////////////////////////
@@ -226,6 +230,7 @@ protected:
 	void TurnCompleted(const FInputActionValue& InputActionValue);
 
 	void Shoot(const FInputActionValue& InputActionValue);
+	void UpdateLockOnCondition(float Value) const;
 	void Aim(const FInputActionValue& InputActionValue);
 
 	void SelfDestruct(const FInputActionValue& InputActionValue);
@@ -233,6 +238,11 @@ protected:
 	void MouseWheelUp(const FInputActionValue& InputActionValue);
 	void MouseWheelDown(const FInputActionValue& InputActionValue);
 
+public:
+	// NOTE: Need to activate a camera after calling this function.
+	UFUNCTION(BlueprintCallable)
+	void ResetCamera() const;
+protected:
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Functions
 	void StartShootTimer();
