@@ -24,7 +24,7 @@ class TANKS_API AProjectilePool : public AActor
 	int PoolSize;
 
 	UPROPERTY(BlueprintReadOnly, Category="Projectile Pool", meta = (AllowPrivateAccess = "true"))
-	TArray<ATankProjectile*> PooledActors;
+	TArray<TObjectPtr<ATankProjectile>> PooledActors;
 
 	// Sets default values for this actor's properties
 	AProjectilePool();

@@ -198,6 +198,7 @@ void ATankCharacter::Tick(float DeltaTime)
 
 		if (LockedTarget == nullptr)
 		{
+			CameraTraceTick(DeltaTime);
 			TurretTraceTick();
 			UpdateTurretTurning(DeltaTime);
 			UpdateGunElevation(DeltaTime);
@@ -213,10 +214,13 @@ void ATankCharacter::Tick(float DeltaTime)
 
 void ATankCharacter::TurretTraceTick_Implementation()
 {
-	constexpr double ShootTraceDistance = 15000.0;
+	if (!GetMesh())
+		return;
+	
+	constexpr double ShootTraceDistance = 15200.0;
 
 	TurretStart = GetMesh()->GetSocketLocation("GunShootSocket");
-	TurretEnd = TurretStart + GetMesh()->GetSocketQuaternion("GunShootSocket").GetForwardVector() * ShootTraceDistance;
+	TurretEnd = TurretStart + GetMesh()->GetSocketQuaternion("Muzzle").GetForwardVector() * ShootTraceDistance;
 	
 	UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
@@ -228,7 +232,7 @@ void ATankCharacter::TurretTraceTick_Implementation()
 		bShowDebugTracesForTurret ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 		TurretTraceHit,
 		true,
-		FLinearColor::Black
+		FLinearColor::Red
 	);
 }
 
@@ -697,19 +701,8 @@ void ATankCharacter::CheckIfGunCanLowerElevationTick_Implementation(float DeltaT
 	// 									  true, true, FLinearColor::Yellow, 0);
 }
 
-void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
+void ATankCharacter::CameraTraceTick_Implementation(float DeltaTime)
 {
-	if (!BackCameraComp && LockedTarget == nullptr)
-		return;
-
-	if (bAimingIn)
-	{
-		GunElevation += LookValues.Y * -1;
-		GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
-		SetGunElevation(GunElevation);
-		return;
-	}
-
 	auto ActiveCamera = GetActiveCamera();
 	if (ActiveCamera == nullptr)
 		return;
@@ -731,7 +724,21 @@ void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
 	
 	DesiredCameraImpactPoint = bHit ? CameraTraceHit.ImpactPoint : ActiveCameraEnd;
 	CameraImpactPoint = FMath::VInterpTo(CameraImpactPoint, DesiredCameraImpactPoint, DeltaTime, 30);
-	
+}
+
+void ATankCharacter::UpdateGunElevation_Implementation(float DeltaTime)
+{
+	if (!BackCameraComp && LockedTarget == nullptr)
+		return;
+
+	if (bAimingIn)
+	{
+		GunElevation += LookValues.Y * -1;
+		GunElevation = FMath::Clamp(GunElevation, MinGunElevation, MaxGunElevation);
+		SetGunElevation(GunElevation);
+		return;
+	}
+
 	GunRotation = UKismetMathLibrary::FindLookAtRotation(
 		TurretStart,
 		CameraImpactPoint

@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "WB_GunSight.generated.h"
 
+class UOverlay;
 class ATankController;
 class UCanvasPanel;
 class UImage;
@@ -26,10 +27,13 @@ public:
 	FVector2D ScreenPosition;
 
 	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<ATankController> TankController;
+	TWeakObjectPtr<ATankController> TankController;
 
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
 	TObjectPtr<UCanvasPanel> CanvasPanel;
+
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	TObjectPtr<UOverlay> GunSightOverlay;
 
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
 	TObjectPtr<UImage> GunSightImage;

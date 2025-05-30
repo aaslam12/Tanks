@@ -179,6 +179,11 @@ protected:
 	/** Traces from the muzzle to the point where it is looking at ahead. */
 	UFUNCTION(BlueprintNativeEvent)
 	void TurretTraceTick();
+
+	/** Traces from the active camera location to where it is looking at ahead. */
+	UFUNCTION(BlueprintNativeEvent)
+	void CameraTraceTick(float DeltaTime);
+	
 	
 	/** Updates turret angle to where the camera is looking */
 	UFUNCTION(BlueprintNativeEvent)
@@ -191,6 +196,7 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable)
 	void SetDesiredTurretAngle(float TurretAngle);
+
 private:
 	double DesiredTurretAngle_C;
 protected:

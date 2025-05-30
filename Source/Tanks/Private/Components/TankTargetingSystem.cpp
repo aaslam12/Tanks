@@ -3,6 +3,7 @@
 
 #include "Components/TankTargetingSystem.h"
 
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UTankTargetingSystem::UTankTargetingSystem(): LockAcquireTime(0.5f), LockLoseTime(0.5f),
@@ -60,17 +61,20 @@ AActor* UTankTargetingSystem::FindClosestTarget(const TArray<AActor*>& HitResult
 	double StartTime = FPlatformTime::Seconds();
 	
 	const FVector OwnerLocation = GetOwner()->GetActorLocation();
-	double MinDistSq = FLT_MAX;
 	AActor* ClosestActor = nullptr;
 
-	for (AActor* Actor : HitResults)
+	// copied and slightly modified from UGameplayStatics::FindNearestActor(...) 
+	float DistanceFromNearestActor = TNumericLimits<float>::Max();
+	for (AActor* ActorToCheck : HitResults)
 	{
-		// TODO: add a team check here
-		const float DistSq = FVector::DistSquared(OwnerLocation, Actor->GetActorLocation());
-		if (DistSq < MinDistSq)
+		if (ActorToCheck)
 		{
-			MinDistSq = DistSq;
-			ClosestActor = Actor;
+			const float DistanceFromActorToCheck = (OwnerLocation - ActorToCheck->GetActorLocation()).SizeSquared();
+			if (DistanceFromActorToCheck < DistanceFromNearestActor)
+			{
+				ClosestActor = ActorToCheck;
+				DistanceFromNearestActor = DistanceFromActorToCheck;
+			}
 		}
 	}
 

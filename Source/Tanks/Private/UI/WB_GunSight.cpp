@@ -5,16 +5,16 @@
 
 #include "TankController.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
-#include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
+#include "Components/Overlay.h"
 
 void UWB_GunSight::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
 	// GunSight
-	GunSightImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+	GunSightOverlay->SetVisibility(ESlateVisibility::HitTestInvisible);
 
 	// GunCenter
 	GunCenterImage->SetVisibility(ESlateVisibility::HitTestInvisible);
@@ -39,12 +39,12 @@ void UWB_GunSight::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 void UWB_GunSight::UpdateGunSightPosition() const
 {
-	UWidgetLayoutLibrary::SlotAsCanvasSlot(GunSightImage)->SetPosition(ScreenPosition);
+	UWidgetLayoutLibrary::SlotAsCanvasSlot(GunSightOverlay)->SetPosition(ScreenPosition);
 }
 
 void UWB_GunSight::SetTints() const
 {
-	if (TankController && GunSightImage && GunCenterImage)
+	if (TankController.IsValid() && GunSightOverlay && GunCenterImage && GunSightImage)
 	{
 		GunSightImage->SetBrushTintColor(TankController->CanShoot() ? FLinearColor::White : FLinearColor::Red);
 		GunCenterImage->SetBrushTintColor(TankController->CanShoot() ? FLinearColor::White : FLinearColor::Red);
